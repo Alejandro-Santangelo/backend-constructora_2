@@ -1,0 +1,2980 @@
+package com.rodrigo.construccion.service;
+
+import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
+import com.rodrigo.construccion.model.entity.PresupuestoNoClienteProfesional;
+import com.rodrigo.construccion.model.entity.PresupuestoNoClienteMaterial;
+import com.rodrigo.construccion.model.entity.PresupuestoNoClienteOtroCosto;
+import com.rodrigo.construccion.model.entity.PresupuestoCostoInicial;
+import com.rodrigo.construccion.model.entity.ItemCalculadoraPresupuesto;
+import com.rodrigo.construccion.model.entity.MaterialCalculadora;
+import com.rodrigo.construccion.model.entity.ProfesionalCalculadora;
+import com.rodrigo.construccion.model.entity.PresupuestoGastoGeneral;
+import com.rodrigo.construccion.model.entity.Empresa;
+import com.rodrigo.construccion.model.entity.Obra;
+import com.rodrigo.construccion.model.entity.Cliente;
+import com.rodrigo.construccion.repository.PresupuestoNoClienteRepository;
+import com.rodrigo.construccion.repository.PresupuestoCostoInicialRepository;
+import com.rodrigo.construccion.repository.ItemCalculadoraPresupuestoRepository;
+import com.rodrigo.construccion.repository.MaterialCalculadoraRepository;
+import com.rodrigo.construccion.repository.ProfesionalCalculadoraRepository;
+import com.rodrigo.construccion.repository.PresupuestoGastoGeneralRepository;
+import com.rodrigo.construccion.repository.EmpresaRepository;
+import com.rodrigo.construccion.repository.ObraRepository;
+import com.rodrigo.construccion.repository.ClienteRepository;
+import com.rodrigo.construccion.dto.request.PresupuestoNoClienteRequestDTO;
+import com.rodrigo.construccion.dto.request.ItemCalculadoraPresupuestoDTO;
+import com.rodrigo.construccion.dto.request.MaterialCalculadoraDTO;
+import com.rodrigo.construccion.dto.request.ProfesionalCalculadoraDTO;
+import com.rodrigo.construccion.dto.request.GastoGeneralDTO;
+import com.rodrigo.construccion.dto.PresupuestoCostoInicialDTO;
+import com.rodrigo.construccion.enums.EstadoObra;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import java.time.LocalDate;
+import java.math.BigDecimal;
+import java.util.List;
+import java.util.Optional;
+import java.util.Map;
+import java.util.HashMap;
+
+@Service
+public class PresupuestoNoClienteService {
+    private static final Logger log = LoggerFactory.getLogger(PresupuestoNoClienteService.class);
+    
+    private final PresupuestoNoClienteRepository repository;
+    private final PresupuestoCostoInicialRepository costoInicialRepository;
+    private final ItemCalculadoraPresupuestoRepository itemCalculadoraRepository;
+    private final ProfesionalCalculadoraRepository profesionalCalculadoraRepository;
+    private final MaterialCalculadoraRepository materialCalculadoraRepository;
+    private final PresupuestoGastoGeneralRepository gastoGeneralRepository;
+    private final EmpresaRepository empresaRepository;
+    private final ObraRepository obraRepository;
+    private final ClienteRepository clienteRepository;
+    
+    public PresupuestoNoClienteService(
+            PresupuestoNoClienteRepository repository,
+            PresupuestoCostoInicialRepository costoInicialRepository,
+            ItemCalculadoraPresupuestoRepository itemCalculadoraRepository,
+            ProfesionalCalculadoraRepository profesionalCalculadoraRepository,
+            MaterialCalculadoraRepository materialCalculadoraRepository,
+            PresupuestoGastoGeneralRepository gastoGeneralRepository,
+            EmpresaRepository empresaRepository,
+            ObraRepository obraRepository,
+            ClienteRepository clienteRepository) {
+        this.repository = repository;
+        this.costoInicialRepository = costoInicialRepository;
+        this.itemCalculadoraRepository = itemCalculadoraRepository;
+        this.profesionalCalculadoraRepository = profesionalCalculadoraRepository;
+        this.materialCalculadoraRepository = materialCalculadoraRepository;
+        this.gastoGeneralRepository = gastoGeneralRepository;
+        this.empresaRepository = empresaRepository;
+        this.obraRepository = obraRepository;
+        this.clienteRepository = clienteRepository;
+    }
+
+    public List<PresupuestoNoCliente> listarTodos() {
+        List<PresupuestoNoCliente> presupuestos = repository.findAll();
+        // Calcular campos calculados para cada presupuesto
+        presupuestos.forEach(p -> {
+            // Forzar carga de items de calculadora
+            p.getItemsCalculadora().size();
+            p.calcularCamposCalculados();
+        });
+        return presupuestos;
+    }
+
+    @Transactional
+    public PresupuestoNoCliente crear(PresupuestoNoClienteRequestDTO dto) {
+        PresupuestoNoCliente pnc = new PresupuestoNoCliente();
+    // fechas
+    LocalDate ahora = LocalDate.now();
+    pnc.setFechaEmision(ahora);
+    // si el DTO provee fechaCreacion la usamos, sino ahora
+    pnc.setFechaCreacion(dto.getFechaCreacion() != null ? dto.getFechaCreacion() : ahora);
+    // nombreObra
+    pnc.setNombreObra(dto.getNombreObra());
+
+        // Empresa: dto puede venir null, en ese caso el caller (controller) debe pasar idEmpresa en el DTO o nosotros lanzar
+        if (dto.getIdEmpresa() == null) {
+            throw new IllegalArgumentException("Debe especificar idEmpresa (o enviar X-Empresa-Id en el request)");
+        }
+        Empresa empresa = empresaRepository.findById(dto.getIdEmpresa()).orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+        pnc.setEmpresa(empresa);
+
+        // campos nulleables
+        pnc.setNombreSolicitante(dto.getNombreSolicitante());
+        pnc.setDireccionParticular(dto.getDireccionParticular());
+
+        // direccion obra desglosada
+        pnc.setDireccionObraCalle(dto.getDireccionObraCalle());
+        pnc.setDireccionObraAltura(dto.getDireccionObraAltura());
+        pnc.setDireccionObraPiso(dto.getDireccionObraPiso());
+        pnc.setDireccionObraDepartamento(dto.getDireccionObraDepartamento());
+        pnc.setDireccionObraBarrio(dto.getDireccionObraBarrio());
+        pnc.setDireccionObraTorre(dto.getDireccionObraTorre());
+
+    pnc.setDescripcion(dto.getDescripcion());
+        
+        // Campos adicionales de descripción y observaciones
+        pnc.setDescripcionDetallada(dto.getDescripcionDetallada());
+        pnc.setObservacionesInternas(dto.getObservacionesInternas());
+        pnc.setNotasAdicionales(dto.getNotasAdicionales());
+        pnc.setEspecificacionesTecnicas(dto.getEspecificacionesTecnicas());
+        pnc.setComentariosCliente(dto.getComentariosCliente());
+        pnc.setRequisitosEspeciales(dto.getRequisitosEspeciales());
+
+        pnc.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
+        // fecha probable inicio: por defecto ahora si es null
+        pnc.setFechaProbableInicio(dto.getFechaProbableInicio() != null ? dto.getFechaProbableInicio() : null);
+        pnc.setTelefono(dto.getTelefono());
+        pnc.setMail(dto.getMail());
+
+        // vencimiento: por defecto 15 dias desde fechaCreacion
+        if (dto.getVencimiento() != null) {
+            pnc.setVencimiento(dto.getVencimiento());
+        } else {
+            pnc.setVencimiento(ahora.plusDays(15));
+        }
+
+        pnc.setObservaciones(dto.getObservaciones());
+
+        // estado por defecto o el que venga
+        if (dto.getEstado() != null) {
+            com.rodrigo.construccion.enums.PresupuestoEstado e = com.rodrigo.construccion.enums.PresupuestoEstado.fromString(dto.getEstado());
+            pnc.setEstado(e != null ? e : com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
+        } else {
+            pnc.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
+        }
+
+        // numeroPresupuesto / numeroVersion
+        if (dto.getNumeroPresupuesto() != null) {
+            Long numero = dto.getNumeroPresupuesto();
+            Integer maxVersion = repository.findMaxNumeroVersionByNumero(numero);
+            if (maxVersion == null) maxVersion = 0;
+            pnc.setNumeroPresupuesto(numero);
+            pnc.setNumeroVersion(maxVersion + 1);
+        } else {
+            Long maxNumero = repository.findMaxNumeroPresupuesto();
+            if (maxNumero == null) maxNumero = 0L;
+            pnc.setNumeroPresupuesto(maxNumero + 1);
+            pnc.setNumeroVersion(1);
+        }
+
+        // Calcular totales (sin JSON)
+        double totalProf = 0.0;
+        if (dto.getProfesionales() != null) {
+            for (var prof : dto.getProfesionales()) {
+                if (prof.getUnidadActiva() == null) throw new IllegalArgumentException("unidadActiva es obligatoria para cada profesional");
+                Double cantidad = prof.getCantidad() != null ? prof.getCantidad() : 0.0;
+                Double importe = prof.getImportePorUnidad();
+                if (importe == null) {
+                    String u = prof.getUnidadActiva().toLowerCase();
+                    if (u.contains("hora")) importe = prof.getImporteXHora();
+                    else if (u.contains("dia") || u.contains("dí")) importe = prof.getImporteXDia();
+                    else if (u.contains("semana")) importe = prof.getImporteXSemana();
+                    else if (u.contains("mes")) importe = prof.getImporteXMes();
+                    else if (u.contains("obra")) importe = prof.getImporteXObra();
+                }
+                importe = importe != null ? importe : 0.0;
+                if (cantidad < 0 || importe < 0) throw new IllegalArgumentException("cantidad e importe deben ser >= 0");
+                totalProf += cantidad * importe;
+            }
+        }
+        pnc.setTotalProfesionales(totalProf);
+
+        double totalMat = 0.0;
+        if (dto.getMaterialesList() != null) {
+            for (var mat : dto.getMaterialesList()) {
+                Double cantidad = mat.getCantidad() != null ? mat.getCantidad() : 0.0;
+                Double precio = mat.getPrecioUnitario() != null ? mat.getPrecioUnitario() : 0.0;
+                if (cantidad < 0 || precio < 0) throw new IllegalArgumentException("cantidad y precioUnitario deben ser >= 0");
+                totalMat += cantidad * precio;
+            }
+        }
+        pnc.setTotalMateriales(totalMat);
+
+        // Calcular total de otros costos
+        double totalOtrosCostos = 0.0;
+        if (dto.getOtrosCostos() != null) {
+            for (var otro : dto.getOtrosCostos()) {
+                totalOtrosCostos += otro.getImporte() != null ? otro.getImporte().doubleValue() : 0.0;
+            }
+        }
+
+        // Honorarios de dirección de obra
+        pnc.setHonorarioDireccionValorFijo(dto.getHonorarioDireccionValorFijo());
+        pnc.setHonorarioDireccionPorcentaje(dto.getHonorarioDireccionPorcentaje());
+
+        // Calcular importe de honorarios de dirección
+        double honorarioDireccionImporte = 0.0;
+        if (dto.getHonorarioDireccionPorcentaje() != null && dto.getHonorarioDireccionPorcentaje() > 0) {
+            double baseCalculo = totalProf + totalMat + totalOtrosCostos;
+            honorarioDireccionImporte = baseCalculo * (dto.getHonorarioDireccionPorcentaje() / 100.0);
+        } else if (dto.getHonorarioDireccionValorFijo() != null && dto.getHonorarioDireccionValorFijo() > 0) {
+            honorarioDireccionImporte = dto.getHonorarioDireccionValorFijo();
+        }
+        pnc.setHonorarioDireccionImporte(honorarioDireccionImporte);
+
+        // ========== MAPEAR CONFIGURACIÓN DE HONORARIOS ==========
+        pnc.setHonorariosAplicarATodos(dto.getHonorariosAplicarATodos());
+        pnc.setHonorariosValorGeneral(dto.getHonorariosValorGeneral());
+        pnc.setHonorariosTipoGeneral(dto.getHonorariosTipoGeneral());
+        
+        pnc.setHonorariosProfesionalesActivo(dto.getHonorariosProfesionalesActivo());
+        pnc.setHonorariosProfesionalesTipo(dto.getHonorariosProfesionalesTipo());
+        pnc.setHonorariosProfesionalesValor(dto.getHonorariosProfesionalesValor());
+        
+        pnc.setHonorariosMaterialesActivo(dto.getHonorariosMaterialesActivo());
+        pnc.setHonorariosMaterialesTipo(dto.getHonorariosMaterialesTipo());
+        pnc.setHonorariosMaterialesValor(dto.getHonorariosMaterialesValor());
+        
+        pnc.setHonorariosOtrosCostosActivo(dto.getHonorariosOtrosCostosActivo());
+        pnc.setHonorariosOtrosCostosTipo(dto.getHonorariosOtrosCostosTipo());
+        pnc.setHonorariosOtrosCostosValor(dto.getHonorariosOtrosCostosValor());
+
+        // total general: profesionales + materiales + otros costos + honorarios dirección
+        pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
+
+        // ========== MAPEAR TOTALES ESPECÍFICOS DEL FRONTEND ==========
+        // Estos campos vienen calculados desde el frontend y se guardan tal como llegan
+        pnc.setTotalPresupuesto(dto.getTotalPresupuesto());
+        pnc.setTotalHonorariosCalculado(dto.getTotalHonorarios());
+        pnc.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        
+        log.info("📊 Totales mapeados del frontend: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
+            dto.getTotalPresupuesto(), dto.getTotalHonorarios(), dto.getTotalPresupuestoConHonorarios());
+
+        // Mapear profesionales a tabla normalizada
+        if (dto.getProfesionales() != null) {
+            for (var profDto : dto.getProfesionales()) {
+                PresupuestoNoClienteProfesional prof = new PresupuestoNoClienteProfesional();
+                prof.setPresupuestoNoCliente(pnc);
+                prof.setEmpresa(empresa);
+                prof.setTipoProfesional(profDto.getTipoProfesional());
+                prof.setImporteHora(profDto.getImporteXHora() != null ? BigDecimal.valueOf(profDto.getImporteXHora()) : null);
+                prof.setImporteDia(profDto.getImporteXDia() != null ? BigDecimal.valueOf(profDto.getImporteXDia()) : null);
+                prof.setImporteSemana(profDto.getImporteXSemana() != null ? BigDecimal.valueOf(profDto.getImporteXSemana()) : null);
+                prof.setImporteMes(profDto.getImporteXMes() != null ? BigDecimal.valueOf(profDto.getImporteXMes()) : null);
+                prof.setCantidadHoras(profDto.getCantidadHoras());
+                prof.setCantidadDias(profDto.getCantidadDias());
+                prof.setCantidadSemanas(profDto.getCantidadSemanas());
+                prof.setCantidadMeses(profDto.getCantidadMeses());
+                prof.setSubtotal(profDto.getImporteCalculado() != null ? BigDecimal.valueOf(profDto.getImporteCalculado()) : BigDecimal.ZERO);
+                
+                // Nuevos campos para tipoUnidad y cantidadJornales
+                prof.setTipoUnidad(profDto.getTipoUnidad() != null && !profDto.getTipoUnidad().isEmpty() ? profDto.getTipoUnidad().toLowerCase() : "jornales");
+                prof.setCantidadJornales(profDto.getCantidadJornales() != null ? BigDecimal.valueOf(profDto.getCantidadJornales()) : null);
+                
+                pnc.getProfesionales().add(prof);
+            }
+        }
+
+        // Mapear materiales a tabla normalizada
+        if (dto.getMaterialesList() != null) {
+            for (var matDto : dto.getMaterialesList()) {
+                PresupuestoNoClienteMaterial mat = new PresupuestoNoClienteMaterial();
+                mat.setPresupuestoNoCliente(pnc);
+                mat.setEmpresa(empresa);
+                mat.setNombreMaterial(matDto.getTipoMaterial());
+                mat.setCantidad(matDto.getCantidad() != null ? BigDecimal.valueOf(matDto.getCantidad()) : BigDecimal.ZERO);
+                mat.setPrecioUnitario(matDto.getPrecioUnitario() != null ? BigDecimal.valueOf(matDto.getPrecioUnitario()) : BigDecimal.ZERO);
+                mat.setUnidadMedida("unidad"); // Valor por defecto
+                BigDecimal subtotal = mat.getCantidad().multiply(mat.getPrecioUnitario());
+                mat.setSubtotal(subtotal);
+                pnc.getMateriales().add(mat);
+            }
+        }
+
+        // Mapear otros costos a tabla normalizada
+        if (dto.getOtrosCostos() != null) {
+            for (var otroDto : dto.getOtrosCostos()) {
+                PresupuestoNoClienteOtroCosto otro = new PresupuestoNoClienteOtroCosto();
+                otro.setPresupuestoNoCliente(pnc);
+                otro.setEmpresa(empresa);
+                otro.setDescripcion(otroDto.getDescripcion());
+                otro.setImporte(otroDto.getImporte() != null ? otroDto.getImporte() : BigDecimal.ZERO);
+                pnc.getOtrosCostos().add(otro);
+            }
+        }
+
+        // Guardar el presupuesto primero para obtener su ID
+        log.info("💾 INICIANDO GUARDADO - Presupuesto ID: {}", pnc.getId());
+        PresupuestoNoCliente guardado = repository.save(pnc);
+        log.info("✅ PRESUPUESTO GUARDADO - ID: {}, Total: {}", guardado.getId(), guardado.getTotalPresupuesto());
+        
+        // Procesar items de calculadora si vienen en el DTO
+        procesarItemsCalculadora(guardado, dto.getItemsCalculadora());
+        
+        // Volver a guardar después del procesamiento
+        guardado = repository.save(guardado);
+        log.info("✅ Items de calculadora procesados y presupuesto guardado");
+        
+        // Procesar costos iniciales si vienen en el DTO
+        procesarCostosIniciales(guardado, dto.getCostosIniciales());
+        
+        // Sincronizar datos del cliente con la obra (si existe obra asociada)
+        sincronizarDatosClienteConObra(guardado);
+        // Calcular campos calculados antes de devolver
+        guardado.calcularCamposCalculados();
+        
+        log.info("🎯 GUARDADO COMPLETADO - ID: {}, Versión: {}, Total Final: {}", 
+            guardado.getId(), guardado.getNumeroVersion(), guardado.getTotalPresupuesto());
+        
+        return guardado;
+    }
+
+    public PresupuestoNoCliente obtenerPorId(Long id) {
+        PresupuestoNoCliente presupuesto = repository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Presupuesto no cliente no encontrado"));
+        
+        // Forzar carga de items de calculadora y sus relaciones
+        for (ItemCalculadoraPresupuesto item : presupuesto.getItemsCalculadora()) {
+            // Cargar profesionales desglosados
+            item.getProfesionales().size();
+            // Cargar materiales desglosados
+            item.getMaterialesLista().size();
+            // 📥 Cargar gastos generales desglosados
+            if (Boolean.TRUE.equals(item.getEsGastoGeneral())) {
+                item.getGastosGenerales().size();
+                log.debug("📤 Cargando gastos generales para item_id {}", item.getId());
+                log.info("✅ Encontrados {} gastos generales para item_id {}", 
+                    item.getGastosGenerales().size(), item.getId());
+                
+                // ⚠️ Verificar si no se encuentran gastos
+                if (item.getGastosGenerales().isEmpty()) {
+                    log.warn("⚠️ Item con esGastoGeneral=true pero sin gastos en BD para item_id {}", 
+                        item.getId());
+                }
+            }
+        }
+        
+        // Calcular campos calculados antes de devolver
+        presupuesto.calcularCamposCalculados();
+        return presupuesto;
+    }
+
+    @Transactional
+    public PresupuestoNoCliente actualizar(Long id, PresupuestoNoClienteRequestDTO dto) {
+        try {
+            log.info("🔄 ACTUALIZANDO PRESUPUESTO - ID: {}", id);
+            
+            // PASO 1: Obtener presupuesto existente
+            PresupuestoNoCliente existente = obtenerPorId(id);
+            log.info("📊 Presupuesto actual - Versión: {}, Total: {}", 
+                existente.getNumeroVersion(), existente.getTotalPresupuesto());
+            
+            // PASO 2: ACTUALIZAR LA VERSIÓN ACTUAL con todos los cambios
+            log.info("💾 Actualizando versión actual...");
+            PresupuestoNoCliente actualizado = actualizarVersionExistenteCompleto(existente, dto);
+            log.info("✅ Versión actual ACTUALIZADA - Total: {}", actualizado.getTotalPresupuesto());
+            
+            // PASO 3: GENERAR NUEVA VERSIÓN automáticamente
+            log.info("🆕 Generando NUEVA VERSIÓN automáticamente...");
+            PresupuestoNoCliente nuevaVersion = crearNuevaVersion(actualizado, dto);
+            log.info("✅ NUEVA VERSIÓN CREADA - Versión: {}, Total: {}", 
+                nuevaVersion.getNumeroVersion(), nuevaVersion.getTotalPresupuesto());
+            
+            log.info("🎯 ACTUALIZACIÓN COMPLETADA EXITOSAMENTE");
+            return nuevaVersion; // Devolver la nueva versión
+            
+        } catch (Exception e) {
+            log.error("❌ ERROR EN ACTUALIZACIÓN - ID: {}", id, e);
+            log.error("❌ Causa: {}", e.getMessage());
+            log.error("❌ Stack trace completo:", e);
+            throw new RuntimeException("Error al actualizar presupuesto: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Crea una nueva versión del presupuesto incrementando el número de versión
+     */
+    protected PresupuestoNoCliente crearNuevaVersion(PresupuestoNoCliente existente, PresupuestoNoClienteRequestDTO dto) {
+        log.info("🔄 Creando nueva versión del presupuesto ID: {} | Versión actual: {}", 
+            existente.getId(), existente.getNumeroVersion());
+        
+        // ========== PASO 1: ACTUALIZAR EL PRESUPUESTO EXISTENTE CON LOS DATOS DEL DTO ==========
+        // Esto es CRÍTICO para que tenga los valores más recientes antes de copiar
+        PresupuestoNoCliente presupuestoConDatosActualizados = actualizarVersionExistente(existente, dto);
+        
+        // ========== PASO 2: GUARDAR LOS CAMBIOS EN EL PRESUPUESTO EXISTENTE ==========
+        // Forzar persistencia para asegurar que los items calculadora están actualizados
+        presupuestoConDatosActualizados = repository.saveAndFlush(presupuestoConDatosActualizados);
+        
+        log.info("✅ Presupuesto existente actualizado con datos del DTO. Total items calculadora: {}", 
+            presupuestoConDatosActualizados.getItemsCalculadora() != null ? 
+                presupuestoConDatosActualizados.getItemsCalculadora().size() : 0);
+        
+        // ========== PASO 3: CREAR NUEVA VERSIÓN COPIANDO TODOS LOS DATOS ==========
+        PresupuestoNoCliente nuevaVersion = new PresupuestoNoCliente();
+        
+        // Mantener información de la versión anterior PERO con número incrementado
+        nuevaVersion.setNumeroPresupuesto(presupuestoConDatosActualizados.getNumeroPresupuesto());
+        nuevaVersion.setNumeroVersion(presupuestoConDatosActualizados.getNumeroVersion() + 1);
+        nuevaVersion.setEmpresa(presupuestoConDatosActualizados.getEmpresa());
+        nuevaVersion.setObraId(presupuestoConDatosActualizados.getObraId());
+        nuevaVersion.setFechaEmision(LocalDate.now());
+        nuevaVersion.setFechaCreacion(presupuestoConDatosActualizados.getFechaCreacion()); // Mantener fecha de creación original
+        
+    // ========== COPIAR ABSOLUTAMENTE TODOS LOS DATOS DEL PRESUPUESTO ANTERIOR ========== 
+    // DATOS DEL SOLICITANTE
+    nuevaVersion.setNombreObra(presupuestoConDatosActualizados.getNombreObra());
+    nuevaVersion.setNombreSolicitante(presupuestoConDatosActualizados.getNombreSolicitante());
+        nuevaVersion.setTelefono(presupuestoConDatosActualizados.getTelefono());
+        nuevaVersion.setDireccionParticular(presupuestoConDatosActualizados.getDireccionParticular());
+        nuevaVersion.setMail(presupuestoConDatosActualizados.getMail());
+        
+        // DIRECCIÓN DE OBRA COMPLETA
+        nuevaVersion.setDireccionObraBarrio(presupuestoConDatosActualizados.getDireccionObraBarrio());
+        nuevaVersion.setDireccionObraCalle(presupuestoConDatosActualizados.getDireccionObraCalle());
+        nuevaVersion.setDireccionObraAltura(presupuestoConDatosActualizados.getDireccionObraAltura());
+        nuevaVersion.setDireccionObraTorre(presupuestoConDatosActualizados.getDireccionObraTorre());
+        nuevaVersion.setDireccionObraPiso(presupuestoConDatosActualizados.getDireccionObraPiso());
+        nuevaVersion.setDireccionObraDepartamento(presupuestoConDatosActualizados.getDireccionObraDepartamento());
+        
+        // DESCRIPCIONES Y OBSERVACIONES COMPLETAS
+        nuevaVersion.setDescripcion(presupuestoConDatosActualizados.getDescripcion());
+        nuevaVersion.setObservaciones(presupuestoConDatosActualizados.getObservaciones());
+        nuevaVersion.setDescripcionDetallada(presupuestoConDatosActualizados.getDescripcionDetallada());
+        nuevaVersion.setObservacionesInternas(presupuestoConDatosActualizados.getObservacionesInternas());
+        nuevaVersion.setNotasAdicionales(presupuestoConDatosActualizados.getNotasAdicionales());
+        nuevaVersion.setEspecificacionesTecnicas(presupuestoConDatosActualizados.getEspecificacionesTecnicas());
+        nuevaVersion.setComentariosCliente(presupuestoConDatosActualizados.getComentariosCliente());
+        nuevaVersion.setRequisitosEspeciales(presupuestoConDatosActualizados.getRequisitosEspeciales());
+        
+        // TIEMPOS Y FECHAS
+        nuevaVersion.setTiempoEstimadoTerminacion(presupuestoConDatosActualizados.getTiempoEstimadoTerminacion());
+        nuevaVersion.setFechaProbableInicio(presupuestoConDatosActualizados.getFechaProbableInicio());
+        nuevaVersion.setVencimiento(presupuestoConDatosActualizados.getVencimiento());
+        
+        // ESTADO (resetear a A_ENVIAR para nueva versión)
+        nuevaVersion.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
+        
+        // TOTALES CONSOLIDADOS (CRÍTICO)
+        nuevaVersion.setTotalProfesionales(presupuestoConDatosActualizados.getTotalProfesionales());
+        nuevaVersion.setTotalMateriales(presupuestoConDatosActualizados.getTotalMateriales());
+        nuevaVersion.setTotalGeneral(presupuestoConDatosActualizados.getTotalGeneral());
+        nuevaVersion.setTotalPresupuesto(presupuestoConDatosActualizados.getTotalPresupuesto());
+        nuevaVersion.setTotalHonorariosCalculado(presupuestoConDatosActualizados.getTotalHonorariosCalculado());
+        nuevaVersion.setTotalPresupuestoConHonorarios(presupuestoConDatosActualizados.getTotalPresupuestoConHonorarios());
+        
+        // CONFIGURACIÓN DE HONORARIOS COMPLETA
+        nuevaVersion.setHonorarioDireccionValorFijo(presupuestoConDatosActualizados.getHonorarioDireccionValorFijo());
+        nuevaVersion.setHonorarioDireccionPorcentaje(presupuestoConDatosActualizados.getHonorarioDireccionPorcentaje());
+        nuevaVersion.setHonorarioDireccionImporte(presupuestoConDatosActualizados.getHonorarioDireccionImporte());
+        
+        nuevaVersion.setHonorariosAplicarATodos(presupuestoConDatosActualizados.getHonorariosAplicarATodos());
+        nuevaVersion.setHonorariosValorGeneral(presupuestoConDatosActualizados.getHonorariosValorGeneral());
+        nuevaVersion.setHonorariosTipoGeneral(presupuestoConDatosActualizados.getHonorariosTipoGeneral());
+        
+        nuevaVersion.setHonorariosProfesionalesActivo(presupuestoConDatosActualizados.getHonorariosProfesionalesActivo());
+        nuevaVersion.setHonorariosProfesionalesTipo(presupuestoConDatosActualizados.getHonorariosProfesionalesTipo());
+        nuevaVersion.setHonorariosProfesionalesValor(presupuestoConDatosActualizados.getHonorariosProfesionalesValor());
+        
+        nuevaVersion.setHonorariosMaterialesActivo(presupuestoConDatosActualizados.getHonorariosMaterialesActivo());
+        nuevaVersion.setHonorariosMaterialesTipo(presupuestoConDatosActualizados.getHonorariosMaterialesTipo());
+        nuevaVersion.setHonorariosMaterialesValor(presupuestoConDatosActualizados.getHonorariosMaterialesValor());
+        
+        nuevaVersion.setHonorariosOtrosCostosActivo(presupuestoConDatosActualizados.getHonorariosOtrosCostosActivo());
+        nuevaVersion.setHonorariosOtrosCostosTipo(presupuestoConDatosActualizados.getHonorariosOtrosCostosTipo());
+        nuevaVersion.setHonorariosOtrosCostosValor(presupuestoConDatosActualizados.getHonorariosOtrosCostosValor());
+        
+        // ========== COPIAR COLECCIONES NORMALIZADAS ==========
+        // PROFESIONALES
+        if (presupuestoConDatosActualizados.getProfesionales() != null) {
+            for (PresupuestoNoClienteProfesional profAnterior : presupuestoConDatosActualizados.getProfesionales()) {
+                PresupuestoNoClienteProfesional nuevoProf = new PresupuestoNoClienteProfesional();
+                nuevoProf.setPresupuestoNoCliente(nuevaVersion);
+                nuevoProf.setEmpresa(nuevaVersion.getEmpresa());
+                nuevoProf.setTipoProfesional(profAnterior.getTipoProfesional());
+                nuevoProf.setImporteHora(profAnterior.getImporteHora());
+                nuevoProf.setImporteDia(profAnterior.getImporteDia());
+                nuevoProf.setImporteSemana(profAnterior.getImporteSemana());
+                nuevoProf.setImporteMes(profAnterior.getImporteMes());
+                nuevoProf.setCantidadHoras(profAnterior.getCantidadHoras());
+                nuevoProf.setCantidadDias(profAnterior.getCantidadDias());
+                nuevoProf.setCantidadSemanas(profAnterior.getCantidadSemanas());
+                nuevoProf.setCantidadMeses(profAnterior.getCantidadMeses());
+                nuevoProf.setSubtotal(profAnterior.getSubtotal());
+                nuevoProf.setTipoUnidad(profAnterior.getTipoUnidad());
+                nuevoProf.setCantidadJornales(profAnterior.getCantidadJornales());
+                nuevaVersion.getProfesionales().add(nuevoProf);
+            }
+        }
+        
+        // MATERIALES
+        if (presupuestoConDatosActualizados.getMateriales() != null) {
+            for (PresupuestoNoClienteMaterial matAnterior : presupuestoConDatosActualizados.getMateriales()) {
+                PresupuestoNoClienteMaterial nuevoMat = new PresupuestoNoClienteMaterial();
+                nuevoMat.setPresupuestoNoCliente(nuevaVersion);
+                nuevoMat.setEmpresa(nuevaVersion.getEmpresa());
+                nuevoMat.setNombreMaterial(matAnterior.getNombreMaterial());
+                nuevoMat.setCantidad(matAnterior.getCantidad());
+                nuevoMat.setPrecioUnitario(matAnterior.getPrecioUnitario());
+                nuevoMat.setUnidadMedida(matAnterior.getUnidadMedida());
+                nuevoMat.setSubtotal(matAnterior.getSubtotal());
+                nuevaVersion.getMateriales().add(nuevoMat);
+            }
+        }
+        
+        // OTROS COSTOS
+        if (presupuestoConDatosActualizados.getOtrosCostos() != null) {
+            for (PresupuestoNoClienteOtroCosto otroAnterior : presupuestoConDatosActualizados.getOtrosCostos()) {
+                PresupuestoNoClienteOtroCosto nuevoOtro = new PresupuestoNoClienteOtroCosto();
+                nuevoOtro.setPresupuestoNoCliente(nuevaVersion);
+                nuevoOtro.setEmpresa(nuevaVersion.getEmpresa());
+                nuevoOtro.setDescripcion(otroAnterior.getDescripcion());
+                nuevoOtro.setImporte(otroAnterior.getImporte());
+                nuevaVersion.getOtrosCostos().add(nuevoOtro);
+            }
+        }
+        
+        log.info("✅ NUEVA VERSIÓN: Copiados TODOS los datos del presupuesto anterior");
+        log.info("   📋 {} profesionales copiados", nuevaVersion.getProfesionales().size());
+        log.info("   🧱 {} materiales copiados", nuevaVersion.getMateriales().size());
+        log.info("   📦 {} otros costos copiados", nuevaVersion.getOtrosCostos().size());
+        log.info("   💰 Total presupuesto: ${}", nuevaVersion.getTotalPresupuesto());
+        
+        // ========== PASO 4: APLICAR CAMBIOS DESDE DTO (SI VIENEN) ==========
+        // Solo sobrescribir campos que vengan específicamente en el DTO
+        // IMPORTANTE: NO procesar items calculadora aquí porque se copiarán después
+        if (dto.getNombreSolicitante() != null) nuevaVersion.setNombreSolicitante(dto.getNombreSolicitante());
+        if (dto.getTelefono() != null) nuevaVersion.setTelefono(dto.getTelefono());
+        if (dto.getMail() != null) nuevaVersion.setMail(dto.getMail());
+        if (dto.getDescripcion() != null) nuevaVersion.setDescripcion(dto.getDescripcion());
+        if (dto.getObservaciones() != null) nuevaVersion.setObservaciones(dto.getObservaciones());
+        // ... otros campos que vengan en el DTO pueden sobrescribir los copiados
+        
+        log.info("✅ Cambios del DTO aplicados sobre la nueva versión (si venían)");
+        
+        // ========== PASO 5: GUARDAR LA NUEVA VERSIÓN ==========
+        PresupuestoNoCliente guardado = repository.save(nuevaVersion);
+        
+        log.info("✅ Nueva versión creada con ID: {} | Versión: {}", 
+            guardado.getId(), guardado.getNumeroVersion());
+        
+        // ========== PASO 6: COPIAR ITEMS CALCULADORA DESDE EL PRESUPUESTO ACTUALIZADO ==========
+        // Solo copiar si el DTO no incluye items de calculadora (para evitar sobrescribir)
+        if ((dto.getItemsCalculadora() == null || dto.getItemsCalculadora().isEmpty()) && 
+            presupuestoConDatosActualizados.getItemsCalculadora() != null && 
+            !presupuestoConDatosActualizados.getItemsCalculadora().isEmpty()) {
+            
+            try {
+                log.info("🔄 Copiando {} items calculadora desde presupuesto actualizado ID: {} hacia nueva versión ID: {}", 
+                    presupuestoConDatosActualizados.getItemsCalculadora().size(),
+                    presupuestoConDatosActualizados.getId(), 
+                    guardado.getId());
+                
+                copiarItemsCalculadoraDePresupuestoBase(guardado.getId(), presupuestoConDatosActualizados.getId());
+                
+                log.info("✅ Items calculadora copiados exitosamente desde presupuesto actualizado");
+            } catch (Exception e) {
+                log.error("❌ Error al copiar items calculadora: {}", e.getMessage(), e);
+            }
+        }
+        
+        // Sincronizar datos del cliente con la obra (si existe obra asociada)
+        sincronizarDatosClienteConObra(guardado);
+        
+        // Guardar y calcular campos calculados antes de devolver
+        guardado = repository.save(guardado);
+        log.info("✅ Nueva versión lista");
+        
+        // Calcular campos calculados antes de devolver
+        guardado.calcularCamposCalculados();
+        
+        return guardado;
+    }
+    
+    /**
+     * Actualiza la versión existente sin crear una nueva
+     */
+    protected PresupuestoNoCliente actualizarVersionExistente(PresupuestoNoCliente pnc, PresupuestoNoClienteRequestDTO dto) {
+        // Mantener ID, versión y fecha de creación original
+        Integer versionActual = pnc.getNumeroVersion();
+        LocalDate fechaCreacionOriginal = pnc.getFechaCreacion();
+        
+        // Actualizar campos desde DTO
+        pnc = mapearDtoAPresupuesto(pnc, dto, false);
+        
+        // Asegurar que se mantienen los valores originales
+        pnc.setNumeroVersion(versionActual);
+        pnc.setFechaCreacion(fechaCreacionOriginal);
+        
+        return pnc;
+    }
+    
+    /**
+     * Actualiza una versión existente con procesamiento completo (guardado + consolidación)
+     */
+    protected PresupuestoNoCliente actualizarVersionExistenteCompleto(PresupuestoNoCliente existente, PresupuestoNoClienteRequestDTO dto) {
+        try {
+            log.info("🔄 PROCESAMIENTO COMPLETO - Actualizando versión existente ID: {}", existente.getId());
+            
+            // PASO 1: Mapear datos del DTO
+            PresupuestoNoCliente pnc = actualizarVersionExistente(existente, dto);
+            
+            // PASO 2: Guardar el presupuesto
+            log.info("💾 GUARDANDO presupuesto actualizado...");
+            PresupuestoNoCliente actualizado = repository.save(pnc);
+            log.info("✅ Presupuesto GUARDADO - ID: {}, Total: {}", actualizado.getId(), actualizado.getTotalPresupuesto());
+            
+            // PASO 3: Procesar items de calculadora si vienen en el DTO
+            log.info("📋 Procesando items de calculadora...");
+            procesarItemsCalculadora(actualizado, dto.getItemsCalculadora());
+            
+            // PASO 4: Procesar costos iniciales si vienen en el DTO
+            log.info("💰 Procesando costos iniciales...");
+            procesarCostosIniciales(actualizado, dto.getCostosIniciales());
+            
+            // PASO 5: Sincronizar datos del cliente con la obra
+            log.info("🔗 Sincronizando datos del cliente...");
+            sincronizarDatosClienteConObra(actualizado);
+            
+            // PASO 6: Calcular campos calculados antes de devolver
+            log.info("🧮 Calculando campos calculados...");
+            actualizado.calcularCamposCalculados();
+            
+            log.info("🎯 PROCESAMIENTO COMPLETO TERMINADO - Total final: {}", actualizado.getTotalPresupuesto());
+            return actualizado;
+            
+        } catch (Exception e) {
+            log.error("❌ ERROR EN PROCESAMIENTO COMPLETO - ID: {}", existente.getId(), e);
+            log.error("❌ Detalles del error: {}", e.getMessage());
+            throw new RuntimeException("Error en procesamiento completo: " + e.getMessage(), e);
+        }
+    }
+    
+    /**
+     * Mapea los datos del DTO a la entidad presupuesto
+     * @param pnc Presupuesto a actualizar
+     * @param dto DTO con los datos nuevos
+     * @param esNuevaVersion Si es true, se considera una nueva versión (cambia fechaEmision)
+     */
+    protected PresupuestoNoCliente mapearDtoAPresupuesto(PresupuestoNoCliente pnc, PresupuestoNoClienteRequestDTO dto, boolean esNuevaVersion) {
+        if (dto.getIdEmpresa() != null) {
+            Empresa empresa = empresaRepository.findById(dto.getIdEmpresa()).orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+            pnc.setEmpresa(empresa);
+        }
+        pnc.setNombreSolicitante(dto.getNombreSolicitante());
+        pnc.setDireccionParticular(dto.getDireccionParticular());
+
+        pnc.setDireccionObraCalle(dto.getDireccionObraCalle());
+        pnc.setDireccionObraAltura(dto.getDireccionObraAltura());
+        pnc.setDireccionObraPiso(dto.getDireccionObraPiso());
+        pnc.setDireccionObraDepartamento(dto.getDireccionObraDepartamento());
+        pnc.setDireccionObraBarrio(dto.getDireccionObraBarrio());
+        pnc.setDireccionObraTorre(dto.getDireccionObraTorre());
+
+        pnc.setDescripcion(dto.getDescripcion());
+        
+        // Campos adicionales de descripción y observaciones
+        pnc.setDescripcionDetallada(dto.getDescripcionDetallada());
+        pnc.setObservacionesInternas(dto.getObservacionesInternas());
+        pnc.setNotasAdicionales(dto.getNotasAdicionales());
+        pnc.setEspecificacionesTecnicas(dto.getEspecificacionesTecnicas());
+        pnc.setComentariosCliente(dto.getComentariosCliente());
+        pnc.setRequisitosEspeciales(dto.getRequisitosEspeciales());
+        
+        // Calcular totales (sin JSON)
+        double totalProf = 0.0;
+        if (dto.getProfesionales() != null) {
+            for (var prof : dto.getProfesionales()) {
+                if (prof.getUnidadActiva() == null) throw new IllegalArgumentException("unidadActiva es obligatoria para cada profesional");
+                Double cantidad = prof.getCantidad() != null ? prof.getCantidad() : 0.0;
+                Double importe = prof.getImportePorUnidad();
+                if (importe == null) {
+                    String u = prof.getUnidadActiva().toLowerCase();
+                    if (u.contains("hora")) importe = prof.getImporteXHora();
+                    else if (u.contains("dia") || u.contains("dí")) importe = prof.getImporteXDia();
+                    else if (u.contains("semana")) importe = prof.getImporteXSemana();
+                    else if (u.contains("mes")) importe = prof.getImporteXMes();
+                    else if (u.contains("obra")) importe = prof.getImporteXObra();
+                }
+                importe = importe != null ? importe : 0.0;
+                if (cantidad < 0 || importe < 0) throw new IllegalArgumentException("cantidad e importe deben ser >= 0");
+                totalProf += cantidad * importe;
+            }
+        }
+        pnc.setTotalProfesionales(totalProf);
+
+        double totalMat = 0.0;
+        if (dto.getMaterialesList() != null) {
+            for (var mat : dto.getMaterialesList()) {
+                Double cantidad = mat.getCantidad() != null ? mat.getCantidad() : 0.0;
+                Double precio = mat.getPrecioUnitario() != null ? mat.getPrecioUnitario() : 0.0;
+                if (cantidad < 0 || precio < 0) throw new IllegalArgumentException("cantidad y precioUnitario deben ser >= 0");
+                totalMat += cantidad * precio;
+            }
+        }
+        pnc.setTotalMateriales(totalMat);
+
+        // Calcular total de otros costos
+        double totalOtrosCostos = 0.0;
+        if (dto.getOtrosCostos() != null) {
+            for (var otro : dto.getOtrosCostos()) {
+                totalOtrosCostos += otro.getImporte() != null ? otro.getImporte().doubleValue() : 0.0;
+            }
+        }
+
+        // Honorarios de dirección de obra
+        pnc.setHonorarioDireccionValorFijo(dto.getHonorarioDireccionValorFijo());
+        pnc.setHonorarioDireccionPorcentaje(dto.getHonorarioDireccionPorcentaje());
+
+        // Calcular importe de honorarios de dirección
+        double honorarioDireccionImporte = 0.0;
+        if (dto.getHonorarioDireccionPorcentaje() != null && dto.getHonorarioDireccionPorcentaje() > 0) {
+            double baseCalculo = totalProf + totalMat + totalOtrosCostos;
+            honorarioDireccionImporte = baseCalculo * (dto.getHonorarioDireccionPorcentaje() / 100.0);
+        } else if (dto.getHonorarioDireccionValorFijo() != null && dto.getHonorarioDireccionValorFijo() > 0) {
+            honorarioDireccionImporte = dto.getHonorarioDireccionValorFijo();
+        }
+        pnc.setHonorarioDireccionImporte(honorarioDireccionImporte);
+
+        // ========== MAPEAR CONFIGURACIÓN DE HONORARIOS ==========
+        pnc.setHonorariosAplicarATodos(dto.getHonorariosAplicarATodos());
+        pnc.setHonorariosValorGeneral(dto.getHonorariosValorGeneral());
+        pnc.setHonorariosTipoGeneral(dto.getHonorariosTipoGeneral());
+        
+        pnc.setHonorariosProfesionalesActivo(dto.getHonorariosProfesionalesActivo());
+        pnc.setHonorariosProfesionalesTipo(dto.getHonorariosProfesionalesTipo());
+        pnc.setHonorariosProfesionalesValor(dto.getHonorariosProfesionalesValor());
+        
+        pnc.setHonorariosMaterialesActivo(dto.getHonorariosMaterialesActivo());
+        pnc.setHonorariosMaterialesTipo(dto.getHonorariosMaterialesTipo());
+        pnc.setHonorariosMaterialesValor(dto.getHonorariosMaterialesValor());
+        
+        pnc.setHonorariosOtrosCostosActivo(dto.getHonorariosOtrosCostosActivo());
+        pnc.setHonorariosOtrosCostosTipo(dto.getHonorariosOtrosCostosTipo());
+        pnc.setHonorariosOtrosCostosValor(dto.getHonorariosOtrosCostosValor());
+
+        // total general actualizado
+        pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
+        
+        // ========== MAPEAR TOTALES ESPECÍFICOS DEL FRONTEND ==========
+        // Estos campos vienen calculados desde el frontend y se guardan tal como llegan
+        pnc.setTotalPresupuesto(dto.getTotalPresupuesto());
+        pnc.setTotalHonorariosCalculado(dto.getTotalHonorarios());
+        pnc.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        
+        log.info("📊 Totales actualizados del frontend: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
+            dto.getTotalPresupuesto(), dto.getTotalHonorarios(), dto.getTotalPresupuestoConHonorarios());
+        
+        // Limpiar colecciones existentes y mapear nuevas
+        pnc.getProfesionales().clear();
+        if (dto.getProfesionales() != null) {
+            for (var profDto : dto.getProfesionales()) {
+                PresupuestoNoClienteProfesional prof = new PresupuestoNoClienteProfesional();
+                prof.setPresupuestoNoCliente(pnc);
+                prof.setEmpresa(pnc.getEmpresa());
+                prof.setTipoProfesional(profDto.getTipoProfesional());
+                prof.setImporteHora(profDto.getImporteXHora() != null ? BigDecimal.valueOf(profDto.getImporteXHora()) : null);
+                prof.setImporteDia(profDto.getImporteXDia() != null ? BigDecimal.valueOf(profDto.getImporteXDia()) : null);
+                prof.setImporteSemana(profDto.getImporteXSemana() != null ? BigDecimal.valueOf(profDto.getImporteXSemana()) : null);
+                prof.setImporteMes(profDto.getImporteXMes() != null ? BigDecimal.valueOf(profDto.getImporteXMes()) : null);
+                prof.setCantidadHoras(profDto.getCantidadHoras());
+                prof.setCantidadDias(profDto.getCantidadDias());
+                prof.setCantidadSemanas(profDto.getCantidadSemanas());
+                prof.setCantidadMeses(profDto.getCantidadMeses());
+                prof.setSubtotal(profDto.getImporteCalculado() != null ? BigDecimal.valueOf(profDto.getImporteCalculado()) : BigDecimal.ZERO);
+                
+                // Nuevos campos para tipoUnidad y cantidadJornales
+                prof.setTipoUnidad(profDto.getTipoUnidad() != null && !profDto.getTipoUnidad().isEmpty() ? profDto.getTipoUnidad().toLowerCase() : "jornales");
+                prof.setCantidadJornales(profDto.getCantidadJornales() != null ? BigDecimal.valueOf(profDto.getCantidadJornales()) : null);
+                
+                pnc.getProfesionales().add(prof);
+            }
+        }
+
+        pnc.getMateriales().clear();
+        if (dto.getMaterialesList() != null) {
+            for (var matDto : dto.getMaterialesList()) {
+                PresupuestoNoClienteMaterial mat = new PresupuestoNoClienteMaterial();
+                mat.setPresupuestoNoCliente(pnc);
+                mat.setEmpresa(pnc.getEmpresa());
+                mat.setNombreMaterial(matDto.getTipoMaterial());
+                mat.setCantidad(matDto.getCantidad() != null ? BigDecimal.valueOf(matDto.getCantidad()) : BigDecimal.ZERO);
+                mat.setPrecioUnitario(matDto.getPrecioUnitario() != null ? BigDecimal.valueOf(matDto.getPrecioUnitario()) : BigDecimal.ZERO);
+                mat.setUnidadMedida("unidad");
+                BigDecimal subtotal = mat.getCantidad().multiply(mat.getPrecioUnitario());
+                mat.setSubtotal(subtotal);
+                pnc.getMateriales().add(mat);
+            }
+        }
+
+        // OtrosCostos eliminado - tabla presupuesto_otro_costo removida del sistema
+        
+        pnc.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
+        if (dto.getFechaCreacion() != null) {
+            pnc.setFechaCreacion(dto.getFechaCreacion());
+        }
+        if (dto.getEstado() != null) {
+            com.rodrigo.construccion.enums.PresupuestoEstado e = com.rodrigo.construccion.enums.PresupuestoEstado.fromString(dto.getEstado());
+            if (e != null) pnc.setEstado(e);
+        }
+        pnc.setFechaProbableInicio(dto.getFechaProbableInicio());
+        pnc.setTelefono(dto.getTelefono());
+        pnc.setMail(dto.getMail());
+        pnc.setVencimiento(dto.getVencimiento());
+        pnc.setObservaciones(dto.getObservaciones());
+        
+        // Guardar el presupuesto
+        PresupuestoNoCliente actualizado = repository.save(pnc);
+        
+        // Procesar items de calculadora si vienen en el DTO (actualizar o crear)
+        procesarItemsCalculadora(actualizado, dto.getItemsCalculadora());
+        
+        // Procesar costos iniciales si vienen en el DTO (actualizar o crear)
+        procesarCostosIniciales(actualizado, dto.getCostosIniciales());
+        
+        // Sincronizar datos del cliente con la obra (si existe obra asociada)
+        sincronizarDatosClienteConObra(actualizado);
+        
+        // Calcular campos calculados antes de devolver
+        actualizado.calcularCamposCalculados();
+        
+        // Log final según si es nueva versión o actualización
+        if (esNuevaVersion) {
+            log.info("✅ Nueva versión creada exitosamente: ID {} | Versión {}", 
+                actualizado.getId(), actualizado.getNumeroVersion());
+        } else {
+            log.info("⏭️ Presupuesto actualizado exitosamente: ID {} | Versión {} (sin cambio)", 
+                actualizado.getId(), actualizado.getNumeroVersion());
+        }
+        
+        return actualizado;
+    }
+
+    /**
+     * Versión de mapearDtoAPresupuesto que NO procesa items calculadora
+     * Se usa cuando se va a copiar items desde otro presupuesto
+     */
+    protected PresupuestoNoCliente mapearDtoAPresupuestoSinItemsCalculadora(PresupuestoNoCliente pnc, PresupuestoNoClienteRequestDTO dto, boolean esNuevaVersion) {
+        // ========== MAPEAR TODOS LOS CAMPOS EXCEPTO ITEMS CALCULADORA ==========
+        if (dto.getIdEmpresa() != null) {
+            Empresa empresa = empresaRepository.findById(dto.getIdEmpresa()).orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+            pnc.setEmpresa(empresa);
+        }
+        pnc.setNombreSolicitante(dto.getNombreSolicitante());
+        pnc.setDireccionParticular(dto.getDireccionParticular());
+
+        pnc.setDireccionObraCalle(dto.getDireccionObraCalle());
+        pnc.setDireccionObraAltura(dto.getDireccionObraAltura());
+        pnc.setDireccionObraPiso(dto.getDireccionObraPiso());
+        pnc.setDireccionObraDepartamento(dto.getDireccionObraDepartamento());
+        pnc.setDireccionObraBarrio(dto.getDireccionObraBarrio());
+        pnc.setDireccionObraTorre(dto.getDireccionObraTorre());
+
+        pnc.setDescripcion(dto.getDescripcion());
+        
+        // Campos adicionales de descripción y observaciones
+        pnc.setDescripcionDetallada(dto.getDescripcionDetallada());
+        pnc.setObservacionesInternas(dto.getObservacionesInternas());
+        pnc.setNotasAdicionales(dto.getNotasAdicionales());
+        pnc.setEspecificacionesTecnicas(dto.getEspecificacionesTecnicas());
+        pnc.setComentariosCliente(dto.getComentariosCliente());
+        pnc.setRequisitosEspeciales(dto.getRequisitosEspeciales());
+        
+        // Calcular totales básicos
+        double totalProf = 0.0;
+        if (dto.getProfesionales() != null) {
+            for (var prof : dto.getProfesionales()) {
+                if (prof.getUnidadActiva() == null) throw new IllegalArgumentException("unidadActiva es obligatoria para cada profesional");
+                Double cantidad = prof.getCantidad() != null ? prof.getCantidad() : 0.0;
+                Double importe = prof.getImportePorUnidad();
+                if (importe == null) {
+                    String u = prof.getUnidadActiva().toLowerCase();
+                    if (u.contains("hora")) importe = prof.getImporteXHora();
+                    else if (u.contains("dia") || u.contains("dí")) importe = prof.getImporteXDia();
+                    else if (u.contains("semana")) importe = prof.getImporteXSemana();
+                    else if (u.contains("mes")) importe = prof.getImporteXMes();
+                    else if (u.contains("obra")) importe = prof.getImporteXObra();
+                }
+                importe = importe != null ? importe : 0.0;
+                if (cantidad < 0 || importe < 0) throw new IllegalArgumentException("cantidad e importe deben ser >= 0");
+                totalProf += cantidad * importe;
+            }
+        }
+        pnc.setTotalProfesionales(totalProf);
+
+        double totalMat = 0.0;
+        if (dto.getMaterialesList() != null) {
+            for (var mat : dto.getMaterialesList()) {
+                Double cantidad = mat.getCantidad() != null ? mat.getCantidad() : 0.0;
+                Double precio = mat.getPrecioUnitario() != null ? mat.getPrecioUnitario() : 0.0;
+                if (cantidad < 0 || precio < 0) throw new IllegalArgumentException("cantidad y precioUnitario deben ser >= 0");
+                totalMat += cantidad * precio;
+            }
+        }
+        pnc.setTotalMateriales(totalMat);
+
+        // Calcular total de otros costos
+        double totalOtrosCostos = 0.0;
+        if (dto.getOtrosCostos() != null) {
+            for (var otro : dto.getOtrosCostos()) {
+                totalOtrosCostos += otro.getImporte() != null ? otro.getImporte().doubleValue() : 0.0;
+            }
+        }
+
+        // Honorarios y configuración
+        pnc.setHonorarioDireccionValorFijo(dto.getHonorarioDireccionValorFijo());
+        pnc.setHonorarioDireccionPorcentaje(dto.getHonorarioDireccionPorcentaje());
+
+        // Calcular importe de honorarios de dirección
+        double honorarioDireccionImporte = 0.0;
+        if (dto.getHonorarioDireccionPorcentaje() != null && dto.getHonorarioDireccionPorcentaje() > 0) {
+            double baseCalculo = totalProf + totalMat + totalOtrosCostos;
+            honorarioDireccionImporte = baseCalculo * (dto.getHonorarioDireccionPorcentaje() / 100.0);
+        } else if (dto.getHonorarioDireccionValorFijo() != null && dto.getHonorarioDireccionValorFijo() > 0) {
+            honorarioDireccionImporte = dto.getHonorarioDireccionValorFijo();
+        }
+        pnc.setHonorarioDireccionImporte(honorarioDireccionImporte);
+
+        // ========== MAPEAR CONFIGURACIÓN DE HONORARIOS ==========
+        pnc.setHonorariosAplicarATodos(dto.getHonorariosAplicarATodos());
+        pnc.setHonorariosValorGeneral(dto.getHonorariosValorGeneral());
+        pnc.setHonorariosTipoGeneral(dto.getHonorariosTipoGeneral());
+        
+        pnc.setHonorariosProfesionalesActivo(dto.getHonorariosProfesionalesActivo());
+        pnc.setHonorariosProfesionalesTipo(dto.getHonorariosProfesionalesTipo());
+        pnc.setHonorariosProfesionalesValor(dto.getHonorariosProfesionalesValor());
+        
+        pnc.setHonorariosMaterialesActivo(dto.getHonorariosMaterialesActivo());
+        pnc.setHonorariosMaterialesTipo(dto.getHonorariosMaterialesTipo());
+        pnc.setHonorariosMaterialesValor(dto.getHonorariosMaterialesValor());
+        
+        pnc.setHonorariosOtrosCostosActivo(dto.getHonorariosOtrosCostosActivo());
+        pnc.setHonorariosOtrosCostosTipo(dto.getHonorariosOtrosCostosTipo());
+        pnc.setHonorariosOtrosCostosValor(dto.getHonorariosOtrosCostosValor());
+
+        // total general actualizado
+        pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
+        
+        // ========== MAPEAR TOTALES ESPECÍFICOS DEL FRONTEND ==========
+        pnc.setTotalPresupuesto(dto.getTotalPresupuesto());
+        pnc.setTotalHonorariosCalculado(dto.getTotalHonorarios());
+        pnc.setTotalMayoresCostos(dto.getTotalMayoresCostos());
+        pnc.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        
+        // ========== MAPEAR CONFIGURACIÓN DE MAYORES COSTOS ==========
+        pnc.setConfiguracionMayoresCostosAceptada(dto.getConfiguracionMayoresCostosAceptada());
+        
+        // Mapear mayores costos (lógica simplificada)
+        pnc.setMayorCostoProfesionalesActivo(dto.getMayorCostoProfesionalesActivo());
+        pnc.setMayorCostoProfesionalesValor(dto.getMayorCostoProfesionalesValor());
+        pnc.setMayorCostoProfesionalesTipo(dto.getMayorCostoProfesionalesTipo());
+        
+        pnc.setMayorCostoMaterialesActivo(dto.getMayorCostoMaterialesActivo());
+        pnc.setMayorCostoMaterialesValor(dto.getMayorCostoMaterialesValor());
+        pnc.setMayorCostoMaterialesTipo(dto.getMayorCostoMaterialesTipo());
+        
+        pnc.setMayorCostoOtrosActivo(dto.getMayorCostoOtrosActivo());
+        pnc.setMayorCostoOtrosValor(dto.getMayorCostoOtrosValor());
+        pnc.setMayorCostoOtrosTipo(dto.getMayorCostoOtrosTipo());
+        
+        pnc.setMayorCostoHonorariosActivo(dto.getMayorCostoHonorariosActivo());
+        pnc.setMayorCostoHonorariosValor(dto.getMayorCostoHonorariosValor());
+        pnc.setMayorCostoHonorariosTipo(dto.getMayorCostoHonorariosTipo());
+        
+        pnc.setMayorCostoConfiguracionActivo(dto.getMayorCostoConfiguracionActivo());
+        pnc.setMayorCostoConfiguracionValor(dto.getMayorCostoConfiguracionValor());
+        pnc.setMayorCostoConfiguracionTipo(dto.getMayorCostoConfiguracionTipo());
+        
+        // Mapear flags de aplicación
+        pnc.setAplicarMayoresCostosAProfesionales(dto.getAplicarMayoresCostosAProfesionales());
+        pnc.setAplicarMayoresCostosAMateriales(dto.getAplicarMayoresCostosAMateriales());
+        pnc.setAplicarMayoresCostosAOtrosCostos(dto.getAplicarMayoresCostosAOtrosCostos());
+        pnc.setAplicarMayoresCostosAHonorarios(dto.getAplicarMayoresCostosAHonorarios());
+        pnc.setAplicarMayoresCostosAConfiguracion(dto.getAplicarMayoresCostosAConfiguracion());
+        
+        // Mapear colecciones básicas (profesionales, materiales, otros costos)
+        pnc.getProfesionales().clear();
+        if (dto.getProfesionales() != null) {
+            for (var profDto : dto.getProfesionales()) {
+                PresupuestoNoClienteProfesional prof = new PresupuestoNoClienteProfesional();
+                prof.setPresupuestoNoCliente(pnc);
+                prof.setEmpresa(pnc.getEmpresa());
+                prof.setTipoProfesional(profDto.getTipoProfesional());
+                prof.setImporteHora(profDto.getImporteXHora() != null ? BigDecimal.valueOf(profDto.getImporteXHora()) : null);
+                prof.setImporteDia(profDto.getImporteXDia() != null ? BigDecimal.valueOf(profDto.getImporteXDia()) : null);
+                prof.setImporteSemana(profDto.getImporteXSemana() != null ? BigDecimal.valueOf(profDto.getImporteXSemana()) : null);
+                prof.setImporteMes(profDto.getImporteXMes() != null ? BigDecimal.valueOf(profDto.getImporteXMes()) : null);
+                prof.setCantidadHoras(profDto.getCantidadHoras());
+                prof.setCantidadDias(profDto.getCantidadDias());
+                prof.setCantidadSemanas(profDto.getCantidadSemanas());
+                prof.setCantidadMeses(profDto.getCantidadMeses());
+                prof.setSubtotal(profDto.getImporteCalculado() != null ? BigDecimal.valueOf(profDto.getImporteCalculado()) : BigDecimal.ZERO);
+                prof.setTipoUnidad(profDto.getTipoUnidad() != null && !profDto.getTipoUnidad().isEmpty() ? profDto.getTipoUnidad().toLowerCase() : "jornales");
+                prof.setCantidadJornales(profDto.getCantidadJornales() != null ? BigDecimal.valueOf(profDto.getCantidadJornales()) : null);
+                pnc.getProfesionales().add(prof);
+            }
+        }
+
+        pnc.getMateriales().clear();
+        if (dto.getMaterialesList() != null) {
+            for (var matDto : dto.getMaterialesList()) {
+                PresupuestoNoClienteMaterial mat = new PresupuestoNoClienteMaterial();
+                mat.setPresupuestoNoCliente(pnc);
+                mat.setEmpresa(pnc.getEmpresa());
+                mat.setNombreMaterial(matDto.getTipoMaterial());
+                mat.setCantidad(matDto.getCantidad() != null ? BigDecimal.valueOf(matDto.getCantidad()) : BigDecimal.ZERO);
+                mat.setPrecioUnitario(matDto.getPrecioUnitario() != null ? BigDecimal.valueOf(matDto.getPrecioUnitario()) : BigDecimal.ZERO);
+                mat.setUnidadMedida("unidad");
+                BigDecimal subtotal = mat.getCantidad().multiply(mat.getPrecioUnitario());
+                mat.setSubtotal(subtotal);
+                pnc.getMateriales().add(mat);
+            }
+        }
+
+        pnc.getOtrosCostos().clear();
+        if (dto.getOtrosCostos() != null) {
+            for (var otroDto : dto.getOtrosCostos()) {
+                PresupuestoNoClienteOtroCosto otro = new PresupuestoNoClienteOtroCosto();
+                otro.setPresupuestoNoCliente(pnc);
+                otro.setEmpresa(pnc.getEmpresa());
+                otro.setDescripcion(otroDto.getDescripcion());
+                otro.setImporte(otroDto.getImporte() != null ? otroDto.getImporte() : BigDecimal.ZERO);
+                pnc.getOtrosCostos().add(otro);
+            }
+        }
+        
+        // Mapear campos restantes
+        pnc.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
+        if (dto.getFechaCreacion() != null) {
+            pnc.setFechaCreacion(dto.getFechaCreacion());
+        }
+        if (dto.getEstado() != null) {
+            com.rodrigo.construccion.enums.PresupuestoEstado e = com.rodrigo.construccion.enums.PresupuestoEstado.fromString(dto.getEstado());
+            if (e != null) pnc.setEstado(e);
+        }
+        pnc.setFechaProbableInicio(dto.getFechaProbableInicio());
+        pnc.setTelefono(dto.getTelefono());
+        pnc.setMail(dto.getMail());
+        pnc.setVencimiento(dto.getVencimiento());
+        pnc.setObservaciones(dto.getObservaciones());
+        
+        // Guardar el presupuesto (SIN procesar items calculadora)
+        PresupuestoNoCliente actualizado = repository.save(pnc);
+        
+        // ❌ NO procesar items calculadora - se copiarán después desde presupuesto base
+        log.info("🔄 Presupuesto guardado SIN procesar items calculadora (se copiarán después)");
+        
+        // Procesar costos iniciales si vienen en el DTO
+        procesarCostosIniciales(actualizado, dto.getCostosIniciales());
+        
+        // Sincronizar datos del cliente con la obra (si existe obra asociada)
+        sincronizarDatosClienteConObra(actualizado);
+        
+        // Calcular campos calculados antes de devolver
+        actualizado.calcularCamposCalculados();
+        
+        log.info("✅ Nueva versión creada (sin items calculadora): ID {} | Versión {}", 
+            actualizado.getId(), actualizado.getNumeroVersion());
+        
+        return actualizado;
+    }
+
+    /**
+     * Elimina un presupuesto específico sin renumerar las versiones restantes.
+     * 
+     * @param id ID del presupuesto a eliminar
+     * @param empresaId ID de la empresa (para validación multi-tenant)
+     * @return Información sobre la eliminación
+     * @throws IllegalArgumentException si empresaId es null
+     * @throws IllegalStateException si el presupuesto está aprobado con obra asociada
+     */
+    @Transactional
+    public EliminarPresupuestoResponse eliminar(Long id, Long empresaId) {
+        if (empresaId == null) {
+            throw new IllegalArgumentException("empresaId es requerido");
+        }
+        
+        // Obtener el presupuesto con validación de existencia y empresa
+        PresupuestoNoCliente presupuesto = repository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Presupuesto con ID " + id + " no encontrado"));
+        
+        // Validar que pertenece a la empresa
+        if (!presupuesto.getEmpresa().getId().equals(empresaId)) {
+            throw new IllegalArgumentException("El presupuesto no pertenece a la empresa especificada");
+        }
+        
+        // Guardar información antes de eliminar (incluyendo obraId si existe)
+        Long numeroPresupuesto = presupuesto.getNumeroPresupuesto();
+        Integer numeroVersion = presupuesto.getNumeroVersion();
+        Long obraIdAsociado = presupuesto.getObraId();
+        
+        // Eliminar el presupuesto (cascada automática por JPA)
+        // Las obras asociadas quedan intactas (el campo obra_id en presupuesto solo es informativo)
+        repository.deleteById(id);
+        
+        String mensaje = String.format("🗑️ Presupuesto ID %d (número: %d, versión: %d) eliminado exitosamente", 
+            id, numeroPresupuesto, numeroVersion);
+        
+        if (obraIdAsociado != null) {
+            mensaje += String.format(" (estaba asociado a Obra ID: %d)", obraIdAsociado);
+        }
+        
+        log.info(mensaje);
+        
+        // Obtener información de versiones restantes
+        List<PresupuestoNoCliente> versionesRestantes = repository.findAll().stream()
+            .filter(p -> p.getNumeroPresupuesto().equals(numeroPresupuesto))
+            .toList();
+        
+        Integer ultimaVersion = versionesRestantes.stream()
+            .map(PresupuestoNoCliente::getNumeroVersion)
+            .max(Integer::compareTo)
+            .orElse(null);
+        
+        return new EliminarPresupuestoResponse(
+            String.format("Presupuesto ID %d (versión %d) eliminado exitosamente", id, numeroVersion),
+            versionesRestantes.size(),
+            ultimaVersion
+        );
+    }
+    
+    /**
+     * DTO de respuesta para eliminación de presupuesto
+     */
+    public static class EliminarPresupuestoResponse {
+        private final String mensaje;
+        private final int versionesRestantes;
+        private final Integer ultimaVersion;
+        
+        public EliminarPresupuestoResponse(String mensaje, int versionesRestantes, Integer ultimaVersion) {
+            this.mensaje = mensaje;
+            this.versionesRestantes = versionesRestantes;
+            this.ultimaVersion = ultimaVersion;
+        }
+        
+        public String getMensaje() { return mensaje; }
+        public int getVersionesRestantes() { return versionesRestantes; }
+        public Integer getUltimaVersion() { return ultimaVersion; }
+    }
+
+    @Transactional
+    public PresupuestoNoCliente actualizarPorDireccion(
+            String direccionObraCalle,
+            String direccionObraAltura,
+            String direccionObraPiso,
+            String direccionObraDepartamento,
+            Integer numeroVersion,
+            PresupuestoNoClienteRequestDTO dto) {
+        
+        // Buscar presupuestos por dirección
+        List<PresupuestoNoCliente> presupuestos = repository.findByDireccionObra(
+            direccionObraCalle,
+            direccionObraAltura,
+            direccionObraPiso,
+            direccionObraDepartamento
+        );
+
+        if (presupuestos.isEmpty()) {
+            throw new IllegalArgumentException("No se encontró ningún presupuesto con la dirección especificada");
+        }
+
+        // Encontrar el presupuesto base (el que queremos versionar)
+        PresupuestoNoCliente presupuestoBase;
+        if (numeroVersion != null) {
+            presupuestoBase = presupuestos.stream()
+                .filter(p -> numeroVersion.equals(p.getNumeroVersion()))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "No se encontró presupuesto con la dirección y versión especificadas"));
+        } else {
+            // Si no se especifica versión, tomar la más reciente
+            presupuestoBase = presupuestos.get(0);
+        }
+
+        // CREAR NUEVO PRESUPUESTO (nueva versión) en lugar de modificar el existente
+        PresupuestoNoCliente nuevaVersion = new PresupuestoNoCliente();
+        
+        // Copiar número de presupuesto del original e incrementar versión
+        nuevaVersion.setNumeroPresupuesto(presupuestoBase.getNumeroPresupuesto());
+        nuevaVersion.setNumeroVersion(presupuestoBase.getNumeroVersion() + 1);
+        
+        // Copiar empresa del presupuesto base (o del DTO si viene)
+        if (dto.getIdEmpresa() != null) {
+            Empresa empresa = empresaRepository.findById(dto.getIdEmpresa())
+                .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada"));
+            nuevaVersion.setEmpresa(empresa);
+        } else {
+            nuevaVersion.setEmpresa(presupuestoBase.getEmpresa());
+        }
+        
+        // Establecer fechas
+        LocalDate ahora = LocalDate.now();
+        nuevaVersion.setFechaEmision(ahora);
+        nuevaVersion.setFechaCreacion(dto.getFechaCreacion() != null ? dto.getFechaCreacion() : ahora);
+        
+        // Copiar datos del DTO
+        nuevaVersion.setNombreSolicitante(dto.getNombreSolicitante());
+        nuevaVersion.setDireccionParticular(dto.getDireccionParticular());
+        nuevaVersion.setDireccionObraCalle(dto.getDireccionObraCalle());
+        nuevaVersion.setDireccionObraAltura(dto.getDireccionObraAltura());
+        nuevaVersion.setDireccionObraPiso(dto.getDireccionObraPiso());
+        nuevaVersion.setDireccionObraDepartamento(dto.getDireccionObraDepartamento());
+        nuevaVersion.setDireccionObraBarrio(dto.getDireccionObraBarrio());
+        nuevaVersion.setDireccionObraTorre(dto.getDireccionObraTorre());
+        nuevaVersion.setDescripcion(dto.getDescripcion());
+        
+        // Campos adicionales de descripción y observaciones
+        nuevaVersion.setDescripcionDetallada(dto.getDescripcionDetallada());
+        nuevaVersion.setObservacionesInternas(dto.getObservacionesInternas());
+        nuevaVersion.setNotasAdicionales(dto.getNotasAdicionales());
+        nuevaVersion.setEspecificacionesTecnicas(dto.getEspecificacionesTecnicas());
+        nuevaVersion.setComentariosCliente(dto.getComentariosCliente());
+        nuevaVersion.setRequisitosEspeciales(dto.getRequisitosEspeciales());
+
+        // Calcular totales (sin JSON)
+        double totalProf = 0.0;
+        if (dto.getProfesionales() != null) {
+            for (var prof : dto.getProfesionales()) {
+                if (prof.getUnidadActiva() == null) 
+                    throw new IllegalArgumentException("unidadActiva es obligatoria para cada profesional");
+                Double cantidad = prof.getCantidad() != null ? prof.getCantidad() : 0.0;
+                Double importe = prof.getImportePorUnidad();
+                if (importe == null) {
+                    String u = prof.getUnidadActiva().toLowerCase();
+                    if (u.contains("hora")) importe = prof.getImporteXHora();
+                    else if (u.contains("dia") || u.contains("dí")) importe = prof.getImporteXDia();
+                    else if (u.contains("semana")) importe = prof.getImporteXSemana();
+                    else if (u.contains("mes")) importe = prof.getImporteXMes();
+                    else if (u.contains("obra")) importe = prof.getImporteXObra();
+                }
+                importe = importe != null ? importe : 0.0;
+                if (cantidad < 0 || importe < 0) 
+                    throw new IllegalArgumentException("cantidad e importe deben ser >= 0");
+                totalProf += cantidad * importe;
+            }
+        }
+        nuevaVersion.setTotalProfesionales(totalProf);
+        
+        double totalMat = 0.0;
+        if (dto.getMaterialesList() != null) {
+            for (var mat : dto.getMaterialesList()) {
+                Double cantidad = mat.getCantidad() != null ? mat.getCantidad() : 0.0;
+                Double precio = mat.getPrecioUnitario() != null ? mat.getPrecioUnitario() : 0.0;
+                if (cantidad < 0 || precio < 0) 
+                    throw new IllegalArgumentException("cantidad y precioUnitario deben ser >= 0");
+                totalMat += cantidad * precio;
+            }
+        }
+        nuevaVersion.setTotalMateriales(totalMat);
+
+        // Total de otros costos eliminado - tabla presupuesto_otro_costo removida del sistema
+        double totalOtrosCostos = 0.0;
+
+        // Honorarios de dirección de obra
+        nuevaVersion.setHonorarioDireccionValorFijo(dto.getHonorarioDireccionValorFijo());
+        nuevaVersion.setHonorarioDireccionPorcentaje(dto.getHonorarioDireccionPorcentaje());
+
+        // Calcular importe de honorarios de dirección
+        double honorarioDireccionImporte = 0.0;
+        if (dto.getHonorarioDireccionPorcentaje() != null && dto.getHonorarioDireccionPorcentaje() > 0) {
+            double baseCalculo = totalProf + totalMat + totalOtrosCostos;
+            honorarioDireccionImporte = baseCalculo * (dto.getHonorarioDireccionPorcentaje() / 100.0);
+        } else if (dto.getHonorarioDireccionValorFijo() != null && dto.getHonorarioDireccionValorFijo() > 0) {
+            honorarioDireccionImporte = dto.getHonorarioDireccionValorFijo();
+        }
+        nuevaVersion.setHonorarioDireccionImporte(honorarioDireccionImporte);
+
+        // ========== MAPEAR CONFIGURACIÓN DE HONORARIOS ==========
+        nuevaVersion.setHonorariosAplicarATodos(dto.getHonorariosAplicarATodos());
+        nuevaVersion.setHonorariosValorGeneral(dto.getHonorariosValorGeneral());
+        nuevaVersion.setHonorariosTipoGeneral(dto.getHonorariosTipoGeneral());
+        
+        nuevaVersion.setHonorariosProfesionalesActivo(dto.getHonorariosProfesionalesActivo());
+        nuevaVersion.setHonorariosProfesionalesTipo(dto.getHonorariosProfesionalesTipo());
+        nuevaVersion.setHonorariosProfesionalesValor(dto.getHonorariosProfesionalesValor());
+        
+        nuevaVersion.setHonorariosMaterialesActivo(dto.getHonorariosMaterialesActivo());
+        nuevaVersion.setHonorariosMaterialesTipo(dto.getHonorariosMaterialesTipo());
+        nuevaVersion.setHonorariosMaterialesValor(dto.getHonorariosMaterialesValor());
+        
+        nuevaVersion.setHonorariosOtrosCostosActivo(dto.getHonorariosOtrosCostosActivo());
+        nuevaVersion.setHonorariosOtrosCostosTipo(dto.getHonorariosOtrosCostosTipo());
+        nuevaVersion.setHonorariosOtrosCostosValor(dto.getHonorariosOtrosCostosValor());
+
+        // Total general
+        nuevaVersion.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
+        
+        // ========== MAPEAR TOTALES ESPECÍFICOS DEL FRONTEND ==========
+        // Estos campos vienen calculados desde el frontend y se guardan tal como llegan
+        nuevaVersion.setTotalPresupuesto(dto.getTotalPresupuesto());
+        nuevaVersion.setTotalHonorariosCalculado(dto.getTotalHonorarios());
+        nuevaVersion.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        
+        // Actualizar otros campos
+        nuevaVersion.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
+        
+        if (dto.getEstado() != null) {
+            com.rodrigo.construccion.enums.PresupuestoEstado e = 
+                com.rodrigo.construccion.enums.PresupuestoEstado.fromString(dto.getEstado());
+            if (e != null) nuevaVersion.setEstado(e);
+        } else {
+            nuevaVersion.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
+        }
+        
+        nuevaVersion.setFechaProbableInicio(dto.getFechaProbableInicio());
+        nuevaVersion.setTelefono(dto.getTelefono());
+        nuevaVersion.setMail(dto.getMail());
+        
+        if (dto.getVencimiento() != null) {
+            nuevaVersion.setVencimiento(dto.getVencimiento());
+        } else {
+            nuevaVersion.setVencimiento(ahora.plusDays(15));
+        }
+        
+        nuevaVersion.setObservaciones(dto.getObservaciones());
+        
+        // Mapear profesionales a tabla normalizada
+        if (dto.getProfesionales() != null) {
+            for (var profDto : dto.getProfesionales()) {
+                PresupuestoNoClienteProfesional prof = new PresupuestoNoClienteProfesional();
+                prof.setPresupuestoNoCliente(nuevaVersion);
+                prof.setEmpresa(nuevaVersion.getEmpresa());
+                prof.setTipoProfesional(profDto.getTipoProfesional());
+                prof.setImporteHora(profDto.getImporteXHora() != null ? BigDecimal.valueOf(profDto.getImporteXHora()) : null);
+                prof.setImporteDia(profDto.getImporteXDia() != null ? BigDecimal.valueOf(profDto.getImporteXDia()) : null);
+                prof.setImporteSemana(profDto.getImporteXSemana() != null ? BigDecimal.valueOf(profDto.getImporteXSemana()) : null);
+                prof.setImporteMes(profDto.getImporteXMes() != null ? BigDecimal.valueOf(profDto.getImporteXMes()) : null);
+                prof.setCantidadHoras(profDto.getCantidadHoras());
+                prof.setCantidadDias(profDto.getCantidadDias());
+                prof.setCantidadSemanas(profDto.getCantidadSemanas());
+                prof.setCantidadMeses(profDto.getCantidadMeses());
+                prof.setSubtotal(profDto.getImporteCalculado() != null ? BigDecimal.valueOf(profDto.getImporteCalculado()) : BigDecimal.ZERO);
+                
+                // Nuevos campos para tipoUnidad y cantidadJornales
+                prof.setTipoUnidad(profDto.getTipoUnidad() != null && !profDto.getTipoUnidad().isEmpty() ? profDto.getTipoUnidad().toLowerCase() : "jornales");
+                prof.setCantidadJornales(profDto.getCantidadJornales() != null ? BigDecimal.valueOf(profDto.getCantidadJornales()) : null);
+                
+                nuevaVersion.getProfesionales().add(prof);
+            }
+        }
+
+        // Mapear materiales a tabla normalizada
+        if (dto.getMaterialesList() != null) {
+            for (var matDto : dto.getMaterialesList()) {
+                PresupuestoNoClienteMaterial mat = new PresupuestoNoClienteMaterial();
+                mat.setPresupuestoNoCliente(nuevaVersion);
+                mat.setEmpresa(nuevaVersion.getEmpresa());
+                mat.setNombreMaterial(matDto.getTipoMaterial());
+                mat.setCantidad(matDto.getCantidad() != null ? BigDecimal.valueOf(matDto.getCantidad()) : BigDecimal.ZERO);
+                mat.setPrecioUnitario(matDto.getPrecioUnitario() != null ? BigDecimal.valueOf(matDto.getPrecioUnitario()) : BigDecimal.ZERO);
+                mat.setUnidadMedida("unidad");
+                BigDecimal subtotal = mat.getCantidad().multiply(mat.getPrecioUnitario());
+                mat.setSubtotal(subtotal);
+                nuevaVersion.getMateriales().add(mat);
+            }
+        }
+
+        // Mapear otros costos a tabla normalizada
+        if (dto.getOtrosCostos() != null) {
+            for (var otroDto : dto.getOtrosCostos()) {
+                PresupuestoNoClienteOtroCosto otro = new PresupuestoNoClienteOtroCosto();
+                otro.setPresupuestoNoCliente(nuevaVersion);
+                otro.setEmpresa(nuevaVersion.getEmpresa());
+                otro.setDescripcion(otroDto.getDescripcion());
+                otro.setImporte(otroDto.getImporte() != null ? otroDto.getImporte() : BigDecimal.ZERO);
+                nuevaVersion.getOtrosCostos().add(otro);
+            }
+        }
+        
+        // ========== COPIAR CONFIGURACIÓN DE MAYORES COSTOS DESDE PRESUPUESTO BASE ==========
+        // Solo copiar si no vienen en el DTO (para mantener valores del presupuesto base)
+        if (dto.getAplicarMayoresCostosAProfesionales() == null && presupuestoBase.getAplicarMayoresCostosAProfesionales() != null) {
+            nuevaVersion.setAplicarMayoresCostosAProfesionales(presupuestoBase.getAplicarMayoresCostosAProfesionales());
+        }
+        if (dto.getMayorCostoProfesionalesValor() == null && presupuestoBase.getMayorCostoProfesionalesValor() != null) {
+            nuevaVersion.setMayorCostoProfesionalesValor(presupuestoBase.getMayorCostoProfesionalesValor());
+        }
+        if (dto.getAplicarMayoresCostosAMateriales() == null && presupuestoBase.getAplicarMayoresCostosAMateriales() != null) {
+            nuevaVersion.setAplicarMayoresCostosAMateriales(presupuestoBase.getAplicarMayoresCostosAMateriales());
+        }
+        if (dto.getMayorCostoMaterialesValor() == null && presupuestoBase.getMayorCostoMaterialesValor() != null) {
+            nuevaVersion.setMayorCostoMaterialesValor(presupuestoBase.getMayorCostoMaterialesValor());
+        }
+        if (dto.getAplicarMayoresCostosAOtrosCostos() == null && presupuestoBase.getAplicarMayoresCostosAOtrosCostos() != null) {
+            nuevaVersion.setAplicarMayoresCostosAOtrosCostos(presupuestoBase.getAplicarMayoresCostosAOtrosCostos());
+        }
+        if (dto.getMayorCostoOtrosValor() == null && presupuestoBase.getMayorCostoOtrosValor() != null) {
+            nuevaVersion.setMayorCostoOtrosValor(presupuestoBase.getMayorCostoOtrosValor());
+        }
+        if (dto.getAplicarMayoresCostosAHonorarios() == null && presupuestoBase.getAplicarMayoresCostosAHonorarios() != null) {
+            nuevaVersion.setAplicarMayoresCostosAHonorarios(presupuestoBase.getAplicarMayoresCostosAHonorarios());
+        }
+        if (dto.getMayorCostoHonorariosValor() == null && presupuestoBase.getMayorCostoHonorariosValor() != null) {
+            nuevaVersion.setMayorCostoHonorariosValor(presupuestoBase.getMayorCostoHonorariosValor());
+        }
+        
+        // Guardar la NUEVA versión (no modifica la anterior)
+        PresupuestoNoCliente guardado = repository.save(nuevaVersion);
+        
+        // ========== COPIAR ITEMS CALCULADORA DESPUÉS DE GUARDAR EL PRESUPUESTO ==========
+        // Solo copiar si el DTO no incluye items de calculadora (para evitar sobrescribir)
+        if ((dto.getItemsCalculadora() == null || dto.getItemsCalculadora().isEmpty()) && 
+            presupuestoBase.getItemsCalculadora() != null && !presupuestoBase.getItemsCalculadora().isEmpty()) {
+            
+            try {
+                copiarItemsCalculadoraDePresupuestoBase(guardado.getId(), presupuestoBase.getId());
+                log.info("✅ Items calculadora copiados desde presupuesto base ID: {}", presupuestoBase.getId());
+            } catch (Exception e) {
+                log.warn("⚠️ Error al copiar items calculadora: {}", e.getMessage());
+            }
+        }
+        
+        // Sincronizar datos del cliente con la obra (si existe obra asociada)
+        sincronizarDatosClienteConObra(guardado);
+        // Calcular campos calculados antes de devolver
+        guardado.calcularCamposCalculados();
+        return guardado;
+    }
+
+    /**
+     * Aprueba un presupuesto cambiando SOLO su estado a APROBADO sin crear nueva versión.
+     * Este método realiza un UPDATE in-place del registro existente.
+     * 
+     * @param id ID del presupuesto a aprobar
+     * @return El presupuesto aprobado
+     * @throws IllegalArgumentException si el presupuesto no existe o ya está aprobado
+     */
+    @Transactional
+    public PresupuestoNoCliente aprobar(Long id) {
+        // Buscar el presupuesto (el filtro multi-tenant de Hibernate se aplica automáticamente)
+        PresupuestoNoCliente presupuesto = repository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Presupuesto no encontrado o no pertenece a la empresa"));
+        
+        // Verificar que no esté ya aprobado
+        if (presupuesto.getEstado() == com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO) {
+            throw new IllegalArgumentException("El presupuesto ya está en estado APROBADO");
+        }
+        
+        // Cambiar SOLO el estado a APROBADO (UPDATE in-place, sin versionar)
+        presupuesto.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
+        
+        // Guardar el cambio (JPA hace UPDATE del registro existente)
+        return repository.save(presupuesto);
+    }
+
+    // Métodos adicionales (stubs - requieren implementación completa)
+    @Transactional
+    public com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse aprobarYCrearObra(Long id) {
+        // 1. VALIDAR que el presupuesto existe
+        PresupuestoNoCliente presupuesto = repository.findById(id)
+            .orElseThrow(() -> new IllegalArgumentException("Presupuesto no encontrado con ID: " + id));
+        
+        // 2. VALIDAR que NO está ya aprobado
+        if (presupuesto.getEstado() == com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO) {
+            throw new IllegalArgumentException("El presupuesto ya está aprobado");
+        }
+        
+        // 3. VALIDAR que NO tiene obraId asignado
+        if (presupuesto.getObraId() != null) {
+            throw new IllegalArgumentException("El presupuesto ya tiene una obra asociada (ID: " + presupuesto.getObraId() + ")");
+        }
+        
+        // 4. VALIDAR campos obligatorios para crear obra
+        if (presupuesto.getDireccionObraCalle() == null || presupuesto.getDireccionObraCalle().trim().isEmpty()) {
+            throw new IllegalArgumentException("El presupuesto debe tener direccionObraCalle para crear la obra");
+        }
+        if (presupuesto.getDireccionObraAltura() == null || presupuesto.getDireccionObraAltura().trim().isEmpty()) {
+            throw new IllegalArgumentException("El presupuesto debe tener direccionObraAltura para crear la obra");
+        }
+        
+        // 5. Obtener o crear cliente genérico para "presupuestos no cliente"
+        Long empresaId = presupuesto.getEmpresa().getId();
+        Empresa empresa = empresaRepository.findById(empresaId)
+            .orElseThrow(() -> new IllegalArgumentException("Empresa no encontrada con ID: " + empresaId));
+        
+        // Buscar cliente genérico "CLIENTE - PRESUPUESTO NO CLIENTE"
+        String nombreClienteGenerico = "CLIENTE - PRESUPUESTO NO CLIENTE";
+        Optional<Cliente> clienteOpt = clienteRepository.findByNombre(nombreClienteGenerico);
+        Cliente cliente;
+        
+        if (clienteOpt.isEmpty()) {
+            // Crear cliente genérico si no existe
+            cliente = new Cliente();
+            cliente.setNombre(nombreClienteGenerico);
+            cliente.setDireccion("N/A");
+            cliente.setTelefono(presupuesto.getTelefono() != null ? presupuesto.getTelefono() : "N/A");
+            cliente.setEmail(presupuesto.getMail() != null ? presupuesto.getMail() : "sin-email@presupuesto.com");
+            cliente.getEmpresas().add(empresa);
+            cliente = clienteRepository.save(cliente);
+        } else {
+            cliente = clienteOpt.get();
+            // Asegurarse de que el cliente esté asociado a esta empresa
+            if (!cliente.getEmpresas().contains(empresa)) {
+                cliente.getEmpresas().add(empresa);
+                cliente = clienteRepository.save(cliente);
+            }
+        }
+        
+        // 6. CREAR nueva Obra con datos del presupuesto
+        Obra obra = new Obra();
+        
+        // Dirección (obligatorio)
+        obra.setDireccionObraCalle(presupuesto.getDireccionObraCalle());
+        
+        // Convertir String a Integer para altura
+        try {
+            Integer altura = Integer.parseInt(presupuesto.getDireccionObraAltura());
+            obra.setDireccionObraAltura(altura);
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("direccionObraAltura debe ser un número entero: " + presupuesto.getDireccionObraAltura());
+        }
+        
+        obra.setDireccionObraPiso(presupuesto.getDireccionObraPiso());
+        obra.setDireccionObraDepartamento(presupuesto.getDireccionObraDepartamento());
+        obra.setDireccionObraBarrio(presupuesto.getDireccionObraBarrio());
+        obra.setDireccionObraTorre(presupuesto.getDireccionObraTorre());
+        
+        // Nombre de la obra (descripción o dirección completa)
+        String nombreObra = presupuesto.getDescripcion() != null && !presupuesto.getDescripcion().trim().isEmpty()
+            ? presupuesto.getDescripcion()
+            : String.format("Obra %s %s", 
+                presupuesto.getDireccionObraCalle(), 
+                presupuesto.getDireccionObraAltura());
+        obra.setNombre(nombreObra);
+        
+        // Cliente
+        obra.setCliente(cliente);
+        
+        // Estado inicial
+        obra.setEstado(EstadoObra.EN_OBRA);
+        
+        // Fechas
+        obra.setFechaInicio(presupuesto.getFechaProbableInicio() != null 
+            ? presupuesto.getFechaProbableInicio() 
+            : LocalDate.now());
+        
+        // Calcular fecha estimada de fin si hay tiempo estimado
+        if (presupuesto.getTiempoEstimadoTerminacion() != null) {
+            LocalDate fechaFin = obra.getFechaInicio().plusDays(presupuesto.getTiempoEstimadoTerminacion());
+            obra.setFechaFin(fechaFin);
+        }
+        
+        // Presupuesto estimado (usar totalFinal si está disponible, sino totalGeneral)
+        if (presupuesto.getTotalGeneral() != null) {
+            obra.setPresupuestoEstimado(BigDecimal.valueOf(presupuesto.getTotalGeneral()));
+        }
+        
+        // Guardar obra
+        obra = obraRepository.save(obra);
+        
+        // 7. ACTUALIZAR presupuesto: estado APROBADO y obraId
+        presupuesto.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
+        presupuesto.setObraId(obra.getId());
+        presupuesto.calcularCamposCalculados();
+        presupuesto = repository.save(presupuesto);
+        
+        // 8. RETORNAR respuesta
+        com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse response = 
+            new com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse();
+        response.setObraId(obra.getId());
+        response.setPresupuestosActualizados(1);
+        response.setObraCreada(true);
+        response.setMensaje(String.format(
+            "Presupuesto #%d aprobado exitosamente. Obra #%d creada: '%s'",
+            presupuesto.getId(),
+            obra.getId(),
+            obra.getNombre()
+        ));
+        
+        return response;
+    }
+
+    public PresupuestoNoCliente actualizarEstado(Long id, String nuevoEstado) {
+        PresupuestoNoCliente presupuesto = obtenerPorId(id);
+        com.rodrigo.construccion.enums.PresupuestoEstado estado = 
+            com.rodrigo.construccion.enums.PresupuestoEstado.fromString(nuevoEstado);
+        if (estado != null) {
+            presupuesto.setEstado(estado);
+            return repository.save(presupuesto);
+        }
+        throw new IllegalArgumentException("Estado inválido: " + nuevoEstado);
+    }
+
+    public java.util.List<PresupuestoNoCliente> busquedaAvanzada(
+            Long empresaId, String calle, String altura, String piso, String departamento,
+            String nombreSolicitante, String direccionParticular, String descripcion,
+            String profesionalesNecesarios, String materiales, String telefono,
+            Long numeroPresupuesto, String mail, Integer tiempoEstimadoTerminacion,
+            String observaciones, java.time.LocalDate fechaEmisionDesde,
+            java.time.LocalDate fechaEmisionHasta, java.time.LocalDate fechaProbableInicioDesde,
+            java.time.LocalDate fechaProbableInicioHasta, java.time.LocalDate vencimientoDesde,
+            java.time.LocalDate vencimientoHasta, java.time.LocalDate fechaCreacionDesde,
+            java.time.LocalDate fechaCreacionHasta, java.math.BigDecimal totalProfesionalesMin,
+            java.math.BigDecimal totalProfesionalesMax, java.math.BigDecimal totalMaterialesMin,
+            java.math.BigDecimal totalMaterialesMax, java.math.BigDecimal totalGeneralMin,
+            java.math.BigDecimal totalGeneralMax, String estado, String numeroVersion) {
+        throw new UnsupportedOperationException("Método busquedaAvanzada no implementado");
+    }
+
+
+
+    public java.util.List<PresupuestoNoCliente> buscarPorTipoProfesional(String tipoProfesional, Long empresaId) {
+        // Implementación básica - puede mejorarse según necesidades
+        List<PresupuestoNoCliente> presupuestos = repository.findAll();
+        // Calcular campos calculados
+        presupuestos.forEach(PresupuestoNoCliente::calcularCamposCalculados);
+        return presupuestos;
+    }
+
+    /**
+     * Sincroniza los datos del cliente desde el presupuesto hacia la obra asociada.
+     * Este método es llamado automáticamente después de guardar un presupuesto.
+     * 
+     * @param presupuesto El presupuesto con los datos actualizados
+     */
+    private void sincronizarDatosClienteConObra(PresupuestoNoCliente presupuesto) {
+        if (presupuesto.getObraId() == null) {
+            return;
+        }
+        
+        try {
+            Optional<Obra> obraOpt = obraRepository.findById(presupuesto.getObraId());
+            
+            if (obraOpt.isEmpty()) {
+                log.warn("⚠️ Obra con ID {} no encontrada para presupuesto {}", 
+                    presupuesto.getObraId(), presupuesto.getId());
+                return;
+            }
+            
+            Obra obra = obraOpt.get();
+            
+            EstadoObra estadoObra = obra.getEstadoEnum();
+            if (estadoObra == EstadoObra.FINALIZADA || estadoObra == EstadoObra.CANCELADA) {
+                log.info("ℹ️ Obra {} está {} - No se actualizan datos del cliente", 
+                    obra.getId(), estadoObra.getDisplayName());
+                return;
+            }
+            
+            boolean actualizado = false;
+            
+            if (presupuesto.getNombreSolicitante() != null && 
+                !presupuesto.getNombreSolicitante().equals(obra.getNombreSolicitante())) {
+                obra.setNombreSolicitante(presupuesto.getNombreSolicitante());
+                actualizado = true;
+            }
+            
+            if (presupuesto.getTelefono() != null && 
+                !presupuesto.getTelefono().equals(obra.getTelefono())) {
+                obra.setTelefono(presupuesto.getTelefono());
+                actualizado = true;
+            }
+            
+            if (presupuesto.getMail() != null && 
+                !presupuesto.getMail().equals(obra.getMail())) {
+                obra.setMail(presupuesto.getMail());
+                actualizado = true;
+            }
+            
+            if (presupuesto.getDireccionParticular() != null && 
+                !presupuesto.getDireccionParticular().equals(obra.getDireccionParticular())) {
+                obra.setDireccionParticular(presupuesto.getDireccionParticular());
+                actualizado = true;
+            }
+            
+            if (actualizado) {
+                obraRepository.save(obra);
+                log.info("✅ Datos del cliente sincronizados: Presupuesto {} → Obra {}", 
+                    presupuesto.getId(), obra.getId());
+            }
+            
+        } catch (Exception e) {
+            log.error("❌ Error al sincronizar datos con obra {}: {}", 
+                presupuesto.getObraId(), e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Procesa los costos iniciales del presupuesto (crear o actualizar).
+     * 
+     * @param presupuesto Presupuesto guardado
+     * @param dto DTO con datos de costos iniciales (puede ser null)
+     */
+    private void procesarItemsCalculadora(PresupuestoNoCliente presupuesto, List<ItemCalculadoraPresupuestoDTO> itemsDTO) {
+        if (itemsDTO == null || itemsDTO.isEmpty()) {
+            log.debug("No se proporcionaron items de calculadora para el presupuesto {}", presupuesto.getId());
+            // Si viene vacío, eliminar todos los items existentes
+            itemCalculadoraRepository.deleteByPresupuestoNoClienteId(presupuesto.getId());
+            return;
+        }
+
+        try {
+            // ESTRATEGIA: DELETE + INSERT
+            // Eliminar todos los items existentes del presupuesto
+            itemCalculadoraRepository.deleteByPresupuestoNoClienteId(presupuesto.getId());
+            log.debug("🗑️ Items de calculadora anteriores eliminados para presupuesto {}", presupuesto.getId());
+
+            // Insertar los nuevos items
+            for (ItemCalculadoraPresupuestoDTO dto : itemsDTO) {
+                ItemCalculadoraPresupuesto item = new ItemCalculadoraPresupuesto();
+                
+                // Relaciones
+                item.setPresupuestoNoCliente(presupuesto);
+                item.setEmpresa(presupuesto.getEmpresa());
+                
+                // Datos del item
+                item.setTipoProfesional(dto.getTipoProfesional());
+                item.setCantidadJornales(dto.getCantidadJornales());
+                item.setImporteJornal(dto.getImporteJornal());
+                item.setSubtotalManoObra(dto.getSubtotalManoObra() != null ? dto.getSubtotalManoObra() : BigDecimal.ZERO);
+                item.setMateriales(dto.getMateriales());
+                item.setTotalManual(dto.getTotalManual());
+                item.setTotal(dto.getTotal());
+                item.setEsModoManual(dto.getEsModoManual());
+                
+                // Campos adicionales
+                item.setSubtotalMateriales(dto.getSubtotalMateriales());
+                
+                // ========== CAMPOS DE GASTOS GENERALES ==========
+                item.setEsGastoGeneral(dto.getEsGastoGeneral() != null ? dto.getEsGastoGeneral() : false);
+                item.setSubtotalGastosGenerales(dto.getSubtotalGastosGenerales());
+                item.setDescripcionGastosGenerales(dto.getDescripcionGastosGenerales());
+                item.setObservacionesGastosGenerales(dto.getObservacionesGastosGenerales());
+                
+                // Calcular totales (por si vienen inconsistentes desde frontend)
+                item.calcularTotales();
+                
+                // Validar antes de guardar
+                item.validar();
+                
+                // Guardar item principal primero
+                ItemCalculadoraPresupuesto itemGuardado = itemCalculadoraRepository.save(item);
+                
+                // Procesar profesionales desglosados
+                if (dto.getProfesionales() != null && !dto.getProfesionales().isEmpty()) {
+                    for (ProfesionalCalculadoraDTO profDto : dto.getProfesionales()) {
+                        ProfesionalCalculadora profesional = new ProfesionalCalculadora();
+                        profesional.setItemCalculadora(itemGuardado);
+                        profesional.setEmpresa(presupuesto.getEmpresa());
+                        profesional.setFrontendId(profDto.getId());
+                        profesional.setTipo(profDto.getTipo());
+                        profesional.setNombre(profDto.getNombre());
+                        profesional.setTelefono(profDto.getTelefono());
+                        profesional.setUnidad(profDto.getUnidad());
+                        profesional.setCantidadJornales(profDto.getCantidadJornales());
+                        profesional.setImporteJornal(profDto.getImporteJornal());
+                        profesional.setSubtotal(profDto.getSubtotal());
+                        profesional.setSinCantidad(profDto.getSinCantidad() != null ? profDto.getSinCantidad() : false);
+                        profesional.setSinImporte(profDto.getSinImporte() != null ? profDto.getSinImporte() : false);
+                        
+                        profesionalCalculadoraRepository.save(profesional);
+                    }
+                }
+                
+                // Procesar materiales desglosados
+                if (dto.getMaterialesLista() != null && !dto.getMaterialesLista().isEmpty()) {
+                    for (MaterialCalculadoraDTO matDto : dto.getMaterialesLista()) {
+                        MaterialCalculadora material = new MaterialCalculadora();
+                        material.setItemCalculadora(itemGuardado);
+                        material.setEmpresa(presupuesto.getEmpresa());
+                        material.setFrontendId(matDto.getId());
+                        material.setNombre(matDto.getNombre());
+                        material.setDescripcion(matDto.getDescripcion());
+                        material.setUnidad(matDto.getUnidad());
+                        material.setCantidad(matDto.getCantidad());
+                        material.setPrecio(matDto.getPrecio());
+                        material.setSubtotal(matDto.getSubtotal());
+                        
+                        materialCalculadoraRepository.save(material);
+                    }
+                }
+                
+                // ========== PROCESAR GASTOS GENERALES ==========
+                if (Boolean.TRUE.equals(dto.getEsGastoGeneral()) && 
+                    dto.getGastosGenerales() != null && !dto.getGastosGenerales().isEmpty()) {
+                    
+                    log.info("📥 Recibido item Gastos Generales con {} gastos: {}", 
+                        dto.getGastosGenerales().size(), 
+                        dto.getGastosGenerales().stream()
+                            .map(g -> g.getDescripcion() + "=" + g.getSubtotal())
+                            .toList());
+                    
+                    log.debug("💾 Guardando {} gastos generales para item_id {}", 
+                        dto.getGastosGenerales().size(), itemGuardado.getId());
+                    
+                    int orden = 1;
+                    for (GastoGeneralDTO gastoDto : dto.getGastosGenerales()) {
+                        PresupuestoGastoGeneral gasto = new PresupuestoGastoGeneral();
+                        gasto.setItemCalculadora(itemGuardado);
+                        gasto.setEmpresa(presupuesto.getEmpresa());
+                        gasto.setDescripcion(gastoDto.getDescripcion());
+                        gasto.setCantidad(gastoDto.getCantidad() != null ? gastoDto.getCantidad() : BigDecimal.ONE);
+                        gasto.setPrecioUnitario(gastoDto.getPrecioUnitario() != null ? gastoDto.getPrecioUnitario() : BigDecimal.ZERO);
+                        gasto.setSubtotal(gastoDto.getSubtotal() != null ? gastoDto.getSubtotal() : BigDecimal.ZERO);
+                        gasto.setSinCantidad(gastoDto.getSinCantidad() != null ? gastoDto.getSinCantidad() : false);
+                        gasto.setSinPrecio(gastoDto.getSinPrecio() != null ? gastoDto.getSinPrecio() : false);
+                        gasto.setOrden(gastoDto.getOrden() != null ? gastoDto.getOrden() : orden++);
+                        
+                        // Configurar defaults y validar
+                        gasto.configurarDefaults();
+                        gasto.validar();
+                        
+                        gastoGeneralRepository.save(gasto);
+                    }
+                    
+                    log.info("✅ Guardados {} gastos generales exitosamente para item_id {}", 
+                        dto.getGastosGenerales().size(), itemGuardado.getId());
+                    
+                    // 🧮 CALCULAR Y ASIGNAR TOTALES DE GASTOS GENERALES
+                    BigDecimal totalGastosGenerales = BigDecimal.ZERO;
+                    for (GastoGeneralDTO gastoDto : dto.getGastosGenerales()) {
+                        BigDecimal subtotalGasto = gastoDto.getSubtotal() != null ? gastoDto.getSubtotal() : BigDecimal.ZERO;
+                        totalGastosGenerales = totalGastosGenerales.add(subtotalGasto);
+                    }
+                    
+                    // Asignar subtotal de gastos generales
+                    itemGuardado.setSubtotalGastosGenerales(totalGastosGenerales);
+                    
+                    // Calcular total completo del item
+                    BigDecimal subtotalManoObra = itemGuardado.getSubtotalManoObra() != null ? itemGuardado.getSubtotalManoObra() : BigDecimal.ZERO;
+                    BigDecimal subtotalMateriales = itemGuardado.getSubtotalMateriales() != null ? itemGuardado.getSubtotalMateriales() : BigDecimal.ZERO;
+                    
+                    BigDecimal totalCompleto = subtotalManoObra
+                        .add(subtotalMateriales)
+                        .add(totalGastosGenerales);
+                    
+                    itemGuardado.setTotal(totalCompleto);
+                    
+                    log.info("🧮 TOTALES CALCULADOS para item_id {}: subtotalGastosGenerales={}, total={}", 
+                        itemGuardado.getId(), totalGastosGenerales, totalCompleto);
+                    
+                    // Guardar el item con los totales actualizados
+                    itemCalculadoraRepository.save(itemGuardado);
+                }
+            }
+            
+            log.info("✅ {} items de calculadora procesados para presupuesto {}", 
+                itemsDTO.size(), presupuesto.getId());
+
+        } catch (IllegalStateException e) {
+            log.error("❌ Error de validación al procesar items de calculadora para presupuesto {}: {}", 
+                presupuesto.getId(), e.getMessage());
+            throw new IllegalArgumentException("Error de validación en items de calculadora: " + e.getMessage(), e);
+        } catch (Exception e) {
+            log.error("❌ Error al procesar items de calculadora para presupuesto {}: {}", 
+                presupuesto.getId(), e.getMessage(), e);
+            throw new IllegalArgumentException("Error al procesar items de calculadora: " + e.getMessage(), e);
+        }
+    }
+
+    /**
+     * Procesa y guarda/actualiza los costos iniciales asociados a un presupuesto.
+     * 
+     * @param presupuesto Presupuesto al que se asocian los costos
+     * @param dto DTO con datos de costos iniciales (puede ser null)
+     */
+    private void procesarCostosIniciales(PresupuestoNoCliente presupuesto, PresupuestoCostoInicialDTO dto) {
+        if (dto == null) {
+            log.debug("No se proporcionaron costos iniciales para el presupuesto {}", presupuesto.getId());
+            return;
+        }
+
+        try {
+            // Buscar si ya existe un costo inicial para este presupuesto
+            Optional<PresupuestoCostoInicial> costoExistente = 
+                costoInicialRepository.findByPresupuestoNoClienteId(presupuesto.getId());
+
+            PresupuestoCostoInicial costoInicial;
+            
+            if (costoExistente.isPresent()) {
+                // ACTUALIZAR existente
+                costoInicial = costoExistente.get();
+                log.debug("📝 Actualizando costos iniciales existentes para presupuesto {}", presupuesto.getId());
+            } else {
+                // CREAR nuevo
+                costoInicial = new PresupuestoCostoInicial();
+                costoInicial.setPresupuestoNoCliente(presupuesto);
+                log.debug("➕ Creando nuevos costos iniciales para presupuesto {}", presupuesto.getId());
+            }
+
+            // Mapear datos del DTO a la entidad
+            costoInicial.setMetrosCuadrados(dto.getMetrosCuadrados());
+            costoInicial.setImportePorMetro(dto.getImportePorMetro());
+            costoInicial.setPorcentajeProfesionales(dto.getPorcentajeProfesionales());
+            costoInicial.setPorcentajeMateriales(dto.getPorcentajeMateriales());
+            costoInicial.setPorcentajeOtrosCostos(dto.getPorcentajeOtrosCostos());
+
+            // Calcular montos derivados
+            costoInicial.calcularMontos();
+
+            // Validar suma de porcentajes
+            if (!costoInicial.validarSumaPorcentajes()) {
+                throw new IllegalArgumentException(
+                    "La suma de porcentajes no puede exceder 100. " +
+                    "Profesionales: " + dto.getPorcentajeProfesionales() + "%, " +
+                    "Materiales: " + dto.getPorcentajeMateriales() + "%, " +
+                    "Otros Costos: " + dto.getPorcentajeOtrosCostos() + "%"
+                );
+            }
+
+            // Guardar
+            costoInicialRepository.save(costoInicial);
+            
+            log.info("✅ Costos iniciales procesados para presupuesto {}: {} m² x ${} = ${}", 
+                presupuesto.getId(), 
+                costoInicial.getMetrosCuadrados(),
+                costoInicial.getImportePorMetro(),
+                costoInicial.getTotalEstimado());
+
+        } catch (Exception e) {
+            log.error("❌ Error al procesar costos iniciales para presupuesto {}: {}", 
+                presupuesto.getId(), e.getMessage(), e);
+            throw new IllegalArgumentException("Error al procesar costos iniciales: " + e.getMessage(), e);
+        }
+    }
+    
+    // ========== MÉTODOS DE RECÁLCULO DE TOTALES ==========
+    
+    /**
+     * Recalcula el total del item basado en sus subtotales consolidados.
+     * CONSERVATIVO: Solo recalcula si hay subtotales válidos.
+     */
+    private void recalcularTotalItem(ItemCalculadoraPresupuesto item) {
+        BigDecimal nuevoTotal = BigDecimal.ZERO;
+        boolean haySubtotales = false;
+        
+        BigDecimal totalAnterior = item.getTotal() != null ? item.getTotal() : BigDecimal.ZERO;
+        if (items == null || items.isEmpty()) {
+            log.warn("⚠️ No hay items de calculadora para consolidar mayores costos");
+            return;
+        }
+        
+        // Guardar total original para auditoría
+        Double totalPresupuestoOriginal = presupuesto.getTotalPresupuesto() != null ? presupuesto.getTotalPresupuesto().doubleValue() : 0.0;
+        
+        // PASO 2: Consolidar mayores costos en cada item de itemsCalculadora - APLICACIÓN SELECTIVA
+        log.info("📊 Aplicación selectiva de mayores costos:");
+        log.info("   - Profesionales: {}", Boolean.TRUE.equals(dto.getAplicarMayoresCostosAProfesionales()));
+        log.info("   - Materiales: {}", Boolean.TRUE.equals(dto.getAplicarMayoresCostosAMateriales()));
+        log.info("   - Otros Costos: {}", Boolean.TRUE.equals(dto.getAplicarMayoresCostosAOtrosCostos()));
+        log.info("   - Honorarios: {}", Boolean.TRUE.equals(dto.getAplicarMayoresCostosAHonorarios()));
+        
+        int itemsConsolidados = 0;
+        
+        for (ItemCalculadoraPresupuesto item : items) {
+            boolean itemModificado = false;
+            
+            // CONSOLIDACIÓN SELECTIVA POR CATEGORÍA - Solo modificar categorías seleccionadas
+            
+            // 1. PROFESIONALES - Solo si está seleccionado
+            if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAProfesionales()) && 
+                dto.getMayorCostoProfesionalesValor() != null && dto.getMayorCostoProfesionalesValor().compareTo(BigDecimal.ZERO) > 0) {
+                Double factorProfesionales = 1 + (dto.getMayorCostoProfesionalesValor().doubleValue() / 100);
+                itemModificado |= consolidarProfesionalesEnItem(item, factorProfesionales);
+                log.debug("�‍💼 Aplicando {}% a profesionales en item {}", dto.getMayorCostoProfesionalesValor(), item.getTipoProfesional());
+            }
+            // Si NO está seleccionado profesionales, mantener valores actuales (no modificar)
+            
+            // 2. MATERIALES - Solo si está seleccionado
+            if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAMateriales()) && 
+                dto.getMayorCostoMaterialesValor() != null && dto.getMayorCostoMaterialesValor().compareTo(BigDecimal.ZERO) > 0) {
+                Double factorMateriales = 1 + (dto.getMayorCostoMaterialesValor().doubleValue() / 100);
+                itemModificado |= consolidarMaterialesEnItem(item, factorMateriales);
+                log.debug("🧱 Aplicando {}% a materiales en item {}", dto.getMayorCostoMaterialesValor(), item.getTipoProfesional());
+            }
+            // Si NO está seleccionado materiales, mantener valores actuales (no modificar)
+            
+            // 3. OTROS COSTOS - Solo si está seleccionado
+            if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAOtrosCostos()) && 
+                dto.getMayorCostoOtrosValor() != null && dto.getMayorCostoOtrosValor().compareTo(BigDecimal.ZERO) > 0) {
+                Double factorOtrosCostos = 1 + (dto.getMayorCostoOtrosValor().doubleValue() / 100);
+                itemModificado |= consolidarOtrosCostosEnItem(item, factorOtrosCostos);
+                log.debug("📦 Aplicando {}% a otros costos en item {}", dto.getMayorCostoOtrosValor(), item.getTipoProfesional());
+            }
+            // Si NO está seleccionado otros costos, mantener valores actuales (no modificar)
+            
+            // 4. HONORARIOS - Solo si está seleccionado
+            if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAHonorarios()) && 
+                dto.getMayorCostoHonorariosValor() != null && dto.getMayorCostoHonorariosValor().compareTo(BigDecimal.ZERO) > 0) {
+                Double factorHonorarios = 1 + (dto.getMayorCostoHonorariosValor().doubleValue() / 100);
+                itemModificado |= consolidarHonorariosEnItem(item, factorHonorarios);
+                log.debug("💼 Aplicando {}% a honorarios en item {}", dto.getMayorCostoHonorariosValor(), item.getTipoProfesional());
+            }
+            // Si NO está seleccionado honorarios, mantener valores actuales (no modificar)
+            
+            // Recalcular total del item solo si hubo modificaciones
+            if (itemModificado) {
+                recalcularTotalItem(item);
+                itemCalculadoraRepository.save(item);
+                itemsConsolidados++;
+            }
+        }
+        
+        log.info("✅ Consolidados {} items de calculadora", itemsConsolidados);
+        
+        // PASO 3: GUARDAR TODOS LOS ITEMS CONSOLIDADOS EXPLÍCITAMENTE
+        log.info("💾 Guardando {} items consolidados en base de datos...", items.size());
+        for (ItemCalculadoraPresupuesto item : items) {
+            // Forzar persistencia de valores consolidados
+            itemCalculadoraRepository.save(item);
+            itemCalculadoraRepository.flush(); // Forzar commit inmediato
+            
+            log.debug("💾 Item {} guardado - Mano obra: {}, Materiales: {}, Total: {}", 
+                item.getTipoProfesional(), 
+                item.getSubtotalManoObra(), 
+                item.getSubtotalMateriales(), 
+                item.getTotal());
+        }
+        
+        // PASO 4: Recalcular totales del presupuesto
+        recalcularTotalesPresupuesto(presupuesto, dto);
+        
+        // PASO 5: GUARDAR PRESUPUESTO CON TOTALES CONSOLIDADOS
+        repository.save(presupuesto);
+        repository.flush(); // Forzar commit inmediato
+        log.info("💾 Presupuesto principal guardado con totales consolidados");
+        
+        // PASO 6: NO RESETEAR CONFIGURACIÓN DURANTE GUARDADO NORMAL
+        // El reseteo solo debe ocurrir al crear nueva versión, no en cada guardado
+        log.info("💾 Valores consolidados PERSISTIDOS en BD - Configuración preservada para frontend");
+        
+        log.info("🎯 CONSOLIDACIÓN AUTOMÁTICA COMPLETADA - Sistema listo para nuevas aplicaciones acumulativas");
+    }
+    
+    /**
+     * Detecta si hay mayores costos configurados para aplicar
+     */
+    private boolean detectarMayoresCostosConfigurados(PresupuestoNoClienteRequestDTO dto) {
+        return (dto.getValorMayorCosto() != null && dto.getValorMayorCosto().compareTo(BigDecimal.ZERO) > 0 && 
+                Boolean.TRUE.equals(dto.getAplicarMayoresCostosATodos())) ||
+               (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAProfesionales()) ||
+                Boolean.TRUE.equals(dto.getAplicarMayoresCostosAMateriales()) ||
+                Boolean.TRUE.equals(dto.getAplicarMayoresCostosAOtrosCostos()) ||
+                Boolean.TRUE.equals(dto.getAplicarMayoresCostosAHonorarios()));
+    }
+    
+    /**
+     * Obtiene el porcentaje de mayor costo a aplicar
+     */
+    private Double obtenerPorcentajeMayorCosto(PresupuestoNoClienteRequestDTO dto) {
+        if (dto.getValorMayorCosto() != null) {
+            return dto.getValorMayorCosto().doubleValue();
+        }
+        
+        // Si no hay valor global, buscar el mayor de los específicos
+        Double maxPorcentaje = 0.0;
+        
+        if (dto.getMayorCostoProfesionalesValor() != null) {
+            maxPorcentaje = Math.max(maxPorcentaje, dto.getMayorCostoProfesionalesValor().doubleValue());
+        }
+        if (dto.getMayorCostoMaterialesValor() != null) {
+            maxPorcentaje = Math.max(maxPorcentaje, dto.getMayorCostoMaterialesValor().doubleValue());
+        }
+        if (dto.getMayorCostoOtrosValor() != null) {
+            maxPorcentaje = Math.max(maxPorcentaje, dto.getMayorCostoOtrosValor().doubleValue());
+        }
+        if (dto.getMayorCostoHonorariosValor() != null) {
+            maxPorcentaje = Math.max(maxPorcentaje, dto.getMayorCostoHonorariosValor().doubleValue());
+        }
+        
+        return maxPorcentaje;
+    }
+    
+    /**
+     * Consolida mayores costos en profesionales de un item - VERSIÓN REFORZADA
+     */
+    private boolean consolidarProfesionalesEnItem(ItemCalculadoraPresupuesto item, Double factorAumento) {
+        boolean modificado = false;
+        
+        log.info("🔄 CONSOLIDANDO PROFESIONALES - Item: {}, Factor: {}", item.getTipoProfesional(), factorAumento);
+        
+        // 1. CONSOLIDAR SUBTOTAL MANO DE OBRA DEL ITEM
+        if (item.getSubtotalManoObra() != null) {
+            BigDecimal subtotalAnterior = item.getSubtotalManoObra();
+            BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+            item.setSubtotalManoObra(nuevoSubtotal);
+            modificado = true;
+            
+            log.info("💼 ITEM - Subtotal mano obra: {} → {}", subtotalAnterior, nuevoSubtotal);
+        }
+        
+        // 2. CONSOLIDAR IMPORTE JORNAL DEL ITEM (si no es modo manual)
+        if (item.getImporteJornal() != null && !Boolean.TRUE.equals(item.getEsModoManual())) {
+            BigDecimal importeAnterior = item.getImporteJornal();
+            BigDecimal nuevoImporte = importeAnterior.multiply(BigDecimal.valueOf(factorAumento));
+            item.setImporteJornal(nuevoImporte);
+            modificado = true;
+            
+            log.info("💰 ITEM - Importe jornal: {} → {}", importeAnterior, nuevoImporte);
+        }
+        
+        // 3. CONSOLIDAR PROFESIONALES INDIVIDUALES
+        if (item.getProfesionales() != null && !item.getProfesionales().isEmpty()) {
+            log.info("👥 Consolidando {} profesionales individuales", item.getProfesionales().size());
+            
+            for (ProfesionalCalculadora prof : item.getProfesionales()) {
+                boolean profModificado = false;
+                
+                // Consolidar importe jornal del profesional
+                if (prof.getImporteJornal() != null) {
+                    BigDecimal importeAnterior = prof.getImporteJornal();
+                    BigDecimal nuevoImporte = importeAnterior.multiply(BigDecimal.valueOf(factorAumento));
+                    prof.setImporteJornal(nuevoImporte);
+                    profModificado = true;
+                    
+                    log.info("  💰 Prof {}: importe {} → {}", prof.getNombre(), importeAnterior, nuevoImporte);
+                }
+                
+                // Consolidar subtotal del profesional
+                if (prof.getSubtotal() != null) {
+                    BigDecimal subtotalAnterior = prof.getSubtotal();
+                    BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+                    prof.setSubtotal(nuevoSubtotal);
+                    profModificado = true;
+                    
+                    log.info("  📊 Prof {}: subtotal {} → {}", prof.getNombre(), subtotalAnterior, nuevoSubtotal);
+                }
+                
+                // GUARDAR INMEDIATAMENTE cada profesional consolidado
+                if (profModificado) {
+                    ProfesionalCalculadora profGuardado = profesionalCalculadoraRepository.save(prof);
+                    profesionalCalculadoraRepository.flush();
+                    log.info("  ✅ Prof {} GUARDADO en BD", prof.getNombre());
+                    modificado = true;
+                }
+            }
+        }
+        
+        return modificado;
+    }
+    
+    /**
+     * Consolida mayores costos en materiales de un item - VERSIÓN REFORZADA
+     */
+    private boolean consolidarMaterialesEnItem(ItemCalculadoraPresupuesto item, Double factorAumento) {
+        boolean modificado = false;
+        
+        log.info("🔄 CONSOLIDANDO MATERIALES - Item: {}, Factor: {}", item.getTipoProfesional(), factorAumento);
+        
+        // 1. CONSOLIDAR SUBTOTAL MATERIALES DEL ITEM
+        if (item.getSubtotalMateriales() != null) {
+            BigDecimal subtotalAnterior = item.getSubtotalMateriales();
+            BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+            item.setSubtotalMateriales(nuevoSubtotal);
+            modificado = true;
+            
+            log.info("🧱 ITEM - Subtotal materiales: {} → {}", subtotalAnterior, nuevoSubtotal);
+        }
+        
+        // 2. CONSOLIDAR CAMPO MATERIALES LEGACY
+        if (item.getMateriales() != null) {
+            BigDecimal totalAnterior = item.getMateriales();
+            BigDecimal nuevoTotal = totalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+            item.setMateriales(nuevoTotal);
+            modificado = true;
+            
+            log.info("📦 ITEM - Materiales (legacy): {} → {}", totalAnterior, nuevoTotal);
+        }
+        
+        // 3. CONSOLIDAR MATERIALES INDIVIDUALES
+        if (item.getMaterialesLista() != null && !item.getMaterialesLista().isEmpty()) {
+            log.info("🧱 Consolidando {} materiales individuales", item.getMaterialesLista().size());
+            
+            for (MaterialCalculadora mat : item.getMaterialesLista()) {
+                boolean matModificado = false;
+                
+                // Consolidar precio del material
+                if (mat.getPrecio() != null) {
+                    BigDecimal precioAnterior = mat.getPrecio();
+                    BigDecimal nuevoPrecio = precioAnterior.multiply(BigDecimal.valueOf(factorAumento));
+                    mat.setPrecio(nuevoPrecio);
+                    matModificado = true;
+                    
+                    log.info("  💰 Mat {}: precio {} → {}", mat.getNombre(), precioAnterior, nuevoPrecio);
+                }
+                
+                // Consolidar subtotal del material
+                if (mat.getSubtotal() != null) {
+                    BigDecimal subtotalAnterior = mat.getSubtotal();
+                    BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+                    mat.setSubtotal(nuevoSubtotal);
+                    matModificado = true;
+                    
+                    log.info("  📊 Mat {}: subtotal {} → {}", mat.getNombre(), subtotalAnterior, nuevoSubtotal);
+                }
+                
+                // GUARDAR INMEDIATAMENTE cada material consolidado
+                if (matModificado) {
+                    MaterialCalculadora matGuardado = materialCalculadoraRepository.save(mat);
+                    materialCalculadoraRepository.flush();
+                    log.info("  ✅ Mat {} GUARDADO en BD", mat.getNombre());
+                    modificado = true;
+                }
+            }
+        }
+        
+        return modificado;
+    }
+    
+    /**
+     * Consolida mayores costos en otros costos de un item
+     */
+    /**
+     * Consolida mayores costos en otros costos de un item - VERSIÓN REFORZADA
+     */
+    private boolean consolidarOtrosCostosEnItem(ItemCalculadoraPresupuesto item, Double factorAumento) {
+        boolean modificado = false;
+        
+        log.info("🔄 CONSOLIDANDO OTROS COSTOS - Item: {}, Factor: {}", item.getTipoProfesional(), factorAumento);
+        
+        // 1. CONSOLIDAR SUBTOTAL GASTOS GENERALES DEL ITEM
+        if (item.getSubtotalGastosGenerales() != null) {
+            BigDecimal subtotalAnterior = item.getSubtotalGastosGenerales();
+            BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+            item.setSubtotalGastosGenerales(nuevoSubtotal);
+            modificado = true;
+            
+            log.info("📦 ITEM - Subtotal gastos generales: {} → {}", subtotalAnterior, nuevoSubtotal);
+        }
+        
+        // 2. CONSOLIDAR SUBTOTAL OTROS COSTOS DEL ITEM (si existe)
+        // if (item.getSubtotalOtrosCostos() != null) {
+        //     BigDecimal subtotalAnterior = item.getSubtotalOtrosCostos();
+        //     BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+        //     item.setSubtotalOtrosCostos(nuevoSubtotal);
+        //     modificado = true;
+        //     
+        //     log.info("📦 ITEM - Subtotal otros costos: {} → {}", subtotalAnterior, nuevoSubtotal);
+        // }
+        
+        // 3. CONSOLIDAR GASTOS GENERALES INDIVIDUALES
+        if (item.getGastosGenerales() != null && !item.getGastosGenerales().isEmpty()) {
+            log.info("📋 Consolidando {} gastos generales individuales", item.getGastosGenerales().size());
+            
+            for (PresupuestoGastoGeneral gasto : item.getGastosGenerales()) {
+                boolean gastoModificado = false;
+                
+                // Consolidar precio unitario del gasto
+                if (gasto.getPrecioUnitario() != null) {
+                    BigDecimal precioAnterior = gasto.getPrecioUnitario();
+                    BigDecimal nuevoPrecio = precioAnterior.multiply(BigDecimal.valueOf(factorAumento));
+                    gasto.setPrecioUnitario(nuevoPrecio);
+                    gastoModificado = true;
+                    
+                    log.info("  💰 Gasto {}: precio {} → {}", gasto.getDescripcion(), precioAnterior, nuevoPrecio);
+                }
+                
+                // Consolidar subtotal del gasto
+                if (gasto.getSubtotal() != null) {
+                    BigDecimal subtotalAnterior = gasto.getSubtotal();
+                    BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorAumento));
+                    gasto.setSubtotal(nuevoSubtotal);
+                    gastoModificado = true;
+                    
+                    log.info("  📊 Gasto {}: subtotal {} → {}", gasto.getDescripcion(), subtotalAnterior, nuevoSubtotal);
+                }
+                
+                // GUARDAR INMEDIATAMENTE cada gasto consolidado
+                if (gastoModificado) {
+                    PresupuestoGastoGeneral gastoGuardado = gastoGeneralRepository.save(gasto);
+                    gastoGeneralRepository.flush();
+                    log.info("  ✅ Gasto {} GUARDADO en BD", gasto.getDescripcion());
+                    modificado = true;
+                }
+            }
+        }
+        
+        return modificado;
+    }
+    
+    /**
+     * Recalcula totales del presupuesto después de consolidar items
+     */
+    private void recalcularTotalesPresupuesto(PresupuestoNoCliente presupuesto, PresupuestoNoClienteRequestDTO dto) {
+        log.info("🔄 Recalculando totales del presupuesto después de consolidación");
+        
+        // Obtener items actualizados desde la base de datos
+        List<ItemCalculadoraPresupuesto> items = itemCalculadoraRepository.findByPresupuestoNoClienteId(presupuesto.getId());
+        
+        // Calcular nuevo total sumando todos los items consolidados
+        Double totalItemsAntes = presupuesto.getTotalPresupuesto() != null ? presupuesto.getTotalPresupuesto().doubleValue() : 0.0;
+        
+        Double nuevoTotalPresupuesto = items.stream()
+            .filter(item -> item.getTotal() != null)
+            .mapToDouble(item -> item.getTotal().doubleValue())
+            .sum();
+        
+        presupuesto.setTotalPresupuesto(BigDecimal.valueOf(nuevoTotalPresupuesto));
+        
+        log.info("� CONSOLIDACIÓN DE ITEMS CALCULADORA:");
+        log.info("   📈 Total presupuesto: ${} → ${} (+${:.2f})", 
+            totalItemsAntes, nuevoTotalPresupuesto, (nuevoTotalPresupuesto - totalItemsAntes));
+        
+        // Log detallado de cada item
+        for (ItemCalculadoraPresupuesto item : items) {
+            log.info("   📌 {}: ${}", item.getTipoProfesional(), 
+                item.getTotal() != null ? item.getTotal() : BigDecimal.ZERO);
+        }
+        
+        // Verificación de consistencia
+        Double sumaItems = items.stream()
+            .filter(item -> item.getTotal() != null)
+            .mapToDouble(item -> item.getTotal().doubleValue())
+            .sum();
+        
+        if (Math.abs(nuevoTotalPresupuesto - sumaItems) > 0.01) {
+            log.warn("⚠️ INCONSISTENCIA: Total presupuesto ${} ≠ Suma items ${}", 
+                nuevoTotalPresupuesto, sumaItems);
+        } else {
+            log.info("✅ CONSISTENCIA VERIFICADA: Total presupuesto = Suma items (${:.2f})", nuevoTotalPresupuesto);
+        }
+        
+        // Aplicar mayores costos a honorarios si está configurado y consolidado
+        if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAHonorarios()) && 
+            dto.getMayorCostoHonorariosValor() != null && dto.getMayorCostoHonorariosValor().compareTo(BigDecimal.ZERO) > 0) {
+            
+            BigDecimal totalHonorariosActual = presupuesto.getTotalHonorariosCalculado();
+            if (totalHonorariosActual != null) {
+                Double factorHonorarios = 1 + (dto.getMayorCostoHonorariosValor().doubleValue() / 100);
+                Double honorariosConMayoresCostos = totalHonorariosActual.doubleValue() * factorHonorarios;
+                presupuesto.setTotalHonorariosCalculado(BigDecimal.valueOf(honorariosConMayoresCostos));
+                log.info("💼 Honorarios actualizados: ${} → ${} (+{}%)", 
+                    totalHonorariosActual, honorariosConMayoresCostos, dto.getMayorCostoHonorariosValor());
+            }
+        }
+        
+        // Recalcular total final
+        Double totalHonorarios = presupuesto.getTotalHonorariosCalculado() != null ? presupuesto.getTotalHonorariosCalculado().doubleValue() : 0.0;
+        Double totalFinal = nuevoTotalPresupuesto + totalHonorarios;
+        // TODO: Activar cuando exista el método setTotalPresupuestoConHonorarios
+        // presupuesto.setTotalPresupuestoConHonorarios(BigDecimal.valueOf(totalFinal));
+        
+        log.info("🎯 TOTALES FINALES CONSOLIDADOS:");
+        log.info("   💰 Total presupuesto: ${:.2f}", nuevoTotalPresupuesto);
+        log.info("   💼 Total honorarios: ${:.2f}", totalHonorarios);
+        log.info("   🏆 TOTAL FINAL: ${:.2f}", totalFinal);
+    }
+    
+    /**
+     * Resetea la configuración de mayores costos después de consolidarla
+     * CRÍTICO: RESETEO SELECTIVO - Solo resetea las categorías que fueron aplicadas
+     * CONSERVA: Los valores de categorías no seleccionadas permanecen intactos
+     */
+    private void resetearConfiguracionMayoresCostosCompleta(PresupuestoNoCliente presupuesto, PresupuestoNoClienteRequestDTO dto, Double totalOriginal) {
+        log.info("🧹 RESETEANDO SELECTIVO de configuración de mayores costos aplicados");
+        
+        // Guardar registro del último incremento aplicado (para auditoría)
+        Double totalActual = presupuesto.getTotalPresupuesto() != null ? presupuesto.getTotalPresupuesto().doubleValue() : 0.0;
+        Double incrementoAplicado = totalActual - totalOriginal;
+        presupuesto.setTotalMayoresCostos(BigDecimal.valueOf(incrementoAplicado));
+        
+        // Resetear configuración de campo global (siempre)
+        dto.setValorMayorCosto(null);
+        dto.setTipoMayorCosto(null);
+        dto.setAplicarMayoresCostosATodos(false);
+        
+        // RESETEO SELECTIVO POR CATEGORÍA - Solo resetear las que fueron aplicadas
+        
+        // 1. PROFESIONALES - Solo si fue aplicado
+        if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAProfesionales())) {
+            log.info("🔄 Reseteando configuración PROFESIONALES (fue aplicada)");
+            dto.setAplicarMayoresCostosAProfesionales(false);
+            dto.setMayorCostoProfesionalesValor(null);
+            presupuesto.setMayorCostoProfesionalesActivo(false);
+            presupuesto.setMayorCostoProfesionalesValor(null);
+            presupuesto.setMayorCostoProfesionalesTipo(null);
+            presupuesto.setAplicarMayoresCostosAProfesionales(false);
+        } else {
+            log.info("💾 CONSERVANDO configuración PROFESIONALES (no fue aplicada)");
+            // No tocar los valores existentes en BD para profesionales
+        }
+        
+        // 2. MATERIALES - Solo si fue aplicado
+        if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAMateriales())) {
+            log.info("🔄 Reseteando configuración MATERIALES (fue aplicada)");
+            dto.setAplicarMayoresCostosAMateriales(false);
+            dto.setMayorCostoMaterialesValor(null);
+            presupuesto.setMayorCostoMaterialesActivo(false);
+            presupuesto.setMayorCostoMaterialesValor(null);
+            presupuesto.setMayorCostoMaterialesTipo(null);
+            presupuesto.setAplicarMayoresCostosAMateriales(false);
+        } else {
+            log.info("💾 CONSERVANDO configuración MATERIALES (no fue aplicada)");
+            // No tocar los valores existentes en BD para materiales
+        }
+        
+        // 3. OTROS COSTOS - Solo si fue aplicado
+        if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAOtrosCostos())) {
+            log.info("🔄 Reseteando configuración OTROS COSTOS (fue aplicada)");
+            dto.setAplicarMayoresCostosAOtrosCostos(false);
+            dto.setMayorCostoOtrosValor(null);
+            presupuesto.setMayorCostoOtrosActivo(false);
+            presupuesto.setMayorCostoOtrosValor(null);
+            presupuesto.setMayorCostoOtrosTipo(null);
+            presupuesto.setAplicarMayoresCostosAOtrosCostos(false);
+        } else {
+            log.info("💾 CONSERVANDO configuración OTROS COSTOS (no fue aplicada)");
+            // No tocar los valores existentes en BD para otros costos
+        }
+        
+        // 4. HONORARIOS - Solo si fue aplicado
+        if (Boolean.TRUE.equals(dto.getAplicarMayoresCostosAHonorarios())) {
+            log.info("🔄 Reseteando configuración HONORARIOS (fue aplicada)");
+            dto.setAplicarMayoresCostosAHonorarios(false);
+            dto.setMayorCostoHonorariosValor(null);
+            presupuesto.setMayorCostoHonorariosActivo(false);
+            presupuesto.setMayorCostoHonorariosValor(null);
+            presupuesto.setMayorCostoHonorariosTipo(null);
+            presupuesto.setAplicarMayoresCostosAHonorarios(false);
+        } else {
+            log.info("💾 CONSERVANDO configuración HONORARIOS (no fue aplicada)");
+            // No tocar los valores existentes en BD para honorarios
+        }
+        
+        // Configuración general (resetear siempre para evitar conflictos)
+        dto.setMayorCostoConfiguracionValor(null);
+        presupuesto.setMayorCostoConfiguracionActivo(false);
+        presupuesto.setMayorCostoConfiguracionValor(null);
+        presupuesto.setMayorCostoConfiguracionTipo(null);
+        presupuesto.setAplicarMayoresCostosAConfiguracion(false);
+        presupuesto.setAplicarMayoresCostosAMateriales(false);
+        presupuesto.setAplicarMayoresCostosAOtrosCostos(false);
+        presupuesto.setAplicarMayoresCostosAHonorarios(false);
+        presupuesto.setAplicarMayoresCostosAConfiguracion(false);
+        
+        // Resetear configuración de aceptación
+        presupuesto.setConfiguracionMayoresCostosAceptada(false);
+        dto.setConfiguracionMayoresCostosAceptada(false);
+        
+        log.info("✅ Configuración COMPLETAMENTE reseteada - Incremento aplicado: ${}", incrementoAplicado);
+        log.info("🔄 Sistema listo para NUEVAS aplicaciones acumulativas de mayores costos");
+    }
+    
+    /**
+     * Consolida mayores costos en subtotales del item (mano de obra, materiales, gastos generales).
+     */
+    private void consolidarSubtotales(ItemCalculadoraPresupuesto item, BigDecimal porcentaje, Map<String, BigDecimal> configuracion) {
+        BigDecimal factor = BigDecimal.ONE.add(porcentaje.divide(new BigDecimal("100")));
+        
+        // Subtotal mano de obra (profesionales)
+        if (item.getSubtotalManoObra() != null && configuracion.containsKey("PROFESIONALES")) {
+            BigDecimal porcentajeProfesionales = configuracion.get("PROFESIONALES");
+            BigDecimal factorProfesionales = BigDecimal.ONE.add(porcentajeProfesionales.divide(new BigDecimal("100")));
+            item.setSubtotalManoObra(item.getSubtotalManoObra().multiply(factorProfesionales));
+        }
+        
+        // Subtotal materiales
+        if (item.getSubtotalMateriales() != null && configuracion.containsKey("MATERIALES")) {
+            BigDecimal porcentajeMateriales = configuracion.get("MATERIALES");
+            BigDecimal factorMateriales = BigDecimal.ONE.add(porcentajeMateriales.divide(new BigDecimal("100")));
+            item.setSubtotalMateriales(item.getSubtotalMateriales().multiply(factorMateriales));
+        }
+        
+        // Subtotal gastos generales
+        if (item.getSubtotalGastosGenerales() != null && configuracion.containsKey("CONFIGURACION")) {
+            BigDecimal porcentajeConfiguracion = configuracion.get("CONFIGURACION");
+            BigDecimal factorConfiguracion = BigDecimal.ONE.add(porcentajeConfiguracion.divide(new BigDecimal("100")));
+            item.setSubtotalGastosGenerales(item.getSubtotalGastosGenerales().multiply(factorConfiguracion));
+        }
+        
+        // Campo materiales (legacy)
+        if (item.getMateriales() != null && configuracion.containsKey("MATERIALES")) {
+            BigDecimal porcentajeMateriales = configuracion.get("MATERIALES");
+            BigDecimal factorMateriales = BigDecimal.ONE.add(porcentajeMateriales.divide(new BigDecimal("100")));
+            item.setMateriales(item.getMateriales().multiply(factorMateriales));
+        }
+    }
+    
+    /**
+     * Consolida mayores costos en profesionales individuales del item.
+     */
+    private void consolidarProfesionalesIndividuales(ItemCalculadoraPresupuesto item, BigDecimal porcentaje, Map<String, BigDecimal> configuracion) {
+        if (item.getProfesionales() == null || item.getProfesionales().isEmpty()) {
+            return;
+        }
+        
+        BigDecimal porcentajeProfesionales = configuracion.get("PROFESIONALES");
+        if (porcentajeProfesionales == null || porcentajeProfesionales.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        
+        BigDecimal factor = BigDecimal.ONE.add(porcentajeProfesionales.divide(new BigDecimal("100")));
+        
+        for (ProfesionalCalculadora profesional : item.getProfesionales()) {
+            // Consolidar importe jornal
+            if (profesional.getImporteJornal() != null) {
+                profesional.setImporteJornal(profesional.getImporteJornal().multiply(factor));
+            }
+            
+            // Consolidar subtotal
+            if (profesional.getSubtotal() != null) {
+                profesional.setSubtotal(profesional.getSubtotal().multiply(factor));
+            }
+            
+            // Guardar profesional actualizado
+            profesionalCalculadoraRepository.save(profesional);
+        }
+        
+        log.debug("✅ Consolidados {} profesionales del item {} con factor {}", 
+            item.getProfesionales().size(), item.getTipoProfesional(), factor);
+    }
+    
+    /**
+     * Consolida mayores costos en materiales individuales del item.
+     */
+    private void consolidarMaterialesIndividuales(ItemCalculadoraPresupuesto item, BigDecimal porcentaje, Map<String, BigDecimal> configuracion) {
+        if (item.getMaterialesLista() == null || item.getMaterialesLista().isEmpty()) {
+            return;
+        }
+        
+        BigDecimal porcentajeMateriales = configuracion.get("MATERIALES");
+        if (porcentajeMateriales == null || porcentajeMateriales.compareTo(BigDecimal.ZERO) <= 0) {
+            return;
+        }
+        
+        BigDecimal factor = BigDecimal.ONE.add(porcentajeMateriales.divide(new BigDecimal("100")));
+        
+        for (MaterialCalculadora material : item.getMaterialesLista()) {
+            // Consolidar precio unitario
+            if (material.getPrecio() != null) {
+                material.setPrecio(material.getPrecio().multiply(factor));
+            }
+            
+            // Consolidar subtotal
+            if (material.getSubtotal() != null) {
+                material.setSubtotal(material.getSubtotal().multiply(factor));
+            }
+            
+            // Guardar material actualizado
+            materialCalculadoraRepository.save(material);
+        }
+        
+        log.debug("✅ Consolidados {} materiales del item {} con factor {}", 
+            item.getMaterialesLista().size(), item.getTipoProfesional(), factor);
+    }
+    
+    /**
+     * Actualiza los totales globales del presupuesto después de la consolidación.
+     */
+    private void actualizarTotalesGlobalesPresupuesto(PresupuestoNoCliente presupuesto, BigDecimal incrementoTotal) {
+        // Recalcular totalPresupuesto sumando los nuevos totales de los items
+        List<ItemCalculadoraPresupuesto> items = itemCalculadoraRepository.findByPresupuestoNoClienteId(presupuesto.getId());
+        BigDecimal nuevoTotalPresupuesto = items.stream()
+            .filter(item -> item.getTotal() != null)
+            .map(ItemCalculadoraPresupuesto::getTotal)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        // Actualizar total presupuesto
+        if (presupuesto.getTotalPresupuesto() != null) {
+            presupuesto.setTotalPresupuesto(nuevoTotalPresupuesto);
+        }
+        
+        // Aplicar mayores costos a honorarios si está configurado
+        if (Boolean.TRUE.equals(presupuesto.getMayorCostoHonorariosActivo()) && 
+            presupuesto.getMayorCostoHonorariosValor() != null &&
+            presupuesto.getMayorCostoHonorariosValor().compareTo(BigDecimal.ZERO) > 0) {
+            
+            BigDecimal porcentajeHonorarios = presupuesto.getMayorCostoHonorariosValor();
+            BigDecimal factorHonorarios = BigDecimal.ONE.add(porcentajeHonorarios.divide(new BigDecimal("100")));
+            
+            if (presupuesto.getTotalHonorariosCalculado() != null) {
+                Double honorariosConMC = presupuesto.getTotalHonorariosCalculado().doubleValue() * factorHonorarios.doubleValue();
+                presupuesto.setTotalHonorariosCalculado(BigDecimal.valueOf(honorariosConMC));
+            }
+        }
+        
+        // Calcular total final con honorarios
+        Double totalPresupuesto = presupuesto.getTotalPresupuesto() != null ? presupuesto.getTotalPresupuesto().doubleValue() : 0.0;
+        Double totalHonorarios = presupuesto.getTotalHonorariosCalculado() != null ? presupuesto.getTotalHonorariosCalculado().doubleValue() : 0.0;
+        // TODO: Activar cuando exista el método setTotalPresupuestoConHonorarios
+        // presupuesto.setTotalPresupuestoConHonorarios(BigDecimal.valueOf(totalPresupuesto + totalHonorarios));
+        
+        log.info("🔢 Totales globales actualizados: Presupuesto=${}, Honorarios=${}, Total=PENDIENTE", 
+            totalPresupuesto, totalHonorarios);
+    }
+    
+    /**
+     * Resetea la configuración de mayores costos después de consolidarla,
+     * permitiendo aplicaciones acumulativas futuras.
+     */
+    private void resetearConfiguracionMayoresCostos(PresupuestoNoCliente presupuesto, BigDecimal incrementoTotal) {
+        log.info("🧹 Reseteando configuración de mayores costos para permitir nuevas aplicaciones acumulativas");
+        
+        // Guardar el último incremento aplicado (para referencia)
+        presupuesto.setTotalMayoresCostos(incrementoTotal);
+        
+        // RESETEAR todos los campos de configuración de mayores costos
+        presupuesto.setMayorCostoProfesionalesActivo(false);
+        presupuesto.setMayorCostoProfesionalesValor(null);
+        presupuesto.setMayorCostoProfesionalesTipo(null);
+        
+        presupuesto.setMayorCostoMaterialesActivo(false);
+        presupuesto.setMayorCostoMaterialesValor(null);
+        presupuesto.setMayorCostoMaterialesTipo(null);
+        
+        presupuesto.setMayorCostoOtrosActivo(false);
+        presupuesto.setMayorCostoOtrosValor(null);
+        presupuesto.setMayorCostoOtrosTipo(null);
+        
+        presupuesto.setMayorCostoHonorariosActivo(false);
+        presupuesto.setMayorCostoHonorariosValor(null);
+        presupuesto.setMayorCostoHonorariosTipo(null);
+        
+        presupuesto.setMayorCostoConfiguracionActivo(false);
+        presupuesto.setMayorCostoConfiguracionValor(null);
+        presupuesto.setMayorCostoConfiguracionTipo(null);
+        
+        // RESETEAR flags de aplicación
+        presupuesto.setAplicarMayoresCostosAProfesionales(false);
+        presupuesto.setAplicarMayoresCostosAMateriales(false);
+        presupuesto.setAplicarMayoresCostosAOtrosCostos(false);
+        presupuesto.setAplicarMayoresCostosAHonorarios(false);
+        presupuesto.setAplicarMayoresCostosAConfiguracion(false);
+        
+        // RESETEAR configuración de aceptación (lista para nueva configuración)
+        presupuesto.setConfiguracionMayoresCostosAceptada(false);
+        
+        log.info("✅ Configuración de mayores costos COMPLETAMENTE reseteada para presupuesto {}", presupuesto.getId());
+        log.info("🔄 El presupuesto está listo para recibir NUEVAS aplicaciones de mayores costos de forma ACUMULATIVA");
+    }
+    
+    /**
+     * Obtiene la configuración de mayores costos por categoría.
+     * 
+     * @param presupuesto Presupuesto con configuración
+     * @return Mapa de categoría → porcentaje de mayor costo
+     */
+    private Map<String, BigDecimal> obtenerMayoresCostosPorCategoria(PresupuestoNoCliente presupuesto) {
+        Map<String, BigDecimal> mayoresCostos = new HashMap<>();
+        
+        // Profesionales
+        if (Boolean.TRUE.equals(presupuesto.getMayorCostoProfesionalesActivo()) && 
+            presupuesto.getMayorCostoProfesionalesValor() != null && 
+            presupuesto.getMayorCostoProfesionalesValor().compareTo(BigDecimal.ZERO) > 0) {
+            mayoresCostos.put("PROFESIONALES", presupuesto.getMayorCostoProfesionalesValor());
+        }
+        
+        // Materiales
+        if (Boolean.TRUE.equals(presupuesto.getMayorCostoMaterialesActivo()) && 
+            presupuesto.getMayorCostoMaterialesValor() != null && 
+            presupuesto.getMayorCostoMaterialesValor().compareTo(BigDecimal.ZERO) > 0) {
+            mayoresCostos.put("MATERIALES", presupuesto.getMayorCostoMaterialesValor());
+        }
+        
+        // Otros costos
+        if (Boolean.TRUE.equals(presupuesto.getMayorCostoOtrosActivo()) && 
+            presupuesto.getMayorCostoOtrosValor() != null && 
+            presupuesto.getMayorCostoOtrosValor().compareTo(BigDecimal.ZERO) > 0) {
+            mayoresCostos.put("OTROS_COSTOS", presupuesto.getMayorCostoOtrosValor());
+        }
+        
+        // Honorarios
+        if (Boolean.TRUE.equals(presupuesto.getMayorCostoHonorariosActivo()) && 
+            presupuesto.getMayorCostoHonorariosValor() != null && 
+            presupuesto.getMayorCostoHonorariosValor().compareTo(BigDecimal.ZERO) > 0) {
+            mayoresCostos.put("HONORARIOS", presupuesto.getMayorCostoHonorariosValor());
+        }
+        
+        // Configuración
+        if (Boolean.TRUE.equals(presupuesto.getMayorCostoConfiguracionActivo()) && 
+            presupuesto.getMayorCostoConfiguracionValor() != null && 
+            presupuesto.getMayorCostoConfiguracionValor().compareTo(BigDecimal.ZERO) > 0) {
+            mayoresCostos.put("CONFIGURACION", presupuesto.getMayorCostoConfiguracionValor());
+        }
+        
+        return mayoresCostos;
+    }
+    
+    /**
+     * Determina el porcentaje de mayor costo que se debe aplicar a un item específico
+     * basado en su categoría.
+     * 
+     * @param item Item de calculadora
+     * @param mayoresCostosPorCategoria Configuración de mayores costos
+     * @return Porcentaje a aplicar (puede ser null si no aplica ninguno)
+     */
+    private BigDecimal determinarPorcentajeMayorCostoParaItem(ItemCalculadoraPresupuesto item, 
+                                                             Map<String, BigDecimal> mayoresCostosPorCategoria) {
+        
+        // Si es gasto general, aplicar configuración
+        if (Boolean.TRUE.equals(item.getEsGastoGeneral())) {
+            return mayoresCostosPorCategoria.get("CONFIGURACION");
+        }
+        
+        // Para items normales, determinar categoría basada en contenido
+        BigDecimal subtotalManoObra = item.getSubtotalManoObra() != null ? item.getSubtotalManoObra() : BigDecimal.ZERO;
+        BigDecimal subtotalMateriales = item.getSubtotalMateriales() != null ? item.getSubtotalMateriales() : BigDecimal.ZERO;
+        
+        // Si tiene principalmente mano de obra (profesionales)
+        if (subtotalManoObra.compareTo(BigDecimal.ZERO) > 0 && 
+            subtotalManoObra.compareTo(subtotalMateriales) >= 0) {
+            return mayoresCostosPorCategoria.get("PROFESIONALES");
+        }
+        
+        // Si tiene principalmente materiales
+        if (subtotalMateriales.compareTo(BigDecimal.ZERO) > 0) {
+            return mayoresCostosPorCategoria.get("MATERIALES");
+        }
+        
+        // Para items con total manual o sin clasificación clara, aplicar "otros costos"
+        if (Boolean.TRUE.equals(item.getEsModoManual()) || item.getTotalManual() != null) {
+            return mayoresCostosPorCategoria.get("OTROS_COSTOS");
+        }
+        
+        // Por defecto, aplicar configuración de profesionales si está disponible
+        return mayoresCostosPorCategoria.get("PROFESIONALES");
+    }
+    
+    /**
+     * Limpia la configuración de mayores costos después de consolidarla en los items.
+     * 
+     * @param presupuesto Presupuesto a limpiar
+     */
+    private void limpiarConfiguracionMayoresCostos(PresupuestoNoCliente presupuesto) {
+        // Usar el método completo de reseteo
+        resetearConfiguracionMayoresCostos(presupuesto, BigDecimal.ZERO);
+    }
+    
+    /**
+     * Verifica si el presupuesto tiene configuración de mayores costos activa
+     * (antes de ser consolidada).
+     * 
+     * @param presupuesto Presupuesto a verificar
+     * @return true si tiene configuración activa
+     */
+    private boolean tieneConfiguracionMayoresCostosActiva(PresupuestoNoCliente presupuesto) {
+        return (Boolean.TRUE.equals(presupuesto.getMayorCostoProfesionalesActivo()) && presupuesto.getMayorCostoProfesionalesValor() != null && presupuesto.getMayorCostoProfesionalesValor().compareTo(BigDecimal.ZERO) > 0) ||
+               (Boolean.TRUE.equals(presupuesto.getMayorCostoMaterialesActivo()) && presupuesto.getMayorCostoMaterialesValor() != null && presupuesto.getMayorCostoMaterialesValor().compareTo(BigDecimal.ZERO) > 0) ||
+               (Boolean.TRUE.equals(presupuesto.getMayorCostoOtrosActivo()) && presupuesto.getMayorCostoOtrosValor() != null && presupuesto.getMayorCostoOtrosValor().compareTo(BigDecimal.ZERO) > 0) ||
+               (Boolean.TRUE.equals(presupuesto.getMayorCostoHonorariosActivo()) && presupuesto.getMayorCostoHonorariosValor() != null && presupuesto.getMayorCostoHonorariosValor().compareTo(BigDecimal.ZERO) > 0) ||
+               (Boolean.TRUE.equals(presupuesto.getMayorCostoConfiguracionActivo()) && presupuesto.getMayorCostoConfiguracionValor() != null && presupuesto.getMayorCostoConfiguracionValor().compareTo(BigDecimal.ZERO) > 0);
+    }
+    
+    /**
+     * Consolida mayores costos específicamente en honorarios del item.
+     * CONSERVA valores existentes si no se modifica honorarios.
+     */
+    /**
+     * Consolida mayores costos en honorarios de un item - VERSIÓN REFORZADA
+     */
+    private boolean consolidarHonorariosEnItem(ItemCalculadoraPresupuesto item, Double factorHonorarios) {
+        boolean modificado = false;
+        
+        log.info("🔄 CONSOLIDANDO HONORARIOS - Item: {}, Factor: {}", item.getTipoProfesional(), factorHonorarios);
+        
+        // 1. CONSOLIDAR HONORARIOS DEL ITEM
+        // if (item.getHonorarios() != null) {
+        //     BigDecimal honorariosAnterior = item.getHonorarios();
+        //     BigDecimal nuevosHonorarios = honorariosAnterior.multiply(BigDecimal.valueOf(factorHonorarios));
+        //     item.setHonorarios(nuevosHonorarios);
+        //     modificado = true;
+        //     
+        //     log.info("💼 ITEM - Honorarios: {} → {}", honorariosAnterior, nuevosHonorarios);
+        // }
+        
+        // 2. CONSOLIDAR SUBTOTAL HONORARIOS (si existe campo separado)
+        // if (item.getSubtotalHonorarios() != null) {
+        //     BigDecimal subtotalAnterior = item.getSubtotalHonorarios();
+        //     BigDecimal nuevoSubtotal = subtotalAnterior.multiply(BigDecimal.valueOf(factorHonorarios));
+        //     item.setSubtotalHonorarios(nuevoSubtotal);
+        //     modificado = true;
+        //     
+        //     log.info("💼 ITEM - Subtotal honorarios: {} → {}", subtotalAnterior, nuevoSubtotal);
+        // }
+        
+        // 3. PERSISTIR CAMBIOS SI HUBO MODIFICACIONES
+        if (modificado) {
+            // Los honorarios son parte del item, se guardarán cuando se guarde el item
+            log.info("✅ Honorarios CONSOLIDADOS para item {}", item.getTipoProfesional());
+        } else {
+            log.info("ℹ️ Item {} no tiene honorarios para consolidar", item.getTipoProfesional());
+        }
+        
+        return modificado;
+    }
+    
+    /**
+     * Recalcula el total del item basado en sus subtotales consolidados.
+     * CONSERVATIVO: Solo recalcula si hay subtotales válidos.
+     */
+    private void recalcularTotalItem(ItemCalculadoraPresupuesto item) {
+        BigDecimal nuevoTotal = BigDecimal.ZERO;
+        boolean haySubtotales = false;
+        
+        BigDecimal totalAnterior = item.getTotal() != null ? item.getTotal() : BigDecimal.ZERO;
+        
+        // Sumar subtotales que existan
+        if (item.getSubtotalManoObra() != null) {
+            nuevoTotal = nuevoTotal.add(item.getSubtotalManoObra());
+            haySubtotales = true;
+            log.debug("  ➕ Mano obra: {}", item.getSubtotalManoObra());
+        }
+        
+        if (item.getSubtotalMateriales() != null) {
+            nuevoTotal = nuevoTotal.add(item.getSubtotalMateriales());
+            haySubtotales = true;
+            log.debug("  ➕ Materiales: {}", item.getSubtotalMateriales());
+        }
+        
+        if (item.getSubtotalGastosGenerales() != null) {
+            nuevoTotal = nuevoTotal.add(item.getSubtotalGastosGenerales());
+            haySubtotales = true;
+            log.debug("  ➕ Gastos generales: {}", item.getSubtotalGastosGenerales());
+        }
+        
+        // if (item.getSubtotalOtrosCostos() != null) {
+        //     nuevoTotal = nuevoTotal.add(item.getSubtotalOtrosCostos());
+        //     haySubtotales = true;
+        //     log.debug("  ➕ Otros costos: {}", item.getSubtotalOtrosCostos());
+        // }
+        
+        // if (item.getHonorarios() != null) {
+        //     nuevoTotal = nuevoTotal.add(item.getHonorarios());
+        //     haySubtotales = true;
+        //     log.debug("  ➕ Honorarios: {}", item.getHonorarios());
+        // }
+        
+        // Solo actualizar el total si hay subtotales válidos
+        if (haySubtotales) {
+            item.setTotal(nuevoTotal);
+            
+            log.debug("🧮 Item {}: Total recalculado {} → {}", 
+                item.getTipoProfesional(), totalAnterior, nuevoTotal);
+        } else {
+            log.debug("⚠️ Item {}: No hay subtotales para recalcular", item.getTipoProfesional());
+        }
+    }
+
+    /**
+     * Método auxiliar para copiar items de calculadora de un presupuesto base
+     * IMPORTANTE: Maneja valores null correctamente - no los convierte a 0
+     */
+    private void copiarItemsCalculadoraDePresupuestoBase(Long presupuestoId, Long presupuestoBaseId) {
+        try {
+            log.info("🔄 Iniciando copia de items calculadora desde presupuesto base ID: {} hacia presupuesto ID: {}", 
+                presupuestoBaseId, presupuestoId);
+            
+            // Obtener items del presupuesto base
+            List<ItemCalculadoraPresupuesto> itemsBase = itemCalculadoraRepository.findByPresupuestoNoClienteId(presupuestoBaseId);
+            
+            if (itemsBase.isEmpty()) {
+                log.warn("⚠️ No se encontraron items calculadora en el presupuesto base ID: {}", presupuestoBaseId);
+                return;
+            }
+            
+            log.info("📊 Encontrados {} items calculadora para copiar", itemsBase.size());
+            
+            // Obtener el presupuesto destino
+            PresupuestoNoCliente presupuestoDestino = repository.findById(presupuestoId)
+                .orElseThrow(() -> new RuntimeException("Presupuesto destino no encontrado: " + presupuestoId));
+            
+            for (ItemCalculadoraPresupuesto itemBase : itemsBase) {
+                // Crear nuevo item copiando TODOS los valores consolidados
+                ItemCalculadoraPresupuesto nuevoItem = new ItemCalculadoraPresupuesto();
+                
+                // Asignar al nuevo presupuesto  
+                nuevoItem.setPresupuestoNoCliente(presupuestoDestino);
+                nuevoItem.setEmpresa(presupuestoDestino.getEmpresa());
+                
+                // ========== COPIAR DATOS BÁSICOS ==========
+                nuevoItem.setTipoProfesional(itemBase.getTipoProfesional());
+                nuevoItem.setCantidadJornales(itemBase.getCantidadJornales());
+                nuevoItem.setImporteJornal(itemBase.getImporteJornal());
+                nuevoItem.setMateriales(itemBase.getMateriales());
+                nuevoItem.setTotalManual(itemBase.getTotalManual());
+                nuevoItem.setEsModoManual(itemBase.getEsModoManual());
+                nuevoItem.setEsGastoGeneral(itemBase.getEsGastoGeneral());
+                nuevoItem.setDescripcionGastosGenerales(itemBase.getDescripcionGastosGenerales());
+                nuevoItem.setObservacionesGastosGenerales(itemBase.getObservacionesGastosGenerales());
+                
+                // ========== COPIAR SUBTOTALES CONSOLIDADOS (CRÍTICO) ==========
+                // Estos valores YA INCLUYEN los mayores costos consolidados
+                nuevoItem.setSubtotalManoObra(itemBase.getSubtotalManoObra()); // VALORES CONSOLIDADOS
+                nuevoItem.setSubtotalMateriales(itemBase.getSubtotalMateriales()); // VALORES CONSOLIDADOS  
+                nuevoItem.setSubtotalGastosGenerales(itemBase.getSubtotalGastosGenerales()); // VALORES CONSOLIDADOS
+                nuevoItem.setTotal(itemBase.getTotal()); // TOTAL CONSOLIDADO
+                
+                log.debug("📋 Copiando item {} con valores CONSOLIDADOS:", itemBase.getTipoProfesional());
+                log.debug("   💼 Subtotal mano obra: {}", itemBase.getSubtotalManoObra());
+                log.debug("   🧱 Subtotal materiales: {}", itemBase.getSubtotalMateriales());
+                log.debug("   📦 Subtotal gastos generales: {}", itemBase.getSubtotalGastosGenerales());
+                log.debug("   🏆 TOTAL: {}", itemBase.getTotal());
+                
+                // Guardar el nuevo item
+                ItemCalculadoraPresupuesto itemGuardado = itemCalculadoraRepository.save(nuevoItem);
+                
+                // ========== COPIAR PROFESIONALES INDIVIDUALES ==========
+                if (itemBase.getProfesionales() != null && !itemBase.getProfesionales().isEmpty()) {
+                    log.debug("👥 Copiando {} profesionales para item {}", 
+                        itemBase.getProfesionales().size(), itemBase.getTipoProfesional());
+                    
+                    for (ProfesionalCalculadora profBase : itemBase.getProfesionales()) {
+                        ProfesionalCalculadora nuevoProf = new ProfesionalCalculadora();
+                        nuevoProf.setItemCalculadora(itemGuardado);
+                        nuevoProf.setEmpresa(presupuestoDestino.getEmpresa());
+                        nuevoProf.setFrontendId(profBase.getFrontendId());
+                        nuevoProf.setTipo(profBase.getTipo());
+                        nuevoProf.setNombre(profBase.getNombre());
+                        nuevoProf.setTelefono(profBase.getTelefono());
+                        nuevoProf.setUnidad(profBase.getUnidad());
+                        nuevoProf.setCantidadJornales(profBase.getCantidadJornales());
+                        nuevoProf.setImporteJornal(profBase.getImporteJornal()); // VALOR CONSOLIDADO
+                        nuevoProf.setSubtotal(profBase.getSubtotal()); // VALOR CONSOLIDADO
+                        nuevoProf.setSinCantidad(profBase.getSinCantidad());
+                        nuevoProf.setSinImporte(profBase.getSinImporte());
+                        
+                        profesionalCalculadoraRepository.save(nuevoProf);
+                    }
+                }
+                
+                // ========== COPIAR MATERIALES INDIVIDUALES ==========
+                if (itemBase.getMaterialesLista() != null && !itemBase.getMaterialesLista().isEmpty()) {
+                    log.debug("🧱 Copiando {} materiales para item {}", 
+                        itemBase.getMaterialesLista().size(), itemBase.getTipoProfesional());
+                    
+                    for (MaterialCalculadora matBase : itemBase.getMaterialesLista()) {
+                        MaterialCalculadora nuevoMat = new MaterialCalculadora();
+                        nuevoMat.setItemCalculadora(itemGuardado);
+                        nuevoMat.setEmpresa(presupuestoDestino.getEmpresa());
+                        nuevoMat.setFrontendId(matBase.getFrontendId());
+                        nuevoMat.setNombre(matBase.getNombre());
+                        nuevoMat.setDescripcion(matBase.getDescripcion());
+                        nuevoMat.setUnidad(matBase.getUnidad());
+                        nuevoMat.setCantidad(matBase.getCantidad());
+                        nuevoMat.setPrecio(matBase.getPrecio()); // VALOR CONSOLIDADO
+                        nuevoMat.setSubtotal(matBase.getSubtotal()); // VALOR CONSOLIDADO
+                        
+                        materialCalculadoraRepository.save(nuevoMat);
+                    }
+                }
+                
+                // ========== COPIAR GASTOS GENERALES ==========
+                if (Boolean.TRUE.equals(itemBase.getEsGastoGeneral()) && 
+                    itemBase.getGastosGenerales() != null && !itemBase.getGastosGenerales().isEmpty()) {
+                    
+                    log.debug("📋 Copiando {} gastos generales para item {}", 
+                        itemBase.getGastosGenerales().size(), itemBase.getTipoProfesional());
+                    
+                    for (PresupuestoGastoGeneral gastoBase : itemBase.getGastosGenerales()) {
+                        PresupuestoGastoGeneral nuevoGasto = new PresupuestoGastoGeneral();
+                        nuevoGasto.setItemCalculadora(itemGuardado);
+                        nuevoGasto.setEmpresa(presupuestoDestino.getEmpresa());
+                        nuevoGasto.setDescripcion(gastoBase.getDescripcion());
+                        nuevoGasto.setCantidad(gastoBase.getCantidad());
+                        nuevoGasto.setPrecioUnitario(gastoBase.getPrecioUnitario()); // VALOR CONSOLIDADO
+                        nuevoGasto.setSubtotal(gastoBase.getSubtotal()); // VALOR CONSOLIDADO
+                        nuevoGasto.setSinCantidad(gastoBase.getSinCantidad());
+                        nuevoGasto.setSinPrecio(gastoBase.getSinPrecio());
+                        nuevoGasto.setOrden(gastoBase.getOrden());
+                        
+                        gastoGeneralRepository.save(nuevoGasto);
+                    }
+                }
+                
+                log.info("✅ Item {} copiado exitosamente con VALORES CONSOLIDADOS: Total = {}", 
+                    itemGuardado.getTipoProfesional(), itemGuardado.getTotal());
+            }
+            
+            log.info("✅ Copia de items calculadora completada exitosamente. {} items copiados con valores ACTUALES", itemsBase.size());
+            
+        } catch (Exception e) {
+            log.error("❌ Error al copiar items calculadora: {}", e.getMessage(), e);
+            throw new RuntimeException("Error al copiar items calculadora: " + e.getMessage(), e);
+        }
+    }
+}

@@ -1,0 +1,4057 @@
+﻿-- PostgreSQL database dump
+--
+
+-- Dumped from database version 17.4
+-- Dumped by pg_dump version 17.4
+
+
+
+
+--
+-- Name: asignacion_profesional_dia; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asignacion_profesional_dia (
+    cantidad integer NOT NULL,
+    fecha date NOT NULL,
+    asignacion_id bigint NOT NULL,
+    creado_en timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    semana_iso character varying(10)
+);
+
+
+--
+-- Name: asignacion_profesional_dia_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asignacion_profesional_dia_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asignacion_profesional_dia_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asignacion_profesional_dia_id_seq OWNED BY public.asignacion_profesional_dia.id;
+
+
+--
+-- Name: asignaciones_cobro_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asignaciones_cobro_obra (
+    monto_asignado numeric(15,2) NOT NULL,
+    monto_gastos_generales numeric(15,2),
+    monto_materiales numeric(15,2),
+    monto_profesionales numeric(15,2),
+    porcentaje_gastos_generales numeric(5,2),
+    porcentaje_materiales numeric(5,2),
+    porcentaje_profesionales numeric(5,2),
+    cobro_obra_id bigint NOT NULL,
+    empresa_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    obra_id bigint NOT NULL,
+    presupuesto_no_cliente_id bigint,
+    usuario_creacion_id bigint,
+    usuario_modificacion_id bigint,
+    estado character varying(20) NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: asignaciones_cobro_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asignaciones_cobro_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asignaciones_cobro_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asignaciones_cobro_obra_id_seq OWNED BY public.asignaciones_cobro_obra.id;
+
+
+--
+-- Name: asignaciones_gasto_general_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asignaciones_gasto_general_obra (
+    cantidad numeric(15,2),
+    fecha_pago date NOT NULL,
+    monto numeric(15,2) NOT NULL,
+    precio_unitario numeric(15,2),
+    empresa_id bigint NOT NULL,
+    etapa_diaria_id bigint,
+    fecha_actualizacion timestamp(6) without time zone,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    fecha_registro timestamp(6) without time zone NOT NULL,
+    gasto_general_calculadora_id bigint,
+    gasto_general_id bigint,
+    id bigint NOT NULL,
+    item_calculadora_id bigint,
+    jornal_calculadora_id bigint,
+    presupuesto_no_cliente_id bigint,
+    profesional_calculadora_id bigint,
+    usuario_creacion_id bigint,
+    usuario_modificacion_id bigint,
+    estado character varying(50) NOT NULL,
+    metodo_pago character varying(50),
+    tipo_pago character varying(50) NOT NULL,
+    numero_comprobante character varying(100),
+    usuario_registro character varying(100),
+    comprobante_url character varying(500),
+    concepto character varying(500) NOT NULL,
+    motivo_anulacion text,
+    observaciones text,
+    CONSTRAINT asignaciones_gasto_general_obra_estado_check CHECK (((estado)::text = ANY ((ARRAY['PAGADO'::character varying, 'PENDIENTE'::character varying, 'ANULADO'::character varying])::text[]))),
+    CONSTRAINT asignaciones_gasto_general_obra_metodo_pago_check CHECK (((metodo_pago)::text = ANY ((ARRAY['EFECTIVO'::character varying, 'TRANSFERENCIA'::character varying, 'CHEQUE'::character varying, 'DEBITO'::character varying, 'CREDITO'::character varying])::text[]))),
+    CONSTRAINT asignaciones_gasto_general_obra_tipo_pago_check CHECK (((tipo_pago)::text = ANY ((ARRAY['MATERIALES'::character varying, 'GASTOS_GENERALES'::character varying, 'OTROS_COSTOS'::character varying, 'OTROS'::character varying])::text[])))
+);
+
+
+--
+-- Name: asignaciones_gasto_general_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asignaciones_gasto_general_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asignaciones_gasto_general_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asignaciones_gasto_general_obra_id_seq OWNED BY public.asignaciones_gasto_general_obra.id;
+
+
+--
+-- Name: asignaciones_material_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asignaciones_material_obra (
+    cantidad_asignada numeric(10,2) NOT NULL,
+    semana integer,
+    empresa_id bigint NOT NULL,
+    fecha_asignacion timestamp(6) without time zone NOT NULL,
+    id bigint NOT NULL,
+    material_calculadora_id bigint,
+    obra_id bigint NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: asignaciones_material_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asignaciones_material_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asignaciones_material_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asignaciones_material_obra_id_seq OWNED BY public.asignaciones_material_obra.id;
+
+
+--
+-- Name: asignaciones_otro_costo_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asignaciones_otro_costo_obra (
+    importe_asignado numeric(15,2) NOT NULL,
+    semana integer,
+    empresa_id bigint NOT NULL,
+    fecha_asignacion timestamp(6) without time zone NOT NULL,
+    gasto_general_id bigint,
+    id bigint NOT NULL,
+    obra_id bigint NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: asignaciones_otro_costo_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asignaciones_otro_costo_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asignaciones_otro_costo_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asignaciones_otro_costo_obra_id_seq OWNED BY public.asignaciones_otro_costo_obra.id;
+
+
+--
+-- Name: asignaciones_profesional_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asignaciones_profesional_obra (
+    cantidad_jornales integer,
+    fecha_fin date,
+    fecha_inicio date NOT NULL,
+    importe_jornal numeric(15,2),
+    jornales_utilizados integer,
+    semanas_objetivo integer,
+    creado_en timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    fecha_modificacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    item_id bigint,
+    obra_id bigint NOT NULL,
+    presupuesto_no_cliente_id bigint,
+    profesional_id bigint NOT NULL,
+    rubro_id bigint NOT NULL,
+    estado character varying(50) NOT NULL,
+    modalidad character varying(50),
+    tipo_asignacion character varying(50) NOT NULL,
+    profesional_tipo character varying(100),
+    observaciones text,
+    profesional_nombre character varying(255),
+    rubro_nombre character varying(255) NOT NULL
+);
+
+
+--
+-- Name: asignaciones_profesional_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asignaciones_profesional_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asignaciones_profesional_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asignaciones_profesional_obra_id_seq OWNED BY public.asignaciones_profesional_obra.id;
+
+
+--
+-- Name: asistencia_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.asistencia_obra (
+    fecha date NOT NULL,
+    hora_entrada time(6) without time zone,
+    hora_salida time(6) without time zone,
+    horas_trabajadas numeric(5,2),
+    latitud_entrada double precision,
+    latitud_salida double precision,
+    longitud_entrada double precision,
+    longitud_salida double precision,
+    empresa_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    profesional_obra_id bigint NOT NULL
+);
+
+
+--
+-- Name: asistencia_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.asistencia_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: asistencia_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.asistencia_obra_id_seq OWNED BY public.asistencia_obra.id;
+
+
+--
+-- Name: caja_chica_movimientos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.caja_chica_movimientos (
+    fecha date NOT NULL,
+    monto numeric(12,2) NOT NULL,
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    presupuesto_id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    tipo character varying(20) NOT NULL,
+    profesional_tipo character varying(50) NOT NULL,
+    profesional_nombre character varying(100) NOT NULL,
+    usuario_registro character varying(100),
+    descripcion text
+);
+
+
+--
+-- Name: caja_chica_movimientos_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.caja_chica_movimientos_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: caja_chica_movimientos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.caja_chica_movimientos_id_seq OWNED BY public.caja_chica_movimientos.id;
+
+
+--
+-- Name: caja_chica_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.caja_chica_obra (
+    fecha date NOT NULL,
+    monto numeric(15,2) NOT NULL,
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    presupuesto_no_cliente_id bigint NOT NULL,
+    profesional_obra_id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    estado character varying(50) NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: caja_chica_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.caja_chica_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: caja_chica_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.caja_chica_obra_id_seq OWNED BY public.caja_chica_obra.id;
+
+
+--
+-- Name: cliente_empresa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cliente_empresa (
+    id_cliente bigint NOT NULL,
+    id_empresa bigint NOT NULL
+);
+
+
+--
+-- Name: clientes; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.clientes (
+    fecha_creacion timestamp(6) without time zone,
+    id_cliente bigint NOT NULL,
+    cuit_cuil character varying(20),
+    telefono character varying(50),
+    email character varying(150),
+    nombre character varying(200),
+    nombre_solicitante character varying(200),
+    direccion text
+);
+
+
+--
+-- Name: clientes_id_cliente_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.clientes_id_cliente_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: clientes_id_cliente_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.clientes_id_cliente_seq OWNED BY public.clientes.id_cliente;
+
+
+--
+-- Name: cobros_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.cobros_obra (
+    fecha_cobro date NOT NULL,
+    fecha_emision date,
+    fecha_vencimiento date,
+    monto numeric(15,2) NOT NULL,
+    monto_cobrado numeric(15,2),
+    monto_cobrar numeric(15,2),
+    monto_gastos_generales numeric(15,2),
+    monto_materiales numeric(15,2),
+    monto_profesionales numeric(15,2),
+    porcentaje_gastos_generales numeric(5,2),
+    porcentaje_materiales numeric(5,2),
+    porcentaje_profesionales numeric(5,2),
+    empresa_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    obra_id bigint,
+    presupuesto_no_cliente_id bigint,
+    usuario_creacion_id bigint,
+    usuario_modificacion_id bigint,
+    modo_distribucion character varying(20),
+    altura character varying(50),
+    depto character varying(50),
+    estado character varying(50) NOT NULL,
+    metodo_pago character varying(50) NOT NULL,
+    piso character varying(50),
+    tipo_cobro character varying(50),
+    tipo_comprobante character varying(50),
+    torre character varying(50),
+    numero_factura character varying(100),
+    numero_recibo character varying(100),
+    comprobante_url character varying(500),
+    concepto character varying(500),
+    barrio character varying(255),
+    calle character varying(255),
+    motivo_anulacion text,
+    observaciones text
+);
+
+
+--
+-- Name: cobros_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.cobros_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: cobros_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.cobros_obra_id_seq OWNED BY public.cobros_obra.id;
+
+
+--
+-- Name: costos; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.costos (
+    anio integer,
+    fecha date NOT NULL,
+    fecha_aprobacion date,
+    imputable boolean,
+    monto numeric(15,2) NOT NULL,
+    semana integer,
+    fecha_actualizacion timestamp(6) without time zone,
+    fecha_creacion timestamp(6) without time zone,
+    id_costo bigint NOT NULL,
+    id_obra bigint NOT NULL,
+    estado character varying(50),
+    tipo_costo character varying(50),
+    categoria character varying(100),
+    concepto character varying(500) NOT NULL,
+    comentarios text,
+    descripcion text,
+    motivo_rechazo text
+);
+
+
+--
+-- Name: costos_id_costo_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.costos_id_costo_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: costos_id_costo_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.costos_id_costo_seq OWNED BY public.costos.id_costo;
+
+
+--
+-- Name: empresas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.empresas (
+    activa boolean,
+    fecha_creacion timestamp(6) without time zone,
+    id_empresa bigint NOT NULL,
+    cuit character varying(20),
+    telefono character varying(50),
+    email character varying(150),
+    nombre_empresa character varying(200) NOT NULL,
+    razon_social character varying(200),
+    representante_legal character varying(200),
+    direccion_fiscal text
+);
+
+
+--
+-- Name: empresas_id_empresa_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.empresas_id_empresa_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: empresas_id_empresa_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.empresas_id_empresa_seq OWNED BY public.empresas.id_empresa;
+
+
+--
+-- Name: etapas_diarias; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.etapas_diarias (
+    fecha date NOT NULL,
+    hora_fin_estimada time(6) without time zone,
+    hora_inicio_estimada time(6) without time zone,
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    obra_id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    prioridad character varying(20),
+    estado character varying(50) NOT NULL,
+    categoria character varying(100),
+    creado_por character varying(100),
+    descripcion text,
+    nombre_etapa character varying(255),
+    observaciones text,
+    CONSTRAINT etapas_diarias_estado_check CHECK (((estado)::text = ANY ((ARRAY['TERMINADA'::character varying, 'EN_PROCESO'::character varying, 'SUSPENDIDA'::character varying, 'MODIFICADA'::character varying, 'CANCELADA'::character varying])::text[])))
+);
+
+
+--
+-- Name: etapas_diarias_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.etapas_diarias_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: etapas_diarias_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.etapas_diarias_id_seq OWNED BY public.etapas_diarias.id;
+
+
+--
+-- Name: flyway_schema_history; Type: TABLE; Schema: public; Owner: -
+--
+
+
+
+
+--
+-- Name: gastos_generales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gastos_generales (
+    precio_unitario_base numeric(38,2),
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    categoria character varying(255),
+    descripcion character varying(255),
+    nombre character varying(255) NOT NULL,
+    unidad_medida character varying(255)
+);
+
+
+--
+-- Name: gastos_generales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.gastos_generales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: gastos_generales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.gastos_generales_id_seq OWNED BY public.gastos_generales.id;
+
+
+--
+-- Name: gastos_obra_profesional; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.gastos_obra_profesional (
+    monto numeric(10,2) NOT NULL,
+    empresa_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_hora timestamp(6) without time zone NOT NULL,
+    id bigint NOT NULL,
+    profesional_obra_id bigint NOT NULL,
+    descripcion character varying(500),
+    foto_ticket text
+);
+
+
+--
+-- Name: gastos_obra_profesional_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.gastos_obra_profesional_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: gastos_obra_profesional_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.gastos_obra_profesional_id_seq OWNED BY public.gastos_obra_profesional.id;
+
+
+--
+-- Name: honorarios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.honorarios (
+    fecha date NOT NULL,
+    monto numeric(15,2) NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    id_honorario bigint NOT NULL,
+    id_obra bigint NOT NULL,
+    id_profesional bigint,
+    observaciones text
+);
+
+
+--
+-- Name: honorarios_id_honorario_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.honorarios_id_honorario_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: honorarios_id_honorario_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.honorarios_id_honorario_seq OWNED BY public.honorarios.id_honorario;
+
+
+--
+-- Name: items_calculadora_presupuesto; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.items_calculadora_presupuesto (
+    cantidad_jornales numeric(10,2),
+    es_gasto_general boolean NOT NULL,
+    es_modo_manual boolean NOT NULL,
+    importe_jornal numeric(15,2),
+    incluir_en_calculo_dias boolean,
+    materiales numeric(15,2),
+    subtotal_gastos_generales numeric(15,2),
+    subtotal_mano_obra numeric(15,2),
+    subtotal_materiales numeric(15,2),
+    total numeric(15,2),
+    total_manual numeric(15,2),
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    presupuesto_no_cliente_id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    descripcion character varying(500),
+    descripcion_gastos_generales character varying(500),
+    descripcion_materiales character varying(500),
+    descripcion_profesionales character varying(500),
+    descripcion_total_manual character varying(500),
+    observaciones text,
+    observaciones_gastos_generales text,
+    observaciones_materiales text,
+    observaciones_profesionales text,
+    observaciones_total_manual text,
+    tipo_profesional character varying(255) NOT NULL
+);
+
+
+--
+-- Name: items_calculadora_presupuesto_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.items_calculadora_presupuesto_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: items_calculadora_presupuesto_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.items_calculadora_presupuesto_id_seq OWNED BY public.items_calculadora_presupuesto.id;
+
+
+--
+-- Name: jornal_calculadora; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.jornal_calculadora (
+    cantidad numeric(10,2) NOT NULL,
+    incluir_en_calculo_dias boolean,
+    subtotal numeric(15,2) NOT NULL,
+    valor_unitario numeric(15,2) NOT NULL,
+    empresa_id bigint NOT NULL,
+    frontend_id bigint,
+    id bigint NOT NULL,
+    item_calculadora_id bigint NOT NULL,
+    profesional_obra_id bigint,
+    observaciones text,
+    rol character varying(255) NOT NULL
+);
+
+
+--
+-- Name: jornal_calculadora_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.jornal_calculadora_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: jornal_calculadora_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.jornal_calculadora_id_seq OWNED BY public.jornal_calculadora.id;
+
+
+--
+-- Name: jornales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.jornales (
+    fecha date NOT NULL,
+    horas_trabajadas numeric(5,2) NOT NULL,
+    incluir_en_calculo_dias boolean,
+    valor_hora numeric(10,2) NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    id_asignacion bigint NOT NULL,
+    id_jornal bigint NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: jornales_id_jornal_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.jornales_id_jornal_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: jornales_id_jornal_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.jornales_id_jornal_seq OWNED BY public.jornales.id_jornal;
+
+
+--
+-- Name: material_calculadora; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.material_calculadora (
+    cantidad numeric(10,3),
+    precio numeric(15,2),
+    subtotal numeric(15,2),
+    empresa_id bigint NOT NULL,
+    frontend_id bigint,
+    id bigint NOT NULL,
+    item_calculadora_id bigint NOT NULL,
+    obra_material_id bigint,
+    unidad character varying(100) NOT NULL,
+    descripcion character varying(500),
+    nombre character varying(255) NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: material_calculadora_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.material_calculadora_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: material_calculadora_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.material_calculadora_id_seq OWNED BY public.material_calculadora.id;
+
+
+--
+-- Name: materiales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.materiales (
+    activo boolean,
+    precio_unitario numeric(15,2),
+    fecha_creacion timestamp(6) without time zone,
+    id_material bigint NOT NULL,
+    unidad_medida character varying(50),
+    nombre character varying(200) NOT NULL,
+    descripcion text
+);
+
+
+--
+-- Name: materiales_id_material_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.materiales_id_material_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: materiales_id_material_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.materiales_id_material_seq OWNED BY public.materiales.id_material;
+
+
+--
+-- Name: movimiento_material; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.movimiento_material (
+    cantidad numeric(15,2) NOT NULL,
+    precio_unitario numeric(15,2),
+    valor_total numeric(15,2),
+    fecha_creacion timestamp(6) without time zone,
+    fecha_movimiento timestamp(6) without time zone NOT NULL,
+    id_empresa bigint NOT NULL,
+    id_material bigint NOT NULL,
+    id_movimiento_material bigint NOT NULL,
+    id_obra bigint,
+    id_stock_material bigint NOT NULL,
+    id_usuario bigint,
+    tipo_movimiento character varying(20) NOT NULL,
+    estado character varying(50),
+    numero_documento character varying(100),
+    motivo character varying(200),
+    observaciones text
+);
+
+
+--
+-- Name: movimiento_material_id_movimiento_material_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.movimiento_material_id_movimiento_material_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: movimiento_material_id_movimiento_material_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.movimiento_material_id_movimiento_material_seq OWNED BY public.movimiento_material.id_movimiento_material;
+
+
+--
+-- Name: obras; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.obras (
+    fecha_fin date,
+    fecha_inicio date,
+    presupuesto_estimado numeric(15,2),
+    empresa_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    id_cliente bigint NOT NULL,
+    id_obra bigint NOT NULL,
+    presupuesto_no_cliente_id bigint,
+    direccion_obra_torre character varying(50),
+    estado character varying(50),
+    telefono character varying(50),
+    direccion_obra_barrio character varying(100),
+    mail character varying(150),
+    nombre character varying(200) NOT NULL,
+    nombre_solicitante character varying(200),
+    descripcion text,
+    direccion_obra_altura character varying(255) NOT NULL,
+    direccion_obra_calle character varying(255) NOT NULL,
+    direccion_obra_departamento character varying(255),
+    direccion_obra_piso character varying(255),
+    direccion_particular text,
+    observaciones text
+);
+
+
+--
+-- Name: obras_id_obra_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.obras_id_obra_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: obras_id_obra_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.obras_id_obra_seq OWNED BY public.obras.id_obra;
+
+
+--
+-- Name: pagos_material_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pagos_material_obra (
+    cantidad numeric(15,2),
+    fecha_pago date NOT NULL,
+    monto numeric(15,2) NOT NULL,
+    precio_unitario numeric(15,2),
+    empresa_id bigint NOT NULL,
+    etapa_diaria_id bigint,
+    fecha_actualizacion timestamp(6) without time zone,
+    fecha_registro timestamp(6) without time zone NOT NULL,
+    gasto_general_id bigint,
+    id bigint NOT NULL,
+    item_calculadora_id bigint,
+    jornal_calculadora_id bigint,
+    material_calculadora_id bigint,
+    presupuesto_no_cliente_id bigint,
+    profesional_calculadora_id bigint,
+    estado character varying(50) NOT NULL,
+    metodo_pago character varying(50),
+    tipo_pago character varying(50) NOT NULL,
+    numero_comprobante character varying(100),
+    usuario_registro character varying(100),
+    comprobante_url character varying(500),
+    concepto character varying(500) NOT NULL,
+    motivo_anulacion text,
+    observaciones text,
+    CONSTRAINT pagos_material_obra_estado_check CHECK (((estado)::text = ANY ((ARRAY['PAGADO'::character varying, 'PENDIENTE'::character varying, 'ANULADO'::character varying])::text[]))),
+    CONSTRAINT pagos_material_obra_metodo_pago_check CHECK (((metodo_pago)::text = ANY ((ARRAY['EFECTIVO'::character varying, 'TRANSFERENCIA'::character varying, 'CHEQUE'::character varying, 'DEBITO'::character varying, 'CREDITO'::character varying])::text[]))),
+    CONSTRAINT pagos_material_obra_tipo_pago_check CHECK (((tipo_pago)::text = ANY ((ARRAY['MATERIALES'::character varying, 'GASTOS_GENERALES'::character varying, 'OTROS_COSTOS'::character varying, 'OTROS'::character varying])::text[])))
+);
+
+
+--
+-- Name: pagos_material_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pagos_material_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pagos_material_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pagos_material_obra_id_seq OWNED BY public.pagos_material_obra.id;
+
+
+--
+-- Name: pagos_profesional_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pagos_profesional_obra (
+    ajustes numeric(15,2),
+    descuento_adelantos numeric(15,2),
+    descuento_presentismo numeric(15,2),
+    dias_esperados integer,
+    dias_trabajados integer,
+    fecha_pago date NOT NULL,
+    monto_base numeric(15,2) NOT NULL,
+    monto_bruto numeric(15,2),
+    monto_final numeric(15,2) NOT NULL,
+    monto_neto numeric(15,2),
+    periodo_desde date,
+    periodo_hasta date,
+    porcentaje_presentismo numeric(5,2),
+    premio_base numeric(15,2),
+    premio_valor numeric(15,2),
+    semana integer,
+    empresa_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    presupuesto_no_cliente_id bigint,
+    profesional_obra_id bigint NOT NULL,
+    usuario_creacion_id bigint,
+    usuario_modificacion_id bigint,
+    premio_tipo character varying(20),
+    estado character varying(50) NOT NULL,
+    metodo_pago character varying(50),
+    tipo_pago character varying(50) NOT NULL,
+    numero_comprobante character varying(100),
+    numero_recibo character varying(100),
+    comprobante_url character varying(500),
+    concepto character varying(500),
+    premio_concepto character varying(500),
+    motivo_anulacion text,
+    observaciones text
+);
+
+
+--
+-- Name: pagos_profesional_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pagos_profesional_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pagos_profesional_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pagos_profesional_obra_id_seq OWNED BY public.pagos_profesional_obra.id;
+
+
+--
+-- Name: pedido_pago; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.pedido_pago (
+    fecha_pedido date NOT NULL,
+    fecha_vencimiento date,
+    importe double precision NOT NULL,
+    fecha_aprobacion timestamp(6) without time zone,
+    fecha_autorizacion timestamp(6) without time zone,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    fecha_pago timestamp(6) without time zone,
+    id_empresa bigint NOT NULL,
+    id_obra bigint,
+    id_pedido_pago bigint NOT NULL,
+    id_proveedor bigint NOT NULL,
+    usuario_aprobador_id bigint,
+    usuario_autorizador_id bigint,
+    usuario_pagador_id bigint,
+    estado character varying(50),
+    tipo_pago character varying(50),
+    numero_comprobante character varying(100),
+    numero_factura character varying(100),
+    numero_pedido character varying(100),
+    concepto character varying(500),
+    motivo_rechazo text,
+    observaciones text
+);
+
+
+--
+-- Name: pedido_pago_id_pedido_pago_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.pedido_pago_id_pedido_pago_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: pedido_pago_id_pedido_pago_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.pedido_pago_id_pedido_pago_seq OWNED BY public.pedido_pago.id_pedido_pago;
+
+
+--
+-- Name: presupuesto_costo_inicial; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presupuesto_costo_inicial (
+    importe_por_metro numeric(15,2) NOT NULL,
+    metros_cuadrados numeric(10,2) NOT NULL,
+    monto_materiales numeric(15,2) NOT NULL,
+    monto_otros_costos numeric(15,2) NOT NULL,
+    monto_profesionales numeric(15,2) NOT NULL,
+    porcentaje_materiales numeric(5,2) NOT NULL,
+    porcentaje_otros_costos numeric(5,2) NOT NULL,
+    porcentaje_profesionales numeric(5,2) NOT NULL,
+    total_estimado numeric(15,2) NOT NULL,
+    fecha_guardado timestamp(6) without time zone NOT NULL,
+    id bigint NOT NULL,
+    presupuesto_no_cliente_id bigint NOT NULL
+);
+
+
+--
+-- Name: presupuesto_costo_inicial_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.presupuesto_costo_inicial_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: presupuesto_costo_inicial_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.presupuesto_costo_inicial_id_seq OWNED BY public.presupuesto_costo_inicial.id;
+
+
+--
+-- Name: presupuesto_gasto_general; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presupuesto_gasto_general (
+    cantidad numeric(10,2) NOT NULL,
+    orden integer NOT NULL,
+    precio_unitario numeric(15,2) NOT NULL,
+    sin_cantidad boolean NOT NULL,
+    sin_precio boolean NOT NULL,
+    subtotal numeric(15,2) NOT NULL,
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    frontend_id bigint,
+    id bigint NOT NULL,
+    item_calculadora_id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    descripcion character varying(500) NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: presupuesto_gasto_general_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.presupuesto_gasto_general_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: presupuesto_gasto_general_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.presupuesto_gasto_general_id_seq OWNED BY public.presupuesto_gasto_general.id;
+
+
+--
+-- Name: presupuesto_material; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presupuesto_material (
+    cantidad double precision,
+    precio_unitario numeric(15,2),
+    id bigint NOT NULL,
+    id_material bigint,
+    nombre_material character varying(255),
+    observaciones character varying(255),
+    unidad_medida character varying(255)
+);
+
+
+--
+-- Name: presupuesto_material_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.presupuesto_material_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: presupuesto_material_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.presupuesto_material_id_seq OWNED BY public.presupuesto_material.id;
+
+
+--
+-- Name: presupuesto_no_cliente; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presupuesto_no_cliente (
+    fecha_creacion date,
+    fecha_emision date NOT NULL,
+    fecha_probable_inicio date,
+    honorario_direccion_importe double precision,
+    honorario_direccion_porcentaje double precision,
+    honorario_direccion_valor_fijo double precision,
+    honorarios_aplicar_a_todos boolean,
+    honorarios_configuracion_presupuesto_activo boolean,
+    honorarios_configuracion_presupuesto_valor numeric(10,2),
+    honorarios_jornales_activo boolean,
+    honorarios_jornales_valor numeric(15,2),
+    honorarios_materiales_activo boolean,
+    honorarios_materiales_valor numeric(15,2),
+    honorarios_otros_costos_activo boolean,
+    honorarios_otros_costos_valor numeric(15,2),
+    honorarios_profesionales_activo boolean,
+    honorarios_profesionales_valor numeric(15,2),
+    honorarios_valor_general numeric(15,2),
+    mayores_costos_aplicar_valor_general boolean,
+    mayores_costos_configuracion_presupuesto_activo boolean,
+    mayores_costos_configuracion_presupuesto_valor double precision,
+    mayores_costos_general_importado boolean,
+    mayores_costos_honorarios_activo boolean,
+    mayores_costos_honorarios_valor double precision,
+    mayores_costos_jornales_activo boolean,
+    mayores_costos_jornales_valor double precision,
+    mayores_costos_materiales_activo boolean,
+    mayores_costos_materiales_valor double precision,
+    mayores_costos_otros_costos_activo boolean,
+    mayores_costos_otros_costos_valor double precision,
+    mayores_costos_profesionales_activo boolean,
+    mayores_costos_profesionales_valor double precision,
+    mayores_costos_valor_general double precision,
+    numero_version integer,
+    tiempo_estimado_terminacion integer,
+    total_general double precision,
+    total_honorarios_calculado numeric(15,2),
+    total_materiales double precision,
+    total_presupuesto numeric(15,2),
+    total_presupuesto_con_honorarios numeric(15,2),
+    total_profesionales double precision,
+    vencimiento date,
+    cliente_id bigint,
+    empresa_id bigint NOT NULL,
+    fecha_ultima_modificacion_estado timestamp(6) without time zone,
+    id bigint NOT NULL,
+    numero_presupuesto bigint,
+    obra_id bigint,
+    honorarios_configuracion_presupuesto_tipo character varying(20),
+    honorarios_jornales_tipo character varying(20),
+    honorarios_materiales_tipo character varying(20),
+    honorarios_otros_costos_tipo character varying(20),
+    honorarios_profesionales_tipo character varying(20),
+    honorarios_tipo_general character varying(20),
+    mayores_costos_configuracion_presupuesto_tipo character varying(20),
+    mayores_costos_honorarios_tipo character varying(20),
+    mayores_costos_jornales_tipo character varying(20),
+    mayores_costos_materiales_tipo character varying(20),
+    mayores_costos_otros_costos_tipo character varying(20),
+    mayores_costos_profesionales_tipo character varying(20),
+    mayores_costos_tipo_general character varying(20),
+    modo_presupuesto character varying(50) NOT NULL,
+    comentarios_cliente text,
+    descripcion character varying(255),
+    descripcion_detallada text,
+    direccion_obra character varying(255),
+    direccion_obra_altura character varying(255) NOT NULL,
+    direccion_obra_barrio character varying(255),
+    direccion_obra_calle character varying(255) NOT NULL,
+    direccion_obra_departamento character varying(255),
+    direccion_obra_piso character varying(255),
+    direccion_obra_torre character varying(255),
+    direccion_particular character varying(255),
+    especificaciones_tecnicas text,
+    estado character varying(255),
+    mail character varying(255),
+    mayores_costos_explicacion text,
+    mayores_costos_nombre_rubro_importado character varying(255),
+    mayores_costos_rubro_importado character varying(255),
+    nombre_obra character varying(255),
+    nombre_solicitante character varying(255),
+    notas_adicionales text,
+    observaciones character varying(255),
+    observaciones_internas text,
+    profesionales_necesarios character varying(255),
+    requisitos_especiales text,
+    telefono character varying(255),
+    CONSTRAINT presupuesto_no_cliente_estado_check CHECK (((estado)::text = ANY ((ARRAY['A_ENVIAR'::character varying, 'BORRADOR'::character varying, 'MODIFICADO'::character varying, 'ENVIADO'::character varying, 'APROBADO'::character varying, 'OBRA_A_CONFIRMAR'::character varying, 'EN_EJECUCION'::character varying, 'TERMINADO'::character varying])::text[]))),
+    CONSTRAINT presupuesto_no_cliente_modo_presupuesto_check CHECK (((modo_presupuesto)::text = ANY ((ARRAY['TRADICIONAL'::character varying, 'TRABAJOS_SEMANALES'::character varying])::text[])))
+);
+
+
+--
+-- Name: presupuesto_no_cliente_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.presupuesto_no_cliente_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: presupuesto_no_cliente_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.presupuesto_no_cliente_id_seq OWNED BY public.presupuesto_no_cliente.id;
+
+
+--
+-- Name: presupuesto_pdf; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presupuesto_pdf (
+    incluye_configuracion boolean,
+    incluye_honorarios boolean,
+    version_presupuesto integer,
+    fecha_generacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    presupuesto_id bigint NOT NULL,
+    tamanio_bytes bigint NOT NULL,
+    generado_por character varying(100),
+    nombre_archivo character varying(255) NOT NULL,
+    contenido_pdf bytea NOT NULL
+);
+
+
+--
+-- Name: presupuesto_pdf_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.presupuesto_pdf_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: presupuesto_pdf_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.presupuesto_pdf_id_seq OWNED BY public.presupuesto_pdf.id;
+
+
+--
+-- Name: presupuestos_auditoria; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.presupuestos_auditoria (
+    fecha_modificacion timestamp(6) without time zone NOT NULL,
+    id bigint NOT NULL,
+    presupuesto_id bigint NOT NULL,
+    usuario_modificador character varying(100),
+    datos_json text NOT NULL
+);
+
+
+--
+-- Name: presupuestos_auditoria_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.presupuestos_auditoria_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: presupuestos_auditoria_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.presupuestos_auditoria_id_seq OWNED BY public.presupuestos_auditoria.id;
+
+
+--
+-- Name: profesional_calculadora; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profesional_calculadora (
+    cantidad_jornales numeric(10,2),
+    importe_jornal numeric(15,2),
+    sin_cantidad boolean NOT NULL,
+    sin_importe boolean NOT NULL,
+    subtotal numeric(15,2),
+    empresa_id bigint NOT NULL,
+    frontend_id bigint,
+    id bigint NOT NULL,
+    item_calculadora_id bigint NOT NULL,
+    profesional_obra_id bigint,
+    telefono character varying(50),
+    unidad character varying(100) NOT NULL,
+    descripcion character varying(500),
+    nombre character varying(255),
+    observaciones text,
+    tipo character varying(255) NOT NULL
+);
+
+
+--
+-- Name: profesional_calculadora_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.profesional_calculadora_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: profesional_calculadora_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.profesional_calculadora_id_seq OWNED BY public.profesional_calculadora.id;
+
+
+--
+-- Name: profesional_tarea_dia; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profesional_tarea_dia (
+    hora_fin_real time(6) without time zone,
+    hora_inicio_real time(6) without time zone,
+    horas_asignadas numeric(4,2),
+    actualizado_en timestamp(6) without time zone,
+    asignacion_dia_id bigint NOT NULL,
+    creado_en timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    tarea_id bigint NOT NULL,
+    estado character varying(50),
+    rol_en_tarea character varying(100),
+    notas text
+);
+
+
+--
+-- Name: profesional_tarea_dia_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.profesional_tarea_dia_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: profesional_tarea_dia_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.profesional_tarea_dia_id_seq OWNED BY public.profesional_tarea_dia.id;
+
+
+--
+-- Name: profesionales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profesionales (
+    activo boolean,
+    dias integer,
+    honorario_dia numeric(10,2),
+    honorario_hora numeric(10,2),
+    honorario_mes numeric(10,2),
+    honorario_semana numeric(10,2),
+    horas integer,
+    importe_ganancia numeric(10,2),
+    meses integer,
+    porcentaje_ganancia numeric(5,2),
+    semanas integer,
+    valor_hora_default numeric(10,2),
+    fecha_creacion timestamp(6) without time zone,
+    id_profesional bigint NOT NULL,
+    cuit character varying(20),
+    telefono character varying(50),
+    tipo_profesional character varying(50) NOT NULL,
+    especialidad character varying(100),
+    rol_personalizado character varying(100),
+    email character varying(150),
+    nombre character varying(200) NOT NULL
+);
+
+
+--
+-- Name: profesionales_id_profesional_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.profesionales_id_profesional_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: profesionales_id_profesional_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.profesionales_id_profesional_seq OWNED BY public.profesionales.id_profesional;
+
+
+--
+-- Name: profesionales_obra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profesionales_obra (
+    fecha_fin date,
+    fecha_inicio date NOT NULL,
+    importe_jornal numeric(10,2),
+    creado_en timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    obra_id bigint NOT NULL,
+    profesional_id bigint NOT NULL,
+    profesional_tipo character varying(100),
+    estado character varying(255),
+    modalidad character varying(255)
+);
+
+
+--
+-- Name: profesionales_obra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.profesionales_obra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: profesionales_obra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.profesionales_obra_id_seq OWNED BY public.profesionales_obra.id;
+
+
+--
+-- Name: profesionales_tarea_etapa; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.profesionales_tarea_etapa (
+    fecha_asignacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    profesional_id bigint NOT NULL,
+    tarea_id bigint NOT NULL
+);
+
+
+--
+-- Name: profesionales_tarea_etapa_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.profesionales_tarea_etapa_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: profesionales_tarea_etapa_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.profesionales_tarea_etapa_id_seq OWNED BY public.profesionales_tarea_etapa.id;
+
+
+--
+-- Name: proveedor; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.proveedor (
+    activo boolean,
+    calificacion double precision,
+    descuento_maximo double precision,
+    limite_credito double precision,
+    plazo_entrega_promedio integer,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    fecha_registro timestamp(6) without time zone,
+    fecha_ultima_compra timestamp(6) without time zone,
+    id_empresa bigint NOT NULL,
+    id_proveedor bigint NOT NULL,
+    codigo_postal character varying(20),
+    estado character varying(20),
+    rut character varying(20),
+    numero_cuenta_bancaria character varying(50),
+    telefono character varying(50),
+    telefono_contacto character varying(50),
+    tipo_cuenta character varying(50),
+    tipo_proveedor character varying(50),
+    banco character varying(100),
+    cargo_contacto character varying(100),
+    categoria character varying(100),
+    ciudad character varying(100),
+    condiciones_pago character varying(100),
+    email character varying(100),
+    email_contacto character varying(100),
+    pais character varying(100),
+    region character varying(100),
+    contacto_principal character varying(150),
+    nombre character varying(200) NOT NULL,
+    sitio_web character varying(200),
+    direccion character varying(300),
+    observaciones text
+);
+
+
+--
+-- Name: proveedor_id_proveedor_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.proveedor_id_proveedor_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: proveedor_id_proveedor_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.proveedor_id_proveedor_seq OWNED BY public.proveedor.id_proveedor;
+
+
+--
+-- Name: stock_gastos_generales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stock_gastos_generales (
+    cantidad_disponible numeric(38,2) NOT NULL,
+    cantidad_minima numeric(38,2),
+    precio_unitario numeric(38,2),
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    gasto_general_id bigint NOT NULL,
+    id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    observaciones character varying(255),
+    ubicacion character varying(255)
+);
+
+
+--
+-- Name: stock_gastos_generales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.stock_gastos_generales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: stock_gastos_generales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.stock_gastos_generales_id_seq OWNED BY public.stock_gastos_generales.id;
+
+
+--
+-- Name: stock_material; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.stock_material (
+    cantidad_actual double precision NOT NULL,
+    cantidad_maxima double precision,
+    cantidad_minima double precision,
+    fecha_ingreso date,
+    fecha_vencimiento date,
+    precio_unitario_promedio double precision,
+    valor_total double precision,
+    fecha_actualizacion timestamp(6) without time zone,
+    fecha_ultima_actualizacion timestamp(6) without time zone,
+    fecha_ultimo_movimiento timestamp(6) without time zone,
+    id_empresa bigint NOT NULL,
+    id_material bigint NOT NULL,
+    id_stock_material bigint NOT NULL,
+    estado character varying(50),
+    numero_lote character varying(100),
+    ubicacion character varying(200),
+    observaciones text
+);
+
+
+--
+-- Name: stock_material_id_stock_material_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.stock_material_id_stock_material_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: stock_material_id_stock_material_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.stock_material_id_stock_material_seq OWNED BY public.stock_material.id_stock_material;
+
+
+--
+-- Name: tareas_etapa_diaria; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.tareas_etapa_diaria (
+    hora_fin time(6) without time zone,
+    hora_inicio time(6) without time zone,
+    etapa_diaria_id bigint NOT NULL,
+    fecha_creacion timestamp(6) without time zone,
+    fecha_modificacion timestamp(6) without time zone,
+    id bigint NOT NULL,
+    estado character varying(20) NOT NULL,
+    prioridad character varying(20),
+    categoria character varying(100),
+    descripcion text NOT NULL,
+    nombre_tarea character varying(255)
+);
+
+
+--
+-- Name: tareas_etapa_diaria_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.tareas_etapa_diaria_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: tareas_etapa_diaria_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.tareas_etapa_diaria_id_seq OWNED BY public.tareas_etapa_diaria.id;
+
+
+--
+-- Name: trabajos_extra; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trabajos_extra (
+    cliente_id bigint NOT NULL,
+    created_at timestamp(6) without time zone,
+    empresa_id bigint NOT NULL,
+    id bigint NOT NULL,
+    obra_id bigint NOT NULL,
+    updated_at timestamp(6) without time zone,
+    nombre character varying(255) NOT NULL,
+    observaciones text
+);
+
+
+--
+-- Name: trabajos_extra_dias; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trabajos_extra_dias (
+    fecha date NOT NULL,
+    id bigint NOT NULL,
+    trabajo_extra_id bigint NOT NULL
+);
+
+
+--
+-- Name: trabajos_extra_dias_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.trabajos_extra_dias_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: trabajos_extra_dias_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.trabajos_extra_dias_id_seq OWNED BY public.trabajos_extra_dias.id;
+
+
+--
+-- Name: trabajos_extra_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.trabajos_extra_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: trabajos_extra_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.trabajos_extra_id_seq OWNED BY public.trabajos_extra.id;
+
+
+--
+-- Name: trabajos_extra_profesionales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trabajos_extra_profesionales (
+    importe numeric(15,2) NOT NULL,
+    id bigint NOT NULL,
+    profesional_id bigint,
+    trabajo_extra_id bigint NOT NULL,
+    tipo character varying(50) NOT NULL,
+    especialidad character varying(255),
+    nombre character varying(255) NOT NULL,
+    CONSTRAINT trabajos_extra_profesionales_tipo_check CHECK (((tipo)::text = ANY ((ARRAY['ASIGNADO_OBRA'::character varying, 'LISTADO_GENERAL'::character varying, 'MANUAL'::character varying])::text[])))
+);
+
+
+--
+-- Name: trabajos_extra_profesionales_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.trabajos_extra_profesionales_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: trabajos_extra_profesionales_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.trabajos_extra_profesionales_id_seq OWNED BY public.trabajos_extra_profesionales.id;
+
+
+--
+-- Name: trabajos_extra_tareas; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trabajos_extra_tareas (
+    importe numeric(15,2),
+    id bigint NOT NULL,
+    trabajo_extra_id bigint NOT NULL,
+    estado character varying(50) NOT NULL,
+    descripcion text NOT NULL,
+    CONSTRAINT trabajos_extra_tareas_estado_check CHECK (((estado)::text = ANY ((ARRAY['TERMINADA'::character varying, 'A_TERMINAR'::character varying, 'POSTERGADA'::character varying, 'SUSPENDIDA'::character varying])::text[])))
+);
+
+
+--
+-- Name: trabajos_extra_tareas_id_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.trabajos_extra_tareas_id_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: trabajos_extra_tareas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.trabajos_extra_tareas_id_seq OWNED BY public.trabajos_extra_tareas.id;
+
+
+--
+-- Name: trabajos_extra_tareas_profesionales; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.trabajos_extra_tareas_profesionales (
+    profesional_index integer,
+    tarea_id bigint NOT NULL
+);
+
+
+--
+-- Name: usuarios; Type: TABLE; Schema: public; Owner: -
+--
+
+CREATE TABLE public.usuarios (
+    activo boolean,
+    fecha_creacion timestamp(6) without time zone,
+    id_empresa bigint,
+    id_usuario bigint NOT NULL,
+    rol character varying(50) NOT NULL,
+    email character varying(150) NOT NULL,
+    nombre character varying(150) NOT NULL,
+    password_hash text NOT NULL
+);
+
+
+--
+-- Name: usuarios_id_usuario_seq; Type: SEQUENCE; Schema: public; Owner: -
+--
+
+CREATE SEQUENCE public.usuarios_id_usuario_seq
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+--
+-- Name: usuarios_id_usuario_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: -
+--
+
+ALTER SEQUENCE public.usuarios_id_usuario_seq OWNED BY public.usuarios.id_usuario;
+
+
+--
+-- Name: asignacion_profesional_dia id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignacion_profesional_dia ALTER COLUMN id 
+
+--
+-- Name: asignaciones_cobro_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_cobro_obra ALTER COLUMN id 
+
+--
+-- Name: asignaciones_gasto_general_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_gasto_general_obra ALTER COLUMN id 
+
+--
+-- Name: asignaciones_material_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_material_obra ALTER COLUMN id 
+
+--
+-- Name: asignaciones_otro_costo_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_otro_costo_obra ALTER COLUMN id 
+
+--
+-- Name: asignaciones_profesional_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_profesional_obra ALTER COLUMN id 
+
+--
+-- Name: asistencia_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asistencia_obra ALTER COLUMN id 
+
+--
+-- Name: caja_chica_movimientos id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_chica_movimientos ALTER COLUMN id 
+
+--
+-- Name: caja_chica_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_chica_obra ALTER COLUMN id 
+
+--
+-- Name: clientes id_cliente; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clientes ALTER COLUMN id_cliente 
+
+--
+-- Name: cobros_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cobros_obra ALTER COLUMN id 
+
+--
+-- Name: costos id_costo; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.costos ALTER COLUMN id_costo 
+
+--
+-- Name: empresas id_empresa; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empresas ALTER COLUMN id_empresa 
+
+--
+-- Name: etapas_diarias id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etapas_diarias ALTER COLUMN id 
+
+--
+-- Name: gastos_generales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gastos_generales ALTER COLUMN id 
+
+--
+-- Name: gastos_obra_profesional id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gastos_obra_profesional ALTER COLUMN id 
+
+--
+-- Name: honorarios id_honorario; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.honorarios ALTER COLUMN id_honorario 
+
+--
+-- Name: items_calculadora_presupuesto id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items_calculadora_presupuesto ALTER COLUMN id 
+
+--
+-- Name: jornal_calculadora id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornal_calculadora ALTER COLUMN id 
+
+--
+-- Name: jornales id_jornal; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornales ALTER COLUMN id_jornal 
+
+--
+-- Name: material_calculadora id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.material_calculadora ALTER COLUMN id 
+
+--
+-- Name: materiales id_material; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.materiales ALTER COLUMN id_material 
+
+--
+-- Name: movimiento_material id_movimiento_material; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.movimiento_material ALTER COLUMN id_movimiento_material 
+
+--
+-- Name: obras id_obra; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.obras ALTER COLUMN id_obra 
+
+--
+-- Name: pagos_material_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_material_obra ALTER COLUMN id 
+
+--
+-- Name: pagos_profesional_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_profesional_obra ALTER COLUMN id 
+
+--
+-- Name: pedido_pago id_pedido_pago; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pedido_pago ALTER COLUMN id_pedido_pago 
+
+--
+-- Name: presupuesto_costo_inicial id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_costo_inicial ALTER COLUMN id 
+
+--
+-- Name: presupuesto_gasto_general id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_gasto_general ALTER COLUMN id 
+
+--
+-- Name: presupuesto_material id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_material ALTER COLUMN id 
+
+--
+-- Name: presupuesto_no_cliente id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_no_cliente ALTER COLUMN id 
+
+--
+-- Name: presupuesto_pdf id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_pdf ALTER COLUMN id 
+
+--
+-- Name: presupuestos_auditoria id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuestos_auditoria ALTER COLUMN id 
+
+--
+-- Name: profesional_calculadora id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_calculadora ALTER COLUMN id 
+
+--
+-- Name: profesional_tarea_dia id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_tarea_dia ALTER COLUMN id 
+
+--
+-- Name: profesionales id_profesional; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales ALTER COLUMN id_profesional 
+
+--
+-- Name: profesionales_obra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_obra ALTER COLUMN id 
+
+--
+-- Name: profesionales_tarea_etapa id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_tarea_etapa ALTER COLUMN id 
+
+--
+-- Name: proveedor id_proveedor; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proveedor ALTER COLUMN id_proveedor 
+
+--
+-- Name: stock_gastos_generales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_gastos_generales ALTER COLUMN id 
+
+--
+-- Name: stock_material id_stock_material; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_material ALTER COLUMN id_stock_material 
+
+--
+-- Name: tareas_etapa_diaria id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas_etapa_diaria ALTER COLUMN id 
+
+--
+-- Name: trabajos_extra id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra ALTER COLUMN id 
+
+--
+-- Name: trabajos_extra_dias id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_dias ALTER COLUMN id 
+
+--
+-- Name: trabajos_extra_profesionales id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_profesionales ALTER COLUMN id 
+
+--
+-- Name: trabajos_extra_tareas id; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_tareas ALTER COLUMN id 
+
+--
+-- Name: usuarios id_usuario; Type: DEFAULT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuarios ALTER COLUMN id_usuario 
+
+--
+-- Name: asignacion_profesional_dia asignacion_profesional_dia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignacion_profesional_dia
+    ADD CONSTRAINT asignacion_profesional_dia_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asignaciones_cobro_obra asignaciones_cobro_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_cobro_obra
+    ADD CONSTRAINT asignaciones_cobro_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asignaciones_gasto_general_obra asignaciones_gasto_general_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_gasto_general_obra
+    ADD CONSTRAINT asignaciones_gasto_general_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asignaciones_material_obra asignaciones_material_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_material_obra
+    ADD CONSTRAINT asignaciones_material_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asignaciones_otro_costo_obra asignaciones_otro_costo_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_otro_costo_obra
+    ADD CONSTRAINT asignaciones_otro_costo_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asignaciones_profesional_obra asignaciones_profesional_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_profesional_obra
+    ADD CONSTRAINT asignaciones_profesional_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asistencia_obra asistencia_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asistencia_obra
+    ADD CONSTRAINT asistencia_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: caja_chica_movimientos caja_chica_movimientos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_chica_movimientos
+    ADD CONSTRAINT caja_chica_movimientos_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: caja_chica_obra caja_chica_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.caja_chica_obra
+    ADD CONSTRAINT caja_chica_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: clientes clientes_cuit_cuil_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clientes
+    ADD CONSTRAINT clientes_cuit_cuil_key UNIQUE (cuit_cuil);
+
+
+--
+-- Name: clientes clientes_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.clientes
+    ADD CONSTRAINT clientes_pkey PRIMARY KEY (id_cliente);
+
+
+--
+-- Name: cobros_obra cobros_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cobros_obra
+    ADD CONSTRAINT cobros_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: costos costos_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.costos
+    ADD CONSTRAINT costos_pkey PRIMARY KEY (id_costo);
+
+
+--
+-- Name: empresas empresas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.empresas
+    ADD CONSTRAINT empresas_pkey PRIMARY KEY (id_empresa);
+
+
+--
+-- Name: etapas_diarias etapas_diarias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etapas_diarias
+    ADD CONSTRAINT etapas_diarias_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: flyway_schema_history flyway_schema_history_pk; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.flyway_schema_history
+    ADD CONSTRAINT flyway_schema_history_pk PRIMARY KEY (installed_rank);
+
+
+--
+-- Name: gastos_generales gastos_generales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gastos_generales
+    ADD CONSTRAINT gastos_generales_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: gastos_obra_profesional gastos_obra_profesional_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gastos_obra_profesional
+    ADD CONSTRAINT gastos_obra_profesional_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: honorarios honorarios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.honorarios
+    ADD CONSTRAINT honorarios_pkey PRIMARY KEY (id_honorario);
+
+
+--
+-- Name: items_calculadora_presupuesto items_calculadora_presupuesto_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items_calculadora_presupuesto
+    ADD CONSTRAINT items_calculadora_presupuesto_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: jornal_calculadora jornal_calculadora_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornal_calculadora
+    ADD CONSTRAINT jornal_calculadora_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: jornales jornales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornales
+    ADD CONSTRAINT jornales_pkey PRIMARY KEY (id_jornal);
+
+
+--
+-- Name: material_calculadora material_calculadora_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.material_calculadora
+    ADD CONSTRAINT material_calculadora_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: materiales materiales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.materiales
+    ADD CONSTRAINT materiales_pkey PRIMARY KEY (id_material);
+
+
+--
+-- Name: movimiento_material movimiento_material_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.movimiento_material
+    ADD CONSTRAINT movimiento_material_pkey PRIMARY KEY (id_movimiento_material);
+
+
+--
+-- Name: obras obras_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.obras
+    ADD CONSTRAINT obras_pkey PRIMARY KEY (id_obra);
+
+
+--
+-- Name: pagos_material_obra pagos_material_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_material_obra
+    ADD CONSTRAINT pagos_material_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pagos_profesional_obra pagos_profesional_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_profesional_obra
+    ADD CONSTRAINT pagos_profesional_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: pedido_pago pedido_pago_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pedido_pago
+    ADD CONSTRAINT pedido_pago_pkey PRIMARY KEY (id_pedido_pago);
+
+
+--
+-- Name: presupuesto_costo_inicial presupuesto_costo_inicial_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_costo_inicial
+    ADD CONSTRAINT presupuesto_costo_inicial_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: presupuesto_costo_inicial presupuesto_costo_inicial_presupuesto_no_cliente_id_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_costo_inicial
+    ADD CONSTRAINT presupuesto_costo_inicial_presupuesto_no_cliente_id_key UNIQUE (presupuesto_no_cliente_id);
+
+
+--
+-- Name: presupuesto_gasto_general presupuesto_gasto_general_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_gasto_general
+    ADD CONSTRAINT presupuesto_gasto_general_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: presupuesto_material presupuesto_material_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_material
+    ADD CONSTRAINT presupuesto_material_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: presupuesto_no_cliente presupuesto_no_cliente_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_no_cliente
+    ADD CONSTRAINT presupuesto_no_cliente_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: presupuesto_pdf presupuesto_pdf_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_pdf
+    ADD CONSTRAINT presupuesto_pdf_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: presupuestos_auditoria presupuestos_auditoria_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuestos_auditoria
+    ADD CONSTRAINT presupuestos_auditoria_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profesional_calculadora profesional_calculadora_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_calculadora
+    ADD CONSTRAINT profesional_calculadora_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profesional_tarea_dia profesional_tarea_dia_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_tarea_dia
+    ADD CONSTRAINT profesional_tarea_dia_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profesionales_obra profesionales_obra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_obra
+    ADD CONSTRAINT profesionales_obra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: profesionales profesionales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales
+    ADD CONSTRAINT profesionales_pkey PRIMARY KEY (id_profesional);
+
+
+--
+-- Name: profesionales_tarea_etapa profesionales_tarea_etapa_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_tarea_etapa
+    ADD CONSTRAINT profesionales_tarea_etapa_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: proveedor proveedor_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proveedor
+    ADD CONSTRAINT proveedor_pkey PRIMARY KEY (id_proveedor);
+
+
+--
+-- Name: stock_gastos_generales stock_gastos_generales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_gastos_generales
+    ADD CONSTRAINT stock_gastos_generales_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: stock_material stock_material_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_material
+    ADD CONSTRAINT stock_material_pkey PRIMARY KEY (id_stock_material);
+
+
+--
+-- Name: tareas_etapa_diaria tareas_etapa_diaria_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas_etapa_diaria
+    ADD CONSTRAINT tareas_etapa_diaria_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: trabajos_extra_dias trabajos_extra_dias_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_dias
+    ADD CONSTRAINT trabajos_extra_dias_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: trabajos_extra trabajos_extra_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra
+    ADD CONSTRAINT trabajos_extra_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: trabajos_extra_profesionales trabajos_extra_profesionales_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_profesionales
+    ADD CONSTRAINT trabajos_extra_profesionales_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: trabajos_extra_tareas trabajos_extra_tareas_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_tareas
+    ADD CONSTRAINT trabajos_extra_tareas_pkey PRIMARY KEY (id);
+
+
+--
+-- Name: asignacion_profesional_dia unique_asignacion_fecha; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignacion_profesional_dia
+    ADD CONSTRAINT unique_asignacion_fecha UNIQUE (asignacion_id, fecha);
+
+
+--
+-- Name: asistencia_obra unique_asistencia_dia; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asistencia_obra
+    ADD CONSTRAINT unique_asistencia_dia UNIQUE (profesional_obra_id, fecha);
+
+
+--
+-- Name: profesional_tarea_dia unique_tarea_asignacion; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_tarea_dia
+    ADD CONSTRAINT unique_tarea_asignacion UNIQUE (tarea_id, asignacion_dia_id);
+
+
+--
+-- Name: asignaciones_material_obra uq_asignaciones_material_obra; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_material_obra
+    ADD CONSTRAINT uq_asignaciones_material_obra UNIQUE (obra_id, material_calculadora_id);
+
+
+--
+-- Name: etapas_diarias uq_obra_fecha; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etapas_diarias
+    ADD CONSTRAINT uq_obra_fecha UNIQUE (obra_id, fecha);
+
+
+--
+-- Name: profesionales_tarea_etapa uq_tarea_profesional; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_tarea_etapa
+    ADD CONSTRAINT uq_tarea_profesional UNIQUE (tarea_id, profesional_id);
+
+
+--
+-- Name: trabajos_extra_dias uq_trabajo_extra_fecha; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_dias
+    ADD CONSTRAINT uq_trabajo_extra_fecha UNIQUE (trabajo_extra_id, fecha);
+
+
+--
+-- Name: usuarios usuarios_email_key; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuarios
+    ADD CONSTRAINT usuarios_email_key UNIQUE (email);
+
+
+--
+-- Name: usuarios usuarios_pkey; Type: CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuarios
+    ADD CONSTRAINT usuarios_pkey PRIMARY KEY (id_usuario);
+
+
+--
+-- Name: flyway_schema_history_s_idx; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX flyway_schema_history_s_idx ON public.flyway_schema_history USING btree (success);
+
+
+--
+-- Name: idx_asignacion_dia_asignacion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_dia_asignacion ON public.asignacion_profesional_dia USING btree (asignacion_id);
+
+
+--
+-- Name: idx_asignacion_dia_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_dia_empresa ON public.asignacion_profesional_dia USING btree (empresa_id);
+
+
+--
+-- Name: idx_asignacion_dia_empresa_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_dia_empresa_fecha ON public.asignacion_profesional_dia USING btree (empresa_id, fecha);
+
+
+--
+-- Name: idx_asignacion_dia_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_dia_fecha ON public.asignacion_profesional_dia USING btree (fecha);
+
+
+--
+-- Name: idx_asignacion_dia_semana; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_dia_semana ON public.asignacion_profesional_dia USING btree (semana_iso);
+
+
+--
+-- Name: idx_asignacion_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_estado ON public.asignaciones_profesional_obra USING btree (estado);
+
+
+--
+-- Name: idx_asignacion_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_obra ON public.asignaciones_profesional_obra USING btree (obra_id);
+
+
+--
+-- Name: idx_asignacion_profesional; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_profesional ON public.asignaciones_profesional_obra USING btree (profesional_id);
+
+
+--
+-- Name: idx_asignacion_profesional_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_profesional_tipo ON public.asignaciones_profesional_obra USING btree (profesional_id, tipo_asignacion);
+
+
+--
+-- Name: idx_asignacion_rubro; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_rubro ON public.asignaciones_profesional_obra USING btree (rubro_id);
+
+
+--
+-- Name: idx_asignacion_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignacion_tipo ON public.asignaciones_profesional_obra USING btree (tipo_asignacion);
+
+
+--
+-- Name: idx_asignaciones_cobro_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignaciones_cobro_obra ON public.asignaciones_cobro_obra USING btree (cobro_obra_id);
+
+
+--
+-- Name: idx_asignaciones_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignaciones_empresa ON public.asignaciones_cobro_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_asignaciones_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignaciones_estado ON public.asignaciones_cobro_obra USING btree (estado);
+
+
+--
+-- Name: idx_asignaciones_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignaciones_obra ON public.asignaciones_cobro_obra USING btree (obra_id);
+
+
+--
+-- Name: idx_asignaciones_presupuesto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asignaciones_presupuesto ON public.asignaciones_cobro_obra USING btree (presupuesto_no_cliente_id);
+
+
+--
+-- Name: idx_asistencia_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asistencia_empresa ON public.asistencia_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_asistencia_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asistencia_fecha ON public.asistencia_obra USING btree (fecha);
+
+
+--
+-- Name: idx_asistencia_profesional; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_asistencia_profesional ON public.asistencia_obra USING btree (profesional_obra_id);
+
+
+--
+-- Name: idx_caja_chica_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_caja_chica_empresa ON public.caja_chica_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_caja_chica_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_caja_chica_estado ON public.caja_chica_obra USING btree (estado);
+
+
+--
+-- Name: idx_caja_chica_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_caja_chica_fecha ON public.caja_chica_obra USING btree (fecha);
+
+
+--
+-- Name: idx_caja_chica_presupuesto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_caja_chica_presupuesto ON public.caja_chica_obra USING btree (presupuesto_no_cliente_id);
+
+
+--
+-- Name: idx_caja_chica_profesional; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_caja_chica_profesional ON public.caja_chica_obra USING btree (profesional_obra_id);
+
+
+--
+-- Name: idx_cobros_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cobros_empresa ON public.cobros_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_cobros_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cobros_estado ON public.cobros_obra USING btree (estado);
+
+
+--
+-- Name: idx_cobros_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cobros_fecha ON public.cobros_obra USING btree (fecha_cobro);
+
+
+--
+-- Name: idx_cobros_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cobros_obra ON public.cobros_obra USING btree (obra_id);
+
+
+--
+-- Name: idx_cobros_presupuesto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cobros_presupuesto ON public.cobros_obra USING btree (presupuesto_no_cliente_id);
+
+
+--
+-- Name: idx_cobros_vencimiento; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_cobros_vencimiento ON public.cobros_obra USING btree (fecha_vencimiento);
+
+
+--
+-- Name: idx_costos_categoria; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_costos_categoria ON public.costos USING btree (categoria);
+
+
+--
+-- Name: idx_costos_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_costos_estado ON public.costos USING btree (estado);
+
+
+--
+-- Name: idx_costos_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_costos_fecha ON public.costos USING btree (fecha);
+
+
+--
+-- Name: idx_costos_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_costos_obra ON public.costos USING btree (id_obra);
+
+
+--
+-- Name: idx_etapas_diarias_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_etapas_diarias_empresa ON public.etapas_diarias USING btree (empresa_id);
+
+
+--
+-- Name: idx_etapas_diarias_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_etapas_diarias_estado ON public.etapas_diarias USING btree (estado);
+
+
+--
+-- Name: idx_etapas_diarias_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_etapas_diarias_fecha ON public.etapas_diarias USING btree (fecha);
+
+
+--
+-- Name: idx_etapas_diarias_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_etapas_diarias_obra ON public.etapas_diarias USING btree (obra_id);
+
+
+--
+-- Name: idx_etapas_diarias_obra_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_etapas_diarias_obra_fecha ON public.etapas_diarias USING btree (obra_id, fecha);
+
+
+--
+-- Name: idx_gastos_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_gastos_empresa ON public.gastos_obra_profesional USING btree (empresa_id);
+
+
+--
+-- Name: idx_gastos_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_gastos_fecha ON public.gastos_obra_profesional USING btree (fecha_hora);
+
+
+--
+-- Name: idx_gastos_profesional; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_gastos_profesional ON public.gastos_obra_profesional USING btree (profesional_obra_id);
+
+
+--
+-- Name: idx_honorarios_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_honorarios_obra ON public.honorarios USING btree (id_obra);
+
+
+--
+-- Name: idx_jornales_asignacion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_jornales_asignacion ON public.jornales USING btree (id_asignacion);
+
+
+--
+-- Name: idx_jornales_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_jornales_fecha ON public.jornales USING btree (fecha);
+
+
+--
+-- Name: idx_movimientos_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_movimientos_empresa ON public.movimiento_material USING btree (id_empresa);
+
+
+--
+-- Name: idx_movimientos_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_movimientos_fecha ON public.movimiento_material USING btree (fecha_movimiento);
+
+
+--
+-- Name: idx_movimientos_material; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_movimientos_material ON public.movimiento_material USING btree (id_material);
+
+
+--
+-- Name: idx_movimientos_stock; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_movimientos_stock ON public.movimiento_material USING btree (id_stock_material);
+
+
+--
+-- Name: idx_obras_cliente; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_obras_cliente ON public.obras USING btree (id_cliente);
+
+
+--
+-- Name: idx_obras_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_obras_estado ON public.obras USING btree (estado);
+
+
+--
+-- Name: idx_pagos_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_empresa ON public.pagos_profesional_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_pagos_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_estado ON public.pagos_profesional_obra USING btree (estado);
+
+
+--
+-- Name: idx_pagos_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_fecha ON public.pagos_profesional_obra USING btree (fecha_pago);
+
+
+--
+-- Name: idx_pagos_gastos_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_empresa ON public.asignaciones_gasto_general_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_pagos_gastos_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_estado ON public.asignaciones_gasto_general_obra USING btree (estado);
+
+
+--
+-- Name: idx_pagos_gastos_fecha_pago; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_fecha_pago ON public.asignaciones_gasto_general_obra USING btree (fecha_pago);
+
+
+--
+-- Name: idx_pagos_gastos_gasto_calculadora; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_gasto_calculadora ON public.asignaciones_gasto_general_obra USING btree (gasto_general_calculadora_id);
+
+
+--
+-- Name: idx_pagos_gastos_item_calculadora; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_item_calculadora ON public.asignaciones_gasto_general_obra USING btree (item_calculadora_id);
+
+
+--
+-- Name: idx_pagos_gastos_presupuesto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_presupuesto ON public.asignaciones_gasto_general_obra USING btree (presupuesto_no_cliente_id);
+
+
+--
+-- Name: idx_pagos_gastos_tipo_pago; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_gastos_tipo_pago ON public.asignaciones_gasto_general_obra USING btree (tipo_pago);
+
+
+--
+-- Name: idx_pagos_material_calculadora; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_material_calculadora ON public.pagos_material_obra USING btree (material_calculadora_id);
+
+
+--
+-- Name: idx_pagos_material_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_material_empresa ON public.pagos_material_obra USING btree (empresa_id);
+
+
+--
+-- Name: idx_pagos_material_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_material_estado ON public.pagos_material_obra USING btree (estado);
+
+
+--
+-- Name: idx_pagos_material_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_material_fecha ON public.pagos_material_obra USING btree (fecha_pago);
+
+
+--
+-- Name: idx_pagos_material_presupuesto; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_material_presupuesto ON public.pagos_material_obra USING btree (presupuesto_no_cliente_id);
+
+
+--
+-- Name: idx_pagos_material_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_material_tipo ON public.pagos_material_obra USING btree (tipo_pago);
+
+
+--
+-- Name: idx_pagos_periodo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_periodo ON public.pagos_profesional_obra USING btree (periodo_desde, periodo_hasta);
+
+
+--
+-- Name: idx_pagos_profesional_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_profesional_obra ON public.pagos_profesional_obra USING btree (profesional_obra_id);
+
+
+--
+-- Name: idx_pagos_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pagos_tipo ON public.pagos_profesional_obra USING btree (tipo_pago);
+
+
+--
+-- Name: idx_pedidos_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pedidos_empresa ON public.pedido_pago USING btree (id_empresa);
+
+
+--
+-- Name: idx_pedidos_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pedidos_estado ON public.pedido_pago USING btree (estado);
+
+
+--
+-- Name: idx_pedidos_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pedidos_fecha ON public.pedido_pago USING btree (fecha_pedido);
+
+
+--
+-- Name: idx_pedidos_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pedidos_obra ON public.pedido_pago USING btree (id_obra);
+
+
+--
+-- Name: idx_pedidos_proveedor; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_pedidos_proveedor ON public.pedido_pago USING btree (id_proveedor);
+
+
+--
+-- Name: idx_profesional_tarea_asignacion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesional_tarea_asignacion ON public.profesional_tarea_dia USING btree (asignacion_dia_id);
+
+
+--
+-- Name: idx_profesional_tarea_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesional_tarea_empresa ON public.profesional_tarea_dia USING btree (empresa_id);
+
+
+--
+-- Name: idx_profesional_tarea_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesional_tarea_estado ON public.profesional_tarea_dia USING btree (estado);
+
+
+--
+-- Name: idx_profesional_tarea_tarea; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesional_tarea_tarea ON public.profesional_tarea_dia USING btree (tarea_id);
+
+
+--
+-- Name: idx_profesionales_activo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesionales_activo ON public.profesionales USING btree (activo);
+
+
+--
+-- Name: idx_profesionales_tarea_etapa_profesional; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesionales_tarea_etapa_profesional ON public.profesionales_tarea_etapa USING btree (profesional_id);
+
+
+--
+-- Name: idx_profesionales_tarea_etapa_tarea; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesionales_tarea_etapa_tarea ON public.profesionales_tarea_etapa USING btree (tarea_id);
+
+
+--
+-- Name: idx_profesionales_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_profesionales_tipo ON public.profesionales USING btree (tipo_profesional);
+
+
+--
+-- Name: idx_proveedor_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_proveedor_empresa ON public.proveedor USING btree (id_empresa);
+
+
+--
+-- Name: idx_proveedor_nombre; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_proveedor_nombre ON public.proveedor USING btree (nombre);
+
+
+--
+-- Name: idx_proveedor_rut; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_proveedor_rut ON public.proveedor USING btree (rut);
+
+
+--
+-- Name: idx_stock_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_empresa ON public.stock_material USING btree (id_empresa);
+
+
+--
+-- Name: idx_stock_material; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_material ON public.stock_material USING btree (id_material);
+
+
+--
+-- Name: idx_stock_ubicacion; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_stock_ubicacion ON public.stock_material USING btree (ubicacion);
+
+
+--
+-- Name: idx_tareas_etapa_diaria_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tareas_etapa_diaria_estado ON public.tareas_etapa_diaria USING btree (estado);
+
+
+--
+-- Name: idx_tareas_etapa_diaria_etapa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_tareas_etapa_diaria_etapa ON public.tareas_etapa_diaria USING btree (etapa_diaria_id);
+
+
+--
+-- Name: idx_trabajos_extra_cliente; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_cliente ON public.trabajos_extra USING btree (cliente_id);
+
+
+--
+-- Name: idx_trabajos_extra_dias_fecha; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_dias_fecha ON public.trabajos_extra_dias USING btree (fecha);
+
+
+--
+-- Name: idx_trabajos_extra_dias_trabajo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_dias_trabajo ON public.trabajos_extra_dias USING btree (trabajo_extra_id);
+
+
+--
+-- Name: idx_trabajos_extra_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_empresa ON public.trabajos_extra USING btree (empresa_id);
+
+
+--
+-- Name: idx_trabajos_extra_obra; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_obra ON public.trabajos_extra USING btree (obra_id);
+
+
+--
+-- Name: idx_trabajos_extra_obra_empresa; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_obra_empresa ON public.trabajos_extra USING btree (obra_id, empresa_id);
+
+
+--
+-- Name: idx_trabajos_extra_prof_profesional; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_prof_profesional ON public.trabajos_extra_profesionales USING btree (profesional_id);
+
+
+--
+-- Name: idx_trabajos_extra_prof_tipo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_prof_tipo ON public.trabajos_extra_profesionales USING btree (tipo);
+
+
+--
+-- Name: idx_trabajos_extra_prof_trabajo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_prof_trabajo ON public.trabajos_extra_profesionales USING btree (trabajo_extra_id);
+
+
+--
+-- Name: idx_trabajos_extra_tareas_estado; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_tareas_estado ON public.trabajos_extra_tareas USING btree (estado);
+
+
+--
+-- Name: idx_trabajos_extra_tareas_trabajo; Type: INDEX; Schema: public; Owner: -
+--
+
+CREATE INDEX idx_trabajos_extra_tareas_trabajo ON public.trabajos_extra_tareas USING btree (trabajo_extra_id);
+
+
+--
+-- Name: profesionales_tarea_etapa fk1gauyso7o3rfmf8uicm31jni6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_tarea_etapa
+    ADD CONSTRAINT fk1gauyso7o3rfmf8uicm31jni6 FOREIGN KEY (tarea_id) REFERENCES public.tareas_etapa_diaria(id);
+
+
+--
+-- Name: cliente_empresa fk1rn5cw5ibq6wxemuu3yj64e7w; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cliente_empresa
+    ADD CONSTRAINT fk1rn5cw5ibq6wxemuu3yj64e7w FOREIGN KEY (id_cliente) REFERENCES public.clientes(id_cliente);
+
+
+--
+-- Name: asignaciones_material_obra fk22ds3rsmpqp4cnw4jswoacr8o; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_material_obra
+    ADD CONSTRAINT fk22ds3rsmpqp4cnw4jswoacr8o FOREIGN KEY (material_calculadora_id) REFERENCES public.material_calculadora(id);
+
+
+--
+-- Name: trabajos_extra fk22k84iqfc65adwbpvgjc9x65w; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra
+    ADD CONSTRAINT fk22k84iqfc65adwbpvgjc9x65w FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: profesionales_obra fk2b9enit6r4p7q20rj6dnhs6bu; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_obra
+    ADD CONSTRAINT fk2b9enit6r4p7q20rj6dnhs6bu FOREIGN KEY (profesional_id) REFERENCES public.profesionales(id_profesional);
+
+
+--
+-- Name: pagos_material_obra fk2fhbnrtttg3jsrxmlamt7ttu6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_material_obra
+    ADD CONSTRAINT fk2fhbnrtttg3jsrxmlamt7ttu6 FOREIGN KEY (item_calculadora_id) REFERENCES public.items_calculadora_presupuesto(id);
+
+
+--
+-- Name: cobros_obra fk2ma20fpa2x2itds4mhjbvvvie; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cobros_obra
+    ADD CONSTRAINT fk2ma20fpa2x2itds4mhjbvvvie FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: trabajos_extra fk2pkuwioipo9vc2oey898rukpo; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra
+    ADD CONSTRAINT fk2pkuwioipo9vc2oey898rukpo FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: honorarios fk2whq6yjjtgacfhon572g07a84; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.honorarios
+    ADD CONSTRAINT fk2whq6yjjtgacfhon572g07a84 FOREIGN KEY (id_profesional) REFERENCES public.profesionales(id_profesional);
+
+
+--
+-- Name: stock_material fk3uyej99ta36datmk1fllx5umj; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_material
+    ADD CONSTRAINT fk3uyej99ta36datmk1fllx5umj FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: profesional_calculadora fk3wgh2pmfhffjueo1todplvmqy; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_calculadora
+    ADD CONSTRAINT fk3wgh2pmfhffjueo1todplvmqy FOREIGN KEY (item_calculadora_id) REFERENCES public.items_calculadora_presupuesto(id);
+
+
+--
+-- Name: pedido_pago fk4lb9ixvfys6t64dwvv5i1vjdb; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pedido_pago
+    ADD CONSTRAINT fk4lb9ixvfys6t64dwvv5i1vjdb FOREIGN KEY (id_obra) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: pedido_pago fk6mlqu6a1m6f0sv81r36xsllc2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pedido_pago
+    ADD CONSTRAINT fk6mlqu6a1m6f0sv81r36xsllc2 FOREIGN KEY (id_proveedor) REFERENCES public.proveedor(id_proveedor);
+
+
+--
+-- Name: jornal_calculadora fk75j8vdqsqqw6n55lilculnvk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornal_calculadora
+    ADD CONSTRAINT fk75j8vdqsqqw6n55lilculnvk FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: obras fk7s6n25kv8mtrn0bswf384jpf0; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.obras
+    ADD CONSTRAINT fk7s6n25kv8mtrn0bswf384jpf0 FOREIGN KEY (id_cliente) REFERENCES public.clientes(id_cliente);
+
+
+--
+-- Name: profesional_tarea_dia fk7tj7rncr0pld0hacy9mhifnwk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_tarea_dia
+    ADD CONSTRAINT fk7tj7rncr0pld0hacy9mhifnwk FOREIGN KEY (asignacion_dia_id) REFERENCES public.asignacion_profesional_dia(id);
+
+
+--
+-- Name: gastos_obra_profesional fk7vpmvc081sw2c1tg510uwsevv; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.gastos_obra_profesional
+    ADD CONSTRAINT fk7vpmvc081sw2c1tg510uwsevv FOREIGN KEY (profesional_obra_id) REFERENCES public.profesionales_obra(id);
+
+
+--
+-- Name: trabajos_extra_tareas_profesionales fk83v0dsmr0oriwlpfyrf5ywadk; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_tareas_profesionales
+    ADD CONSTRAINT fk83v0dsmr0oriwlpfyrf5ywadk FOREIGN KEY (tarea_id) REFERENCES public.trabajos_extra_tareas(id);
+
+
+--
+-- Name: asignaciones_material_obra fk8vcb03w3be8twwuisuvfmoqe; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_material_obra
+    ADD CONSTRAINT fk8vcb03w3be8twwuisuvfmoqe FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: asignaciones_cobro_obra fk9h43v371idh1xbh4aq8bpin43; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_cobro_obra
+    ADD CONSTRAINT fk9h43v371idh1xbh4aq8bpin43 FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: profesional_calculadora fk9k12dq5mndpcv4mxjhnhx573r; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_calculadora
+    ADD CONSTRAINT fk9k12dq5mndpcv4mxjhnhx573r FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: pedido_pago fk9xmoknpapg3b79w07jiwxapdj; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pedido_pago
+    ADD CONSTRAINT fk9xmoknpapg3b79w07jiwxapdj FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: asignaciones_cobro_obra fkasw6clxh64pv4eppgg356t18f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_cobro_obra
+    ADD CONSTRAINT fkasw6clxh64pv4eppgg356t18f FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES public.presupuesto_no_cliente(id);
+
+
+--
+-- Name: presupuesto_gasto_general fkauyp6jdjtdya2505wqfkpr3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_gasto_general
+    ADD CONSTRAINT fkauyp6jdjtdya2505wqfkpr3 FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: pagos_profesional_obra fkb379mdh6xu5m5nwktwgt8xn0g; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_profesional_obra
+    ADD CONSTRAINT fkb379mdh6xu5m5nwktwgt8xn0g FOREIGN KEY (profesional_obra_id) REFERENCES public.profesionales_obra(id);
+
+
+--
+-- Name: asignaciones_profesional_obra fkbdqfrnwo160kqkmn0w2aklu16; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_profesional_obra
+    ADD CONSTRAINT fkbdqfrnwo160kqkmn0w2aklu16 FOREIGN KEY (profesional_id) REFERENCES public.profesionales(id_profesional);
+
+
+--
+-- Name: profesional_tarea_dia fkbeinhfvv3g9w5wcx6u7o5y7x4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesional_tarea_dia
+    ADD CONSTRAINT fkbeinhfvv3g9w5wcx6u7o5y7x4 FOREIGN KEY (tarea_id) REFERENCES public.tareas_etapa_diaria(id);
+
+
+--
+-- Name: etapas_diarias fkbht989839spsovngmv77ruin8; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etapas_diarias
+    ADD CONSTRAINT fkbht989839spsovngmv77ruin8 FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: profesionales_obra fkbohpt3p99kbi7gxn4wnrefbvq; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_obra
+    ADD CONSTRAINT fkbohpt3p99kbi7gxn4wnrefbvq FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: jornal_calculadora fkd8i8tojw7jsx0u5laxw5lspi5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornal_calculadora
+    ADD CONSTRAINT fkd8i8tojw7jsx0u5laxw5lspi5 FOREIGN KEY (item_calculadora_id) REFERENCES public.items_calculadora_presupuesto(id);
+
+
+--
+-- Name: profesionales_tarea_etapa fkd8l32ju3pumptxsk0ikib357n; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.profesionales_tarea_etapa
+    ADD CONSTRAINT fkd8l32ju3pumptxsk0ikib357n FOREIGN KEY (profesional_id) REFERENCES public.profesionales(id_profesional);
+
+
+--
+-- Name: trabajos_extra_profesionales fkd8puahmmye8osuvjlg87qt4k; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_profesionales
+    ADD CONSTRAINT fkd8puahmmye8osuvjlg87qt4k FOREIGN KEY (trabajo_extra_id) REFERENCES public.trabajos_extra(id);
+
+
+--
+-- Name: costos fkddlb4xmvf5npx8qv4qcqrfk2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.costos
+    ADD CONSTRAINT fkddlb4xmvf5npx8qv4qcqrfk2 FOREIGN KEY (id_obra) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: tareas_etapa_diaria fkdr6giwyw431xirfxsec7sx3mv; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.tareas_etapa_diaria
+    ADD CONSTRAINT fkdr6giwyw431xirfxsec7sx3mv FOREIGN KEY (etapa_diaria_id) REFERENCES public.etapas_diarias(id);
+
+
+--
+-- Name: trabajos_extra_tareas fke1j9onsx85xggr58kfplbgmmm; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_tareas
+    ADD CONSTRAINT fke1j9onsx85xggr58kfplbgmmm FOREIGN KEY (trabajo_extra_id) REFERENCES public.trabajos_extra(id);
+
+
+--
+-- Name: movimiento_material fke56i7dxl1btq5ad98y3aoat9v; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.movimiento_material
+    ADD CONSTRAINT fke56i7dxl1btq5ad98y3aoat9v FOREIGN KEY (id_stock_material) REFERENCES public.stock_material(id_stock_material);
+
+
+--
+-- Name: trabajos_extra fke7wvpegjl82q05fir1rggpxse; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra
+    ADD CONSTRAINT fke7wvpegjl82q05fir1rggpxse FOREIGN KEY (cliente_id) REFERENCES public.clientes(id_cliente);
+
+
+--
+-- Name: movimiento_material fkes4ho1ck0n1cenelcd1mfl4ft; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.movimiento_material
+    ADD CONSTRAINT fkes4ho1ck0n1cenelcd1mfl4ft FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: asignaciones_profesional_obra fkgqt1eufsovo2ckkmpq1r0qy67; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_profesional_obra
+    ADD CONSTRAINT fkgqt1eufsovo2ckkmpq1r0qy67 FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: usuarios fkgrju3u0utt7909j9yap1oacng; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.usuarios
+    ADD CONSTRAINT fkgrju3u0utt7909j9yap1oacng FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: stock_material fkh0w9emrlsowv7ikfx3gfv6gu3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_material
+    ADD CONSTRAINT fkh0w9emrlsowv7ikfx3gfv6gu3 FOREIGN KEY (id_material) REFERENCES public.materiales(id_material);
+
+
+--
+-- Name: items_calculadora_presupuesto fkhj1997fe5n6gdouebwtowuqxn; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items_calculadora_presupuesto
+    ADD CONSTRAINT fkhj1997fe5n6gdouebwtowuqxn FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES public.presupuesto_no_cliente(id);
+
+
+--
+-- Name: honorarios fkhvecss9sypdmw5r8ogvtx5ueg; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.honorarios
+    ADD CONSTRAINT fkhvecss9sypdmw5r8ogvtx5ueg FOREIGN KEY (id_obra) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: pagos_material_obra fkjltpv2hsjqo4lgdktjwpxtfgs; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_material_obra
+    ADD CONSTRAINT fkjltpv2hsjqo4lgdktjwpxtfgs FOREIGN KEY (material_calculadora_id) REFERENCES public.material_calculadora(id);
+
+
+--
+-- Name: asignaciones_gasto_general_obra fkk36b11hmvyw05ia1hycndqof9; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_gasto_general_obra
+    ADD CONSTRAINT fkk36b11hmvyw05ia1hycndqof9 FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES public.presupuesto_no_cliente(id);
+
+
+--
+-- Name: pagos_material_obra fkk3ae7oeyll652flm02pm7144k; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.pagos_material_obra
+    ADD CONSTRAINT fkk3ae7oeyll652flm02pm7144k FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES public.presupuesto_no_cliente(id);
+
+
+--
+-- Name: presupuesto_costo_inicial fkk9u81wo669jhjfajhtqwsvqbh; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_costo_inicial
+    ADD CONSTRAINT fkk9u81wo669jhjfajhtqwsvqbh FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES public.presupuesto_no_cliente(id);
+
+
+--
+-- Name: asistencia_obra fkkilb13p5thec1pkkrn2bgs2ah; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asistencia_obra
+    ADD CONSTRAINT fkkilb13p5thec1pkkrn2bgs2ah FOREIGN KEY (profesional_obra_id) REFERENCES public.profesionales_obra(id);
+
+
+--
+-- Name: trabajos_extra_profesionales fkkvgtho51v0jwaosvumob69gqj; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_profesionales
+    ADD CONSTRAINT fkkvgtho51v0jwaosvumob69gqj FOREIGN KEY (profesional_id) REFERENCES public.profesionales(id_profesional);
+
+
+--
+-- Name: asignaciones_gasto_general_obra fkl87ljyko7v2a61ytv792074e2; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_gasto_general_obra
+    ADD CONSTRAINT fkl87ljyko7v2a61ytv792074e2 FOREIGN KEY (item_calculadora_id) REFERENCES public.items_calculadora_presupuesto(id);
+
+
+--
+-- Name: presupuesto_no_cliente fklb5kd15qski6l9650hgwh1dwq; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_no_cliente
+    ADD CONSTRAINT fklb5kd15qski6l9650hgwh1dwq FOREIGN KEY (cliente_id) REFERENCES public.clientes(id_cliente);
+
+
+--
+-- Name: jornales fklemnr34bjr21c72ai6hupwqf3; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.jornales
+    ADD CONSTRAINT fklemnr34bjr21c72ai6hupwqf3 FOREIGN KEY (id_asignacion) REFERENCES public.profesionales_obra(id);
+
+
+--
+-- Name: items_calculadora_presupuesto fkls8galqi1yfanfifwxe5jvp9m; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.items_calculadora_presupuesto
+    ADD CONSTRAINT fkls8galqi1yfanfifwxe5jvp9m FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: presupuesto_gasto_general fkmpex7fqwwoq4beel66np54ux6; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_gasto_general
+    ADD CONSTRAINT fkmpex7fqwwoq4beel66np54ux6 FOREIGN KEY (item_calculadora_id) REFERENCES public.items_calculadora_presupuesto(id);
+
+
+--
+-- Name: asignaciones_cobro_obra fkn0stmybwj7us24yky0d8kqg8f; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignaciones_cobro_obra
+    ADD CONSTRAINT fkn0stmybwj7us24yky0d8kqg8f FOREIGN KEY (cobro_obra_id) REFERENCES public.cobros_obra(id);
+
+
+--
+-- Name: cliente_empresa fkncggwj6hgasmgsttcrte7kh9c; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cliente_empresa
+    ADD CONSTRAINT fkncggwj6hgasmgsttcrte7kh9c FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: material_calculadora fkoyoeppu7avtbr1y096rdj8jp5; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.material_calculadora
+    ADD CONSTRAINT fkoyoeppu7avtbr1y096rdj8jp5 FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: asignacion_profesional_dia fkpvefpitvbyw1o5wxh55xc1mgh; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.asignacion_profesional_dia
+    ADD CONSTRAINT fkpvefpitvbyw1o5wxh55xc1mgh FOREIGN KEY (asignacion_id) REFERENCES public.asignaciones_profesional_obra(id);
+
+
+--
+-- Name: material_calculadora fkq3m6ej2h7y8dyd3p63nm8i9fg; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.material_calculadora
+    ADD CONSTRAINT fkq3m6ej2h7y8dyd3p63nm8i9fg FOREIGN KEY (item_calculadora_id) REFERENCES public.items_calculadora_presupuesto(id);
+
+
+--
+-- Name: trabajos_extra_dias fkqbtkwamedgryush7xxj067vsr; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.trabajos_extra_dias
+    ADD CONSTRAINT fkqbtkwamedgryush7xxj067vsr FOREIGN KEY (trabajo_extra_id) REFERENCES public.trabajos_extra(id);
+
+
+--
+-- Name: presupuesto_material fkr1t9uewmd80s5199eyygnf53y; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_material
+    ADD CONSTRAINT fkr1t9uewmd80s5199eyygnf53y FOREIGN KEY (id_material) REFERENCES public.materiales(id_material);
+
+
+--
+-- Name: cobros_obra fkr7o1qvvox4obhn7jjw03jvu81; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.cobros_obra
+    ADD CONSTRAINT fkr7o1qvvox4obhn7jjw03jvu81 FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES public.presupuesto_no_cliente(id);
+
+
+--
+-- Name: etapas_diarias fkrbujk7oronp67qs8nyapum1k4; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.etapas_diarias
+    ADD CONSTRAINT fkrbujk7oronp67qs8nyapum1k4 FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: stock_gastos_generales fkrul2pq3i35smikfegsuloty81; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.stock_gastos_generales
+    ADD CONSTRAINT fkrul2pq3i35smikfegsuloty81 FOREIGN KEY (gasto_general_id) REFERENCES public.gastos_generales(id);
+
+
+--
+-- Name: presupuesto_no_cliente fkslul65fgy0e355e5acx3f2r31; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_no_cliente
+    ADD CONSTRAINT fkslul65fgy0e355e5acx3f2r31 FOREIGN KEY (obra_id) REFERENCES public.obras(id_obra);
+
+
+--
+-- Name: proveedor fksujl7gk643tmwusehsmdu87rf; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.proveedor
+    ADD CONSTRAINT fksujl7gk643tmwusehsmdu87rf FOREIGN KEY (id_empresa) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- Name: movimiento_material fkt9domjcljfp9a2juy25vytnjp; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.movimiento_material
+    ADD CONSTRAINT fkt9domjcljfp9a2juy25vytnjp FOREIGN KEY (id_material) REFERENCES public.materiales(id_material);
+
+
+--
+-- Name: presupuesto_no_cliente fktdibfc5rpf3ha25uxdoiyppkx; Type: FK CONSTRAINT; Schema: public; Owner: -
+--
+
+ALTER TABLE ONLY public.presupuesto_no_cliente
+    ADD CONSTRAINT fktdibfc5rpf3ha25uxdoiyppkx FOREIGN KEY (empresa_id) REFERENCES public.empresas(id_empresa);
+
+
+--
+-- PostgreSQL database dump complete
+--
+
+
+
+-- Datos iniciales
+INSERT INTO empresas (id, nombre_empresa, email, activa, fecha_creacion, cuit, razon_social) VALUES (3, 'Gisel', 'contacto@gisel.com', true, NOW(), '28458759632', 'Gisel SA');

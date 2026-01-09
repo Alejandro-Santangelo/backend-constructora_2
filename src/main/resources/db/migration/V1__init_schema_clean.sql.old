@@ -1,0 +1,412 @@
+-- Schema generado automáticamente desde entidades Java
+-- NO EDITAR MANUALMENTE - Regenerar con generate-schema-from-entities.py
+
+-- ASIGNACIONES_COBRO_OBRA (desde AsignacionCobroObra.java)
+CREATE TABLE IF NOT EXISTS asignaciones_cobro_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    cobro_obra_id BIGINT NOT NULL,
+    obra_id BIGINT NOT NULL,
+    presupuesto_no_cliente_id BIGINT NULL,
+    usuario_modificacion_id BIGINT NULL
+);
+
+-- ASIGNACION_PROFESIONAL_DIA (desde AsignacionProfesionalDia.java)
+CREATE TABLE IF NOT EXISTS asignacion_profesional_dia (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    asignacion_id BIGINT NOT NULL,
+    fecha DATE NOT NULL,
+    cantidad INTEGER NOT NULL,
+    semana_iso VARCHAR(10),
+    creado_en TIMESTAMP
+);
+
+-- ASIGNACIONES_PROFESIONAL_OBRA (desde AsignacionProfesionalObra.java)
+CREATE TABLE IF NOT EXISTS asignaciones_profesional_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    profesional_id BIGINT NOT NULL,
+    obra_id BIGINT NOT NULL,
+    fecha_modificacion TIMESTAMP NULL
+);
+
+-- ASISTENCIA_OBRA (desde AsistenciaObra.java)
+CREATE TABLE IF NOT EXISTS asistencia_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    profesional_obra_id BIGINT NOT NULL
+);
+
+-- CAJA_CHICA_MOVIMIENTOS (desde CajaChicaMovimiento.java)
+CREATE TABLE IF NOT EXISTS caja_chica_movimientos (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- CAJA_CHICA_OBRA (desde CajaChicaObra.java)
+CREATE TABLE IF NOT EXISTS caja_chica_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- CLIENTES (desde Cliente.java)
+CREATE TABLE IF NOT EXISTS clientes (
+    id BIGSERIAL PRIMARY KEY,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- COBROS_OBRA (desde CobroObra.java)
+CREATE TABLE IF NOT EXISTS cobros_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    obra_id BIGINT NULL,
+    presupuesto_no_cliente_id BIGINT NULL,
+    usuario_modificacion_id BIGINT NULL
+);
+
+-- COSTOS (desde Costo.java)
+CREATE TABLE IF NOT EXISTS costos (
+    id BIGSERIAL PRIMARY KEY,
+    id_obra BIGINT NOT NULL,
+    anio INTEGER NULL
+);
+
+-- EMPRESAS (desde Empresa.java)
+CREATE TABLE IF NOT EXISTS empresas (
+    id BIGSERIAL PRIMARY KEY,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- ETAPAS_DIARIAS (desde EtapaDiaria.java)
+CREATE TABLE IF NOT EXISTS etapas_diarias (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    obra_id BIGINT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- GASTOS_GENERALES (desde GastoGeneral.java)
+CREATE TABLE IF NOT EXISTS gastos_generales (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- GASTOS_OBRA_PROFESIONAL (desde GastoObraProfesional.java)
+CREATE TABLE IF NOT EXISTS gastos_obra_profesional (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    profesional_obra_id BIGINT NOT NULL,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- HONORARIOS (desde Honorario.java)
+CREATE TABLE IF NOT EXISTS honorarios (
+    id BIGSERIAL PRIMARY KEY,
+    id_obra BIGINT NOT NULL,
+    id_profesional BIGINT NULL,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- ITEMS_CALCULADORA_PRESUPUESTO (desde ItemCalculadoraPresupuesto.java)
+CREATE TABLE IF NOT EXISTS items_calculadora_presupuesto (
+    id BIGSERIAL PRIMARY KEY,
+    presupuesto_no_cliente_id BIGINT NOT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- JORNALES (desde Jornal.java)
+CREATE TABLE IF NOT EXISTS jornales (
+    id BIGSERIAL PRIMARY KEY,
+    id_asignacion BIGINT NOT NULL,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- JORNAL_CALCULADORA (desde JornalCalculadora.java)
+CREATE TABLE IF NOT EXISTS jornal_calculadora (
+    id BIGSERIAL PRIMARY KEY,
+    item_calculadora_id BIGINT NOT NULL,
+    profesional_obra_id BIGINT NULL
+);
+
+-- MATERIALES (desde Material.java)
+CREATE TABLE IF NOT EXISTS materiales (
+    id BIGSERIAL PRIMARY KEY,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- MATERIAL_CALCULADORA (desde MaterialCalculadora.java)
+CREATE TABLE IF NOT EXISTS material_calculadora (
+    id BIGSERIAL PRIMARY KEY,
+    item_calculadora_id BIGINT NOT NULL,
+    obra_material_id BIGINT NULL
+);
+
+-- MOVIMIENTO_MATERIAL (desde MovimientoMaterial.java)
+CREATE TABLE IF NOT EXISTS movimiento_material (
+    id BIGSERIAL PRIMARY KEY,
+    id_stock_material BIGINT NOT NULL,
+    id_material BIGINT NOT NULL,
+    id_empresa BIGINT NOT NULL,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- OBRAS (desde Obra.java)
+CREATE TABLE IF NOT EXISTS obras (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    id_cliente BIGINT NOT NULL
+);
+
+-- ASIGNACIONES_MATERIAL_OBRA (desde ObraMaterial.java)
+CREATE TABLE IF NOT EXISTS asignaciones_material_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    obra_id BIGINT NULL,
+    material_calculadora_id BIGINT NULL
+);
+
+-- PAGOS_MATERIAL_OBRA (desde PagoConsolidado.java)
+CREATE TABLE IF NOT EXISTS pagos_material_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    presupuesto_no_cliente_id BIGINT NULL,
+    material_calculadora_id BIGINT NULL,
+    item_calculadora_id BIGINT NULL,
+    usuario_registro VARCHAR(100) NULL
+);
+
+-- ASIGNACIONES_GASTO_GENERAL_OBRA (desde PagoGastoGeneralObra.java)
+CREATE TABLE IF NOT EXISTS asignaciones_gasto_general_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    presupuesto_no_cliente_id BIGINT NULL,
+    item_calculadora_id BIGINT NULL,
+    fecha_creacion TIMESTAMP NULL
+);
+
+-- PAGOS_PROFESIONAL_OBRA (desde PagoProfesionalObra.java)
+CREATE TABLE IF NOT EXISTS pagos_profesional_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    profesional_obra_id BIGINT NOT NULL,
+    usuario_modificacion_id BIGINT NULL
+);
+
+-- PEDIDO_PAGO (desde PedidoPago.java)
+CREATE TABLE IF NOT EXISTS pedido_pago (
+    id BIGSERIAL PRIMARY KEY,
+    id_proveedor BIGINT NOT NULL,
+    id_obra BIGINT NULL,
+    id_empresa BIGINT NOT NULL,
+    fecha_modificacion TIMESTAMP NULL
+);
+
+-- PRESUPUESTOS_AUDITORIA (desde PresupuestoAuditoria.java)
+CREATE TABLE IF NOT EXISTS presupuestos_auditoria (
+    id BIGSERIAL PRIMARY KEY,
+    usuario_modificador VARCHAR(100) NULL
+);
+
+-- PRESUPUESTO_COSTO_INICIAL (desde PresupuestoCostoInicial.java)
+CREATE TABLE IF NOT EXISTS presupuesto_costo_inicial (
+    id BIGSERIAL PRIMARY KEY,
+    presupuesto_no_cliente_id BIGINT NOT NULL,
+    fecha_guardado TIMESTAMP NULL
+);
+
+-- PRESUPUESTO_GASTO_GENERAL (desde PresupuestoGastoGeneral.java)
+CREATE TABLE IF NOT EXISTS presupuesto_gasto_general (
+    id BIGSERIAL PRIMARY KEY,
+    item_calculadora_id BIGINT NOT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- PRESUPUESTO_MATERIAL (desde PresupuestoMaterial.java)
+CREATE TABLE IF NOT EXISTS presupuesto_material (
+    id BIGSERIAL PRIMARY KEY,
+    id_material BIGINT NULL,
+    observaciones VARCHAR NULL
+);
+
+-- PRESUPUESTO_NO_CLIENTE (desde PresupuestoNoCliente.java)
+CREATE TABLE IF NOT EXISTS presupuesto_no_cliente (
+    id BIGSERIAL PRIMARY KEY,
+    obra_id BIGINT NULL,
+    cliente_id BIGINT NULL,
+    mayores_costos_explicacion VARCHAR NULL
+);
+
+-- PRESUPUESTO_PDF (desde PresupuestoPdf.java)
+CREATE TABLE IF NOT EXISTS presupuesto_pdf (
+    id BIGSERIAL PRIMARY KEY,
+    incluye_configuracion BOOLEAN NULL
+);
+
+-- PROFESIONALES (desde Profesional.java)
+CREATE TABLE IF NOT EXISTS profesionales (
+    id BIGSERIAL PRIMARY KEY
+);
+
+-- PROFESIONAL_CALCULADORA (desde ProfesionalCalculadora.java)
+CREATE TABLE IF NOT EXISTS profesional_calculadora (
+    id BIGSERIAL PRIMARY KEY,
+    item_calculadora_id BIGINT NOT NULL,
+    subtotal NUMERIC(15, 2) NULL
+);
+
+-- PROFESIONALES_OBRA (desde ProfesionalObra.java)
+CREATE TABLE IF NOT EXISTS profesionales_obra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    profesional_id BIGINT NOT NULL,
+    obra_id BIGINT NOT NULL
+);
+
+-- PROFESIONAL_TAREA_DIA (desde ProfesionalTareaDia.java)
+CREATE TABLE IF NOT EXISTS profesional_tarea_dia (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    tarea_id BIGINT NOT NULL,
+    asignacion_dia_id BIGINT NOT NULL,
+    actualizado_en TIMESTAMP NULL
+);
+
+-- PROFESIONALES_TAREA_ETAPA (desde ProfesionalTareaEtapa.java)
+CREATE TABLE IF NOT EXISTS profesionales_tarea_etapa (
+    id BIGSERIAL PRIMARY KEY,
+    tarea_id BIGINT NULL,
+    profesional_id BIGINT NULL,
+    fecha_asignacion TIMESTAMP NULL
+);
+
+-- PROVEEDOR (desde Proveedor.java)
+CREATE TABLE IF NOT EXISTS proveedor (
+    id BIGSERIAL PRIMARY KEY,
+    id_empresa BIGINT NULL,
+    fecha_modificacion TIMESTAMP NULL
+);
+
+-- STOCK_GASTOS_GENERALES (desde StockGastoGeneral.java)
+CREATE TABLE IF NOT EXISTS stock_gastos_generales (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    gasto_general_id BIGINT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- STOCK_MATERIAL (desde StockMaterial.java)
+CREATE TABLE IF NOT EXISTS stock_material (
+    id BIGSERIAL PRIMARY KEY,
+    id_material BIGINT NOT NULL,
+    id_empresa BIGINT NOT NULL,
+    fecha_ultima_actualizacion TIMESTAMP NULL
+);
+
+-- TAREAS_ETAPA_DIARIA (desde TareaEtapaDiaria.java)
+CREATE TABLE IF NOT EXISTS tareas_etapa_diaria (
+    id BIGSERIAL PRIMARY KEY,
+    etapa_diaria_id BIGINT NULL,
+    fecha_modificacion TIMESTAMP NULL
+);
+
+-- TRABAJOS_EXTRA (desde TrabajoExtra.java)
+CREATE TABLE IF NOT EXISTS trabajos_extra (
+    id BIGSERIAL PRIMARY KEY,
+    empresa_id BIGINT NOT NULL,
+    obra_id BIGINT NULL,
+    cliente_id BIGINT NULL,
+    updated_at TIMESTAMP NULL
+);
+
+-- TRABAJOS_EXTRA_DIAS (desde TrabajoExtraDia.java)
+CREATE TABLE IF NOT EXISTS trabajos_extra_dias (
+    id BIGSERIAL PRIMARY KEY,
+    trabajo_extra_id BIGINT NULL,
+    fecha DATE NULL
+);
+
+-- TRABAJOS_EXTRA_TAREAS (desde TrabajoExtraTarea.java)
+CREATE TABLE IF NOT EXISTS trabajos_extra_tareas (
+    id BIGSERIAL PRIMARY KEY,
+    trabajo_extra_id BIGINT NULL,
+    importe NUMERIC(15, 2) NULL
+);
+
+-- TRABAJOS_EXTRA_PROFESIONALES (desde TrabajoExtroProfesional.java)
+CREATE TABLE IF NOT EXISTS trabajos_extra_profesionales (
+    id BIGSERIAL PRIMARY KEY,
+    trabajo_extra_id BIGINT NULL,
+    profesional_id BIGINT NULL,
+    tipo VARCHAR(50) NULL
+);
+
+-- USUARIOS (desde Usuario.java)
+CREATE TABLE IF NOT EXISTS usuarios (
+    id BIGSERIAL PRIMARY KEY,
+    id_empresa BIGINT NULL,
+    fecha_creacion TIMESTAMP NULL
+);
+
+
+-- FOREIGN KEYS - Corregidos con nombres de tabla reales
+ALTER TABLE asignaciones_cobro_obra ADD CONSTRAINT fk_asignaciones_cobro_obra_cobro_obra_id FOREIGN KEY (cobro_obra_id) REFERENCES cobros_obra(id);
+ALTER TABLE asignaciones_cobro_obra ADD CONSTRAINT fk_asignaciones_cobro_obra_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE asignaciones_cobro_obra ADD CONSTRAINT fk_asignaciones_cobro_obra_presupuesto_no_cliente_id FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES presupuesto_no_cliente(id);
+ALTER TABLE asignacion_profesional_dia ADD CONSTRAINT fk_asignacion_profesional_dia_asignacion_id FOREIGN KEY (asignacion_id) REFERENCES asignaciones_profesional_obra(id);
+ALTER TABLE asignaciones_profesional_obra ADD CONSTRAINT fk_asignaciones_profesional_obra_profesional_id FOREIGN KEY (profesional_id) REFERENCES profesionales(id);
+ALTER TABLE asignaciones_profesional_obra ADD CONSTRAINT fk_asignaciones_profesional_obra_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE asistencia_obra ADD CONSTRAINT fk_asistencia_obra_profesional_obra_id FOREIGN KEY (profesional_obra_id) REFERENCES profesionales_obra(id);
+ALTER TABLE cobros_obra ADD CONSTRAINT fk_cobros_obra_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE cobros_obra ADD CONSTRAINT fk_cobros_obra_presupuesto_no_cliente_id FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES presupuesto_no_cliente(id);
+ALTER TABLE costos ADD CONSTRAINT fk_costos_id_obra FOREIGN KEY (id_obra) REFERENCES obras(id);
+ALTER TABLE etapas_diarias ADD CONSTRAINT fk_etapas_diarias_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE gastos_obra_profesional ADD CONSTRAINT fk_gastos_obra_profesional_profesional_obra_id FOREIGN KEY (profesional_obra_id) REFERENCES profesionales_obra(id);
+ALTER TABLE honorarios ADD CONSTRAINT fk_honorarios_id_obra FOREIGN KEY (id_obra) REFERENCES obras(id);
+ALTER TABLE honorarios ADD CONSTRAINT fk_honorarios_id_profesional FOREIGN KEY (id_profesional) REFERENCES profesionales(id);
+ALTER TABLE items_calculadora_presupuesto ADD CONSTRAINT fk_items_calculadora_presupuesto_presupuesto_no_cliente_id FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES presupuesto_no_cliente(id);
+ALTER TABLE jornales ADD CONSTRAINT fk_jornales_id_asignacion FOREIGN KEY (id_asignacion) REFERENCES profesionales_obra(id);
+ALTER TABLE jornal_calculadora ADD CONSTRAINT fk_jornal_calculadora_item_calculadora_id FOREIGN KEY (item_calculadora_id) REFERENCES items_calculadora_presupuesto(id);
+ALTER TABLE material_calculadora ADD CONSTRAINT fk_material_calculadora_item_calculadora_id FOREIGN KEY (item_calculadora_id) REFERENCES items_calculadora_presupuesto(id);
+ALTER TABLE movimiento_material ADD CONSTRAINT fk_movimiento_material_id_stock_material FOREIGN KEY (id_stock_material) REFERENCES stock_material(id);
+ALTER TABLE movimiento_material ADD CONSTRAINT fk_movimiento_material_id_material FOREIGN KEY (id_material) REFERENCES materiales(id);
+ALTER TABLE movimiento_material ADD CONSTRAINT fk_movimiento_material_id_empresa FOREIGN KEY (id_empresa) REFERENCES empresas(id);
+ALTER TABLE obras ADD CONSTRAINT fk_obras_id_cliente FOREIGN KEY (id_cliente) REFERENCES clientes(id);
+ALTER TABLE asignaciones_material_obra ADD CONSTRAINT fk_asignaciones_material_obra_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE asignaciones_material_obra ADD CONSTRAINT fk_asignaciones_material_obra_material_calculadora_id FOREIGN KEY (material_calculadora_id) REFERENCES material_calculadora(id);
+ALTER TABLE pagos_material_obra ADD CONSTRAINT fk_pagos_material_obra_presupuesto_no_cliente_id FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES presupuesto_no_cliente(id);
+ALTER TABLE pagos_material_obra ADD CONSTRAINT fk_pagos_material_obra_material_calculadora_id FOREIGN KEY (material_calculadora_id) REFERENCES material_calculadora(id);
+ALTER TABLE pagos_material_obra ADD CONSTRAINT fk_pagos_material_obra_item_calculadora_id FOREIGN KEY (item_calculadora_id) REFERENCES items_calculadora_presupuesto(id);
+ALTER TABLE asignaciones_gasto_general_obra ADD CONSTRAINT fk_asignaciones_gasto_general_obra_presupuesto_no_cliente_id FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES presupuesto_no_cliente(id);
+ALTER TABLE asignaciones_gasto_general_obra ADD CONSTRAINT fk_asignaciones_gasto_general_obra_item_calculadora_id FOREIGN KEY (item_calculadora_id) REFERENCES items_calculadora_presupuesto(id);
+ALTER TABLE pagos_profesional_obra ADD CONSTRAINT fk_pagos_profesional_obra_profesional_obra_id FOREIGN KEY (profesional_obra_id) REFERENCES profesionales_obra(id);
+ALTER TABLE pedido_pago ADD CONSTRAINT fk_pedido_pago_id_proveedor FOREIGN KEY (id_proveedor) REFERENCES proveedor(id);
+ALTER TABLE pedido_pago ADD CONSTRAINT fk_pedido_pago_id_obra FOREIGN KEY (id_obra) REFERENCES obras(id);
+ALTER TABLE pedido_pago ADD CONSTRAINT fk_pedido_pago_id_empresa FOREIGN KEY (id_empresa) REFERENCES empresas(id);
+ALTER TABLE presupuesto_costo_inicial ADD CONSTRAINT fk_presupuesto_costo_inicial_presupuesto_no_cliente_id FOREIGN KEY (presupuesto_no_cliente_id) REFERENCES presupuesto_no_cliente(id);
+ALTER TABLE presupuesto_gasto_general ADD CONSTRAINT fk_presupuesto_gasto_general_item_calculadora_id FOREIGN KEY (item_calculadora_id) REFERENCES items_calculadora_presupuesto(id);
+ALTER TABLE presupuesto_material ADD CONSTRAINT fk_presupuesto_material_id_material FOREIGN KEY (id_material) REFERENCES materiales(id);
+ALTER TABLE presupuesto_no_cliente ADD CONSTRAINT fk_presupuesto_no_cliente_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE presupuesto_no_cliente ADD CONSTRAINT fk_presupuesto_no_cliente_cliente_id FOREIGN KEY (cliente_id) REFERENCES clientes(id);
+ALTER TABLE profesional_calculadora ADD CONSTRAINT fk_profesional_calculadora_item_calculadora_id FOREIGN KEY (item_calculadora_id) REFERENCES items_calculadora_presupuesto(id);
+ALTER TABLE profesionales_obra ADD CONSTRAINT fk_profesionales_obra_profesional_id FOREIGN KEY (profesional_id) REFERENCES profesionales(id);
+ALTER TABLE profesionales_obra ADD CONSTRAINT fk_profesionales_obra_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE profesional_tarea_dia ADD CONSTRAINT fk_profesional_tarea_dia_tarea_id FOREIGN KEY (tarea_id) REFERENCES tareas_etapa_diaria(id);
+ALTER TABLE profesional_tarea_dia ADD CONSTRAINT fk_profesional_tarea_dia_asignacion_dia_id FOREIGN KEY (asignacion_dia_id) REFERENCES asignacion_profesional_dia(id);
+ALTER TABLE profesionales_tarea_etapa ADD CONSTRAINT fk_profesionales_tarea_etapa_tarea_id FOREIGN KEY (tarea_id) REFERENCES tareas_etapa_diaria(id);
+ALTER TABLE profesionales_tarea_etapa ADD CONSTRAINT fk_profesionales_tarea_etapa_profesional_id FOREIGN KEY (profesional_id) REFERENCES profesionales(id);
+ALTER TABLE proveedor ADD CONSTRAINT fk_proveedor_id_empresa FOREIGN KEY (id_empresa) REFERENCES empresas(id);
+ALTER TABLE stock_gastos_generales ADD CONSTRAINT fk_stock_gastos_generales_gasto_general_id FOREIGN KEY (gasto_general_id) REFERENCES gastos_generales(id);
+ALTER TABLE stock_material ADD CONSTRAINT fk_stock_material_id_material FOREIGN KEY (id_material) REFERENCES materiales(id);
+ALTER TABLE stock_material ADD CONSTRAINT fk_stock_material_id_empresa FOREIGN KEY (id_empresa) REFERENCES empresas(id);
+ALTER TABLE tareas_etapa_diaria ADD CONSTRAINT fk_tareas_etapa_diaria_etapa_diaria_id FOREIGN KEY (etapa_diaria_id) REFERENCES etapas_diarias(id);
+ALTER TABLE trabajos_extra ADD CONSTRAINT fk_trabajos_extra_obra_id FOREIGN KEY (obra_id) REFERENCES obras(id);
+ALTER TABLE trabajos_extra ADD CONSTRAINT fk_trabajos_extra_cliente_id FOREIGN KEY (cliente_id) REFERENCES clientes(id);
+ALTER TABLE trabajos_extra_dias ADD CONSTRAINT fk_trabajos_extra_dias_trabajo_extra_id FOREIGN KEY (trabajo_extra_id) REFERENCES trabajos_extra(id);
+ALTER TABLE trabajos_extra_tareas ADD CONSTRAINT fk_trabajos_extra_tareas_trabajo_extra_id FOREIGN KEY (trabajo_extra_id) REFERENCES trabajos_extra(id);
+ALTER TABLE trabajos_extra_profesionales ADD CONSTRAINT fk_trabajos_extra_profesionales_trabajo_extra_id FOREIGN KEY (trabajo_extra_id) REFERENCES trabajos_extra(id);
+ALTER TABLE trabajos_extra_profesionales ADD CONSTRAINT fk_trabajos_extra_profesionales_profesional_id FOREIGN KEY (profesional_id) REFERENCES profesionales(id);
+ALTER TABLE usuarios ADD CONSTRAINT fk_usuarios_id_empresa FOREIGN KEY (id_empresa) REFERENCES empresas(id);

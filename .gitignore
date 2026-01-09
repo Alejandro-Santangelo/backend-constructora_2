@@ -1,0 +1,99 @@
+##########################
+# Java / Spring Boot
+##########################
+
+# Compiled Java class files
+*.class
+
+# Log files
+*.log
+error_log.txt
+spring.log
+
+# Maven
+target/
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+pom.xml.next
+release.properties
+
+##########################
+# Scripts
+##########################
+
+# Ignorar todos los .ps1 EXCEPTO backup-bd-construccion-app.ps1
+*.ps1
+!backup-bd-construccion-app.ps1
+
+##########################
+# Backups Base de Datos
+##########################
+
+# Ignorar carpeta completa de backups SQL
+db-backups/
+*.sql
+*.dump
+
+##########################
+# IDEs
+##########################
+
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# Eclipse
+.classpath
+.project
+.settings/
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+.nb-gradle/
+
+# VS Code
+.vscode/
+
+##########################
+# Archivos del Sistema
+##########################
+
+# MacOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+##########################
+# Archivos empaquetados
+##########################
+*.jar
+*.war
+*.ear
+
+##########################
+# Otros archivos que no deben ir al repo
+##########################
+
+# Datos temporales
+*.tmp
+*.temp
+
+# Documentación local
+*.pdf
+*.doc
+*.docx
+*.xlsx
+
+# Archivos markdown generados para informes
+INFORME_*.md
+PLAN_*.md
+FLUJO-TRABAJO-GIT.md

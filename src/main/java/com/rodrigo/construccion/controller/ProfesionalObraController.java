@@ -1,0 +1,267 @@
+package com.rodrigo.construccion.controller;
+
+import com.rodrigo.construccion.dto.request.ActualizarAsignacionRequest;
+import com.rodrigo.construccion.dto.request.AsignarProfesionalRequest;
+import com.rodrigo.construccion.dto.request.AsignarProfesionalesBatchRequest;
+import com.rodrigo.construccion.dto.response.ListaProfesionalesResponse;
+import com.rodrigo.construccion.dto.response.AsignacionProfesionalResponse;
+import com.rodrigo.construccion.dto.response.DisponibilidadProfesionalResponse;
+import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
+import com.rodrigo.construccion.model.entity.ProfesionalObra;
+import com.rodrigo.construccion.service.IProfesionalObraService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.Parameter;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+/**
+ * Controlador REST para gestión de Asignaciones Profesional-Obra
+ * 
+ * ARQUITECTURA REESTRUCTURADA - SOLO ENDPOINTS ESENCIALES
+ * =======================================================
+ * Este controlador ha sido completamente reestructurado para eliminar confusión
+ * y simplificar las operaciones de asignación de profesionales a obras.
+ */
+@RestController
+@RequestMapping("/api/profesionales-obras")
+@RequiredArgsConstructor
+@Tag(name = "Profesionales-Obras", description = "Gestión simplificada de asignaciones profesional-obra")
+public class ProfesionalObraController {
+
+        private final IProfesionalObraService profesionalObraService;
+        private final com.rodrigo.construccion.service.GastoObraProfesionalService gastoService;
+
+        /**
+         * =============================================
+         * ENDPOINTS PRINCIPALES - ARQUITECTURA LIMPIA
+         * =============================================
+         */
+        @GetMapping
+        @Operation(summary = "Listar asignaciones profesional-obra", description = "Obtiene todas las asignaciones activas de profesionales a obras con información completa. "
+                        +
+                        "Incluye datos del profesional, obra, fechas de asignación y estado.")
+        public ResponseEntity<List<AsignacionProfesionalResponse>> listarAsignaciones(
+                        @Parameter(description = "ID de la empresa (opcional para filtrado multi-tenant)")
+                        @RequestParam(required = false) Long empresaId) {
+                List<AsignacionProfesionalResponse> asignaciones;
+                if (empresaId != null) {
+                        asignaciones = profesionalObraService.obtenerTodasPorEmpresa(empresaId);
+                } else {
+                        asignaciones = profesionalObraService.obtenerTodasComoDTO();
+                }
+                return ResponseEntity.ok(asignaciones);
+        }
+
+        @PostMapping("/asignar")
+        @Operation(summary = "Asignar profesional a obra", description = "Asigna un profesional específico a una obra mediante validación por tipo y nombre. "
+                        +
+                        "Valida que el profesional exista en la tabla Profesionales y crea la asignación en Profesionales-Obras. "
+                        +
+                        "Campos requeridos: empresaId, obraId, profesional (tipo), nombre del profesional.")
+        public ResponseEntity<AsignacionProfesionalResponse> asignarProfesionalPorTipo(
+                        @Valid @RequestBody AsignarProfesionalRequest request) {
+                AsignacionProfesionalResponse asignacionCreada = profesionalObraService
+                                .asignarProfesionalPorTipoComoDTO(request);
+                return ResponseEntity.status(HttpStatus.CREATED).body(asignacionCreada);
+        }
+
+        @PostMapping("/asignar-multiples")
+        @Operation(summary = "Asignar varios profesionales a una obra", description = "Permite asignar una lista de profesionales a una obra en una sola llamada. Valida que no estén ya asignados.")
+        public ResponseEntity<List<AsignacionProfesionalResponse>> asignarMultiplesProfesionales(
+                        @Valid @RequestBody AsignarProfesionalesBatchRequest request) {
+                List<AsignacionProfesionalResponse> asignaciones = profesionalObraService
+                                .asignarMultiplesProfesionales(request);
+                return ResponseEntity.status(HttpStatus.CREATED).body(asignaciones);
+        }
+
+        @GetMapping("/tipo/{tipoProfesional}")
+        @Operation(summary = "Consultar asignaciones por especialidad", description = "Busca todas las asignaciones activas filtradas por tipo de profesional específico. "
+                        + "Útil para ver qué obras tienen asignados profesionales de una especialidad particular. " +
+                        "Acepta búsqueda flexible con variaciones de género y capitalización.")
+        public ResponseEntity<List<AsignacionProfesionalResponse>> obtenerAsignacionesPorTipo(
+                        @Parameter(description = "Tipo de profesional (ej: 'Oficial Albañil', 'Arquitecto', etc.)") @PathVariable String tipoProfesional,
+                        @Parameter(description = "ID de la empresa") @RequestParam Long empresaId) {
+
+                List<AsignacionProfesionalResponse> asignaciones = profesionalObraService
+                                .obtenerAsignacionesPorTipo(tipoProfesional, empresaId);
+                return ResponseEntity.ok(asignaciones);
+        }
+
+        @GetMapping("/disponibilidad/{tipoProfesional}")
+        @Operation(summary = "Consultar disponibilidad por tipo de profesional", description = "Muestra qué profesionales de un tipo específico están disponibles "
+                        + "y cuáles están asignados a obras")
+        public ResponseEntity<List<DisponibilidadProfesionalResponse>> consultarDisponibilidadPorTipo(
+                        @Parameter(description = "Tipo de profesional (ej: 'Oficial Albañil', 'Arquitecto', etc.)") @PathVariable String tipoProfesional,
+                        @Parameter(description = "ID de la empresa") @RequestParam Long empresaId) {
+
+                // Se pasa el empresaId al servicio para una búsqueda segura y multi-tenant.
+                List<DisponibilidadProfesionalResponse> disponibilidad = profesionalObraService
+                                .obtenerDisponibilidadPorTipo(tipoProfesional, empresaId);
+
+                return ResponseEntity.ok(disponibilidad);
+        }
+
+        @GetMapping("/profesionales/tipo/{tipoProfesional}")
+        @Operation(summary = "Listar profesionales por tipo", description = "Obtiene todos los profesionales de un tipo específico con su información básica "
+                        + "para facilitar la selección en asignaciones")
+        public ResponseEntity<ListaProfesionalesResponse> listarProfesionalesPorTipo(
+                        @Parameter(description = "Tipo de profesional (ej: 'Oficial Albañil', 'Arquitecto', etc.)") @PathVariable String tipoProfesional,
+                        @Parameter(description = "ID de la empresa") @RequestParam(required = false) Long empresaId) {
+                ListaProfesionalesResponse respuesta = profesionalObraService
+                                .obtenerDisponibilidadProfesionalesPorTipo(tipoProfesional, empresaId);
+
+                return ResponseEntity.ok(respuesta);
+        }
+
+        @PutMapping("/{asignacionId}")
+        @Operation(summary = "Actualizar asignación existente", description = "Permite modificar uno o todos los campos de una asignación existente. "
+                        + "Todos los campos son opcionales - solo se actualizarán los campos proporcionados. Requiere obraId.")
+        public ResponseEntity<AsignacionProfesionalResponse> actualizarAsignacion(
+                        @Parameter(description = "ID de la asignación a actualizar") @PathVariable Long asignacionId,
+                        @RequestBody ActualizarAsignacionRequest request,
+                        @Parameter(description = "ID de la empresa") @RequestParam(required = false) Long empresaId,
+                        @Parameter(description = "ID de la obra asociada") @RequestParam Long obraId) {
+                AsignacionProfesionalResponse asignacionActualizada = profesionalObraService
+                                .actualizarAsignacionComoDTO(asignacionId, request, empresaId);
+                return ResponseEntity.ok(asignacionActualizada);
+        }
+
+        @DeleteMapping("/{asignacionId}")
+        @Operation(summary = "Desactivar asignación", description = "Desactiva una asignación (no la elimina físicamente, solo la marca como inactiva). Requiere empresaId, obraId y asignacionId.")
+        public ResponseEntity<AsignacionProfesionalResponse> desactivarAsignacion(
+                        @Parameter(description = "ID de la asignación a desactivar") @PathVariable Long asignacionId,
+                        @Parameter(description = "ID de la empresa") @RequestParam(required = false) Long empresaId,
+                        @Parameter(description = "ID de la obra") @RequestParam(required = false) Long obraId) {
+                return ResponseEntity.ok(profesionalObraService.desactivarAsignacion(asignacionId, empresaId, obraId));
+        }
+
+        @GetMapping("/profesionales-por-obra")
+        @Operation(summary = "Listar profesionales asignados a una obra de una empresa", description = "Devuelve todos los profesionales asignados a una obra específica de una empresa. Requiere empresaId y obraId.")
+        public ResponseEntity<List<ProfesionalResponseDTO>> obtenerProfesionalesPorObraYEmpresa(
+                        @RequestParam Long empresaId,
+                        @RequestParam Long obraId) {
+                List<ProfesionalResponseDTO> profesionales = profesionalObraService
+                                .obtenerProfesionalesPorObraYEmpresa(empresaId, obraId);
+                return ResponseEntity.ok(profesionales);
+        }
+
+        /**
+         * ============================================
+         * ENDPOINTS DE DEPURACIÓN (TEMPORALES)
+         * ============================================
+         */
+        @GetMapping("/debug/tipos-profesionales")
+        @Operation(summary = "🔍 DEBUG: Ver todos los tipos de profesionales", description = "Endpoint temporal para verificar qué tipos de profesionales existen en la base de datos")
+        public ResponseEntity<Map<String, Object>> debugTiposProfesionales() {
+                try {
+                        Map<String, Object> debug = new HashMap<>();
+
+                        // 1. Obtener todos los profesionales
+                        List<com.rodrigo.construccion.model.entity.Profesional> todosProfesionales = profesionalObraService
+                                        .obtenerTodosProfesionales();
+
+                        // 2. Obtener todas las asignaciones
+                        List<ProfesionalObra> todasAsignaciones = profesionalObraService.obtenerTodasLasAsignaciones();
+
+                        // 3. Tipos únicos de profesionales
+                        List<String> tiposUnicos = todosProfesionales.stream()
+                                        .map(p -> p.getTipoProfesional())
+                                        .filter(tipo -> tipo != null && !tipo.trim().isEmpty())
+                                        .distinct()
+                                        .sorted()
+                                        .collect(java.util.stream.Collectors.toList());
+
+                        // 4. Resumen por tipos
+                        Map<String, Long> conteosPorTipo = todosProfesionales.stream()
+                                        .filter(p -> p.getTipoProfesional() != null)
+                                        .collect(java.util.stream.Collectors.groupingBy(
+                                                        p -> p.getTipoProfesional(),
+                                                        java.util.stream.Collectors.counting()));
+
+                        debug.put("totalProfesionales", todosProfesionales.size());
+                        debug.put("totalAsignaciones", todasAsignaciones.size());
+                        debug.put("tiposUnicos", tiposUnicos);
+                        debug.put("conteosPorTipo", conteosPorTipo);
+                        debug.put("profesionalesDetalle", todosProfesionales.stream()
+                                        .map(p -> Map.of(
+                                                        "id", p.getId(),
+                                                        "nombre", p.getNombre(),
+                                                        "tipo",
+                                                        p.getTipoProfesional() != null ? p.getTipoProfesional()
+                                                                        : "null",
+                                                        "activo", p.getActivo()
+                                        // Removimos la relación obrasAsignadas para evitar referencia circular
+                                        ))
+                                        .collect(java.util.stream.Collectors.toList()));
+
+                        debug.put("timestamp", LocalDate.now());
+
+                        return ResponseEntity.ok(debug);
+
+                } catch (Exception e) {
+                        System.out.println("🚨 Error en debug de tipos profesionales: " + e.getMessage());
+                        Map<String, Object> error = new HashMap<>();
+                        error.put("error", "Error al obtener datos de debug");
+                        error.put("mensaje", e.getMessage());
+                        return ResponseEntity.internalServerError().body(error);
+                }
+        }
+
+        /**
+         * ============================================
+         * ENDPOINTS DE GESTIÓN DE CAJA CHICA
+         * ============================================
+         */
+        
+        @PutMapping("/{id}/asignar-caja-chica")
+        @Operation(
+                summary = "Asignar caja chica a profesional",
+                description = "Asigna un monto de caja chica a un profesional en una obra. " +
+                             "El saldo disponible se establece igual al monto asignado."
+        )
+        public ResponseEntity<?> asignarCajaChica(
+                        @Parameter(description = "ID de la asignación profesional-obra", required = true)
+                        @PathVariable Long id,
+                        @Valid @RequestBody com.rodrigo.construccion.dto.request.AsignarCajaChicaRequest request) {
+                try {
+                        ProfesionalObra actualizado = profesionalObraService.asignarCajaChica(
+                                id, request.getMonto(), request.getEmpresaId()
+                        );
+                        return ResponseEntity.ok(actualizado);
+                } catch (com.rodrigo.construccion.exception.ResourceNotFoundException e) {
+                        return ResponseEntity.notFound().build();
+                } catch (SecurityException e) {
+                        return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+                }
+        }
+
+        @GetMapping("/{id}/saldo-caja-chica")
+        @Operation(
+                summary = "Consultar saldo de caja chica",
+                description = "Obtiene el saldo actual de caja chica de un profesional: " +
+                             "monto asignado, saldo disponible, gastado y cantidad de gastos."
+        )
+        public ResponseEntity<?> obtenerSaldoCajaChica(
+                        @Parameter(description = "ID de la asignación profesional-obra", required = true)
+                        @PathVariable Long id,
+                        @Parameter(description = "ID de la empresa", required = true)
+                        @RequestParam Long empresaId) {
+                try {
+                        com.rodrigo.construccion.dto.response.SaldoCajaChicaResponse saldo = 
+                                gastoService.obtenerSaldoCajaChica(id, empresaId);
+                        return ResponseEntity.ok(saldo);
+                } catch (IllegalArgumentException e) {
+                        return ResponseEntity.notFound().build();
+                }
+        }
+
+}
