@@ -23,6 +23,9 @@ public class ProfesionalResponseDTO {
     @Schema(description = "ID único del profesional", example = "1")
     private Long id;
 
+    @Schema(description = "ID de la empresa", example = "123")
+    private Long empresaId;
+
     @Schema(description = "Nombre completo del profesional", example = "Juan Carlos Pérez")
     private String nombre;
 

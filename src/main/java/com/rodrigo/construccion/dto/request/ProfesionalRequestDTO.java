@@ -23,6 +23,13 @@ public class ProfesionalRequestDTO {
 
     @Schema(description = "ID del profesional (se genera automáticamente)", example = "0", hidden = true)
     private Long id;
+    
+    @Schema(description = "ID de la empresa", example = "123", required = true)
+    private Long empresaId;
+
+    @Schema(description = "Costo del jornal (Diario)", example = "5000.00", required = true)
+    private BigDecimal costoJornal;
+
     // --- CAMPOS FALTANTES ---
     @Schema(description = "Cantidad de días (opcional, puede ser null)", example = "5", nullable = true)
     private Integer dias;
@@ -51,9 +58,8 @@ public class ProfesionalRequestDTO {
     @Schema(description = "Importe de ganancia (opcional, puede ser null)", example = "5000.00", nullable = true)
     private BigDecimal importeGanancia;
 
-    @NotBlank(message = "El nombre del profesional es obligatorio")
     @Size(max = 200, message = "El nombre no puede exceder 200 caracteres")
-    @Schema(description = "Nombre completo del profesional", example = "Juan Carlos Pérez", required = true)
+    @Schema(description = "Nombre completo del profesional (opcional, se genera automáticamente si no se envía)", example = "Juan Carlos Pérez")
     private String nombre;
 
     @NotBlank(message = "El tipo de profesional es obligatorio")

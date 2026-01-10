@@ -35,6 +35,15 @@ public class ProfesionalService implements IProfesionalService {
         
         Profesional profesional = profesionalMapper.toEntity(requestDTO);
 
+        // Mapeo manual de campos nuevos
+        if (requestDTO.getEmpresaId() != null) {
+            profesional.setEmpresaId(requestDTO.getEmpresaId());
+        }
+
+        if (requestDTO.getCostoJornal() != null) {
+            profesional.setHonorarioDia(requestDTO.getCostoJornal());
+        }
+
         // Lógica flexible para tipo de profesional
         TipoProfesional tipoEnum = TipoProfesional.fromDisplayName(requestDTO.getTipoProfesional());
         if (tipoEnum != null) {
@@ -51,6 +60,14 @@ public class ProfesionalService implements IProfesionalService {
 
         if (profesional.getValorHoraDefault() == null) {
             profesional.setValorHoraDefault(BigDecimal.ZERO);
+        }
+
+        // Verificar si el nombre está vacío
+        boolean nombreVacio = profesional.getNombre() == null || profesional.getNombre().trim().isEmpty();
+        
+        // Si el nombre es nulo o vacío, asignamos el tipo de profesional como nombre
+        if (nombreVacio) {
+            profesional.setNombre(profesional.getTipoProfesional());
         }
 
         Profesional profesionalGuardado = profesionalRepository.save(profesional);

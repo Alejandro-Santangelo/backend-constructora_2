@@ -20,7 +20,6 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * @version 1.0.0
  */
 @SpringBootApplication
-@ComponentScan(basePackages = {"com.rodrigo.construccion"})
 @EnableJpaRepositories
 @EnableJpaAuditing
 @EnableScheduling  // Habilita tareas programadas (@Scheduled)

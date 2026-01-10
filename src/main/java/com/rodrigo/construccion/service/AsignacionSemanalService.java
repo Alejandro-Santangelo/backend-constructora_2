@@ -436,6 +436,34 @@ public class AsignacionSemanalService {
     }
 
     /**
+     * Reemplazar todas las asignaciones de una obra por una nueva lista (Transaccional)
+     * Resuelve el error 409 Conflict al garantizar limpieza total antes de insertar.
+     */
+    public AsignacionSemanalCreacionResponseDTO reemplazarAsignacionSemanal(
+            AsignacionSemanalRequestDTO request, Long empresaId) {
+
+        log.info("Reemplazando asignaciones semanales para obra {}", request.getObraId());
+
+        // 1. Validar obra y empresa
+        Obra obra = obraRepository.findById(request.getObraId())
+                .orElseThrow(() -> new ResourceNotFoundException("Obra no encontrada con ID: " + request.getObraId()));
+
+        if (!obra.getEmpresaId().equals(empresaId)) {
+            throw new BusinessException("La obra no pertenece a la empresa actual");
+        }
+
+        // 2. Eliminar TODAS las asignaciones existentes para esta obra (Hard Delete)
+        // Esto elimina conflictos de unicidad y limpia el estado anterior
+        // Gracias a cascade DB, también se eliminan los AsignacionProfesionalDia
+        asignacionRepository.deleteByObra_IdAndEmpresaId(request.getObraId(), empresaId);
+        asignacionRepository.flush(); // Forzar sincronización con DB para liberar constraints
+
+        // 3. Crear las nuevas asignaciones
+        // Reutilizamos el método existente que ya tiene la lógica de creación
+        return crearAsignacionSemanal(request, empresaId);
+    }
+
+    /**
      * Eliminar asignación semanal (método original para compatibilidad)
      */
     public void eliminarAsignacionSemanal(Long asignacionId, Long empresaId) {

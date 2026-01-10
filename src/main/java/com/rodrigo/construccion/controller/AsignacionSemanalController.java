@@ -47,6 +47,24 @@ public class AsignacionSemanalController {
     }
 
     /**
+     * PUT /api/profesionales/asignar-semanal/gestion-completa
+     * Reemplazar todas las asignaciones de una obra (UPSERT masivo)
+     * Elimina todo lo existente y crea lo nuevo en una sola transacción.
+     */
+    @PutMapping("/asignar-semanal/gestion-completa")
+    public ResponseEntity<AsignacionSemanalCreacionResponseDTO> reemplazarAsignacionSemanal(
+            @Valid @RequestBody AsignacionSemanalRequestDTO request,
+            @RequestHeader("empresaId") Long empresaId) {
+
+        log.info("PUT /api/profesionales/asignar-semanal/gestion-completa - Obra: {}", request.getObraId());
+
+        AsignacionSemanalCreacionResponseDTO response = asignacionSemanalService
+                .reemplazarAsignacionSemanal(request, empresaId);
+
+        return ResponseEntity.ok(response);
+    }
+
+    /**
      * GET /api/profesionales/asignaciones/{obraId}
      * Obtener asignaciones semanales de una obra
      */

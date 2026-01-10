@@ -54,9 +54,11 @@ public class Profesional {
     @Column(name = "id_profesional")
     private Long id;
 
-    @NotBlank(message = "El nombre del profesional es obligatorio")
+    @Column(name = "empresa_id")
+    private Long empresaId;
+
     @Size(max = 200, message = "El nombre no puede exceder 200 caracteres")
-    @Column(name = "nombre", nullable = false, length = 200)
+    @Column(name = "nombre", nullable = true, length = 200)
     private String nombre;
 
     @NotBlank(message = "El tipo de profesional es obligatorio")
