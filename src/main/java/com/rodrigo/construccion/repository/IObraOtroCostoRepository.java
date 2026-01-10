@@ -15,9 +15,16 @@ import java.util.List;
 public interface IObraOtroCostoRepository extends JpaRepository<ObraOtroCosto, Long> {
 
     /**
-     * Buscar asignaciones por obra y empresa
+     * Buscar asignaciones por obra y empresa ordenadas por semana y fecha.
+     * Las asignaciones semanales (sin fecha) van primero dentro de cada semana.
      */
-    List<ObraOtroCosto> findByObraIdAndEmpresaIdOrderByFechaAsignacionDesc(Long obraId, Long empresaId);
+    @Query("""
+        SELECT ooc FROM ObraOtroCosto ooc 
+        WHERE ooc.obraId = :obraId 
+          AND ooc.empresaId = :empresaId
+        ORDER BY ooc.semana ASC, ooc.fechaAsignacion ASC NULLS FIRST
+        """)
+    List<ObraOtroCosto> findByObraIdAndEmpresaIdOrderByFechaAsignacionDesc(@Param("obraId") Long obraId, @Param("empresaId") Long empresaId);
 
     /**
      * Buscar asignación específica por ID y empresa
@@ -25,13 +32,14 @@ public interface IObraOtroCostoRepository extends JpaRepository<ObraOtroCosto, L
     ObraOtroCosto findByIdAndEmpresaId(Long id, Long empresaId);
 
     /**
-     * Obtener asignaciones con información de obra y gasto general
+     * Obtener asignaciones con orden optimizado para visualización:
+     * primero por semana, luego asignaciones semanales (null), luego diarias ordenadas
      */
     @Query("""
         SELECT ooc FROM ObraOtroCosto ooc 
         WHERE ooc.obraId = :obraId 
           AND ooc.empresaId = :empresaId
-        ORDER BY ooc.fechaAsignacion DESC
+        ORDER BY ooc.semana ASC, ooc.fechaAsignacion ASC NULLS FIRST
         """)
     List<ObraOtroCosto> findByObraIdAndEmpresaIdWithDetails(@Param("obraId") Long obraId, @Param("empresaId") Long empresaId);
 }

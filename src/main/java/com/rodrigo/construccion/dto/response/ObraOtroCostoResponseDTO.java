@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -7,15 +8,18 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
-import java.time.LocalDateTime;
+import java.time.LocalDate;
 
 /**
- * DTO de respuesta con información del otro costo asignado a una obra
+ * DTO de respuesta con información del otro costo asignado a una obra.
+ * Soporta asignaciones semanales (esSemanal=true, sin fechaAsignacion) y 
+ * diarias (esSemanal=false, con fechaAsignacion).
  */
 @Data
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@JsonInclude(JsonInclude.Include.NON_NULL)
 @Schema(description = "Información de un otro costo asignado a una obra")
 public class ObraOtroCostoResponseDTO {
 
@@ -28,10 +32,10 @@ public class ObraOtroCostoResponseDTO {
     @Schema(description = "Nombre de la obra", example = "Av. Libertador 1234")
     private String nombreObra;
 
-    @Schema(description = "ID del otro costo del presupuesto", example = "7")
+    @Schema(description = "ID del otro costo del presupuesto. Null si es manual.", example = "7")
     private Long presupuestoOtroCostoId;
 
-    @Schema(description = "ID del gasto general", example = "5")
+    @Schema(description = "ID del gasto general. Null si es manual.", example = "5")
     private Long gastoGeneralId;
 
     @Schema(description = "Categoría del costo", example = "Transporte")
@@ -40,15 +44,24 @@ public class ObraOtroCostoResponseDTO {
     @Schema(description = "Descripción del costo", example = "Flete de materiales")
     private String descripcion;
 
+    @Schema(description = "Nombre del otro costo (alias de descripcion para compatibilidad)", example = "Volquetes")
+    private String nombreOtroCosto;
+
     @Schema(description = "Importe asignado a la obra", example = "15000.00")
     private BigDecimal importeAsignado;
 
-    @Schema(description = "Fecha de asignación", example = "2025-12-05T10:30:00")
-    private LocalDateTime fechaAsignacion;
+    @Schema(description = "Fecha de asignación específica. Solo presente en asignaciones diarias.", example = "2026-01-12")
+    private LocalDate fechaAsignacion;
 
     @Schema(description = "Número de semana en la que se requiere el gasto/costo", example = "2")
     private Integer semana;
 
-    @Schema(description = "Observaciones sobre la asignación", example = "Costo de transporte para materiales")
+    @Schema(description = "Observaciones sobre la asignación", example = "Volquetes [Gasto Semanal Global]")
     private String observaciones;
+
+    @Schema(description = "Indica si es una asignación semanal (true) o diaria (false)", example = "true")
+    private Boolean esSemanal;
+
+    @Schema(description = "Indica si el gasto fue creado manualmente (true) o vinculado a presupuesto (false)", example = "true")
+    private Boolean esManual;
 }

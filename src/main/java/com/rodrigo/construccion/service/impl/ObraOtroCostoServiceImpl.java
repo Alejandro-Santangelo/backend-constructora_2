@@ -29,24 +29,55 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
 
     @Override
     public ObraOtroCostoResponseDTO asignar(Long empresaId, AsignarOtroCostoRequestDTO request) {
-        log.info("🔄 Asignando otro costo - Empresa: {}, Obra: {}, Gasto: {}, Importe: {}, SEMANA: {}", 
-                empresaId, request.getObraId(), request.getGastoGeneralId(), request.getImporteAsignado(), request.getSemana());
+        log.info("🔄 Asignando otro costo - Empresa: {}, Obra: {}, Gasto: {}, Importe: {}, SEMANA: {}, Fecha: {}", 
+                empresaId, request.getObraId(), request.getGastoGeneralId(), request.getImporteAsignado(), 
+                request.getSemana(), request.getFechaAsignacion());
+
+        // Detectar si es asignación semanal o diaria
+        boolean esSemanal = request.getFechaAsignacion() == null;
+        boolean esManual = request.getPresupuestoOtroCostoId() == null;
+        
+        log.info("📊 Tipo de asignación - Semanal: {}, Manual: {}", esSemanal, esManual);
+
+        // Validaciones
+        if (esSemanal && request.getFechaAsignacion() != null) {
+            throw new IllegalArgumentException("Una asignación semanal no debe tener fecha específica");
+        }
+        
+        if (!esSemanal && request.getFechaAsignacion() == null) {
+            throw new IllegalArgumentException("Una asignación diaria debe tener fecha específica");
+        }
+        
+        if (esManual && (request.getDescripcion() == null || request.getDescripcion().trim().isEmpty())) {
+            throw new IllegalArgumentException("Una asignación manual debe tener descripción");
+        }
+
+        if (esManual && (request.getCategoria() == null || request.getCategoria().trim().isEmpty())) {
+            throw new IllegalArgumentException("Una asignación manual debe tener categoría");
+        }
 
         // Crear nueva asignación
         ObraOtroCosto obraOtroCosto = new ObraOtroCosto();
         obraOtroCosto.setObraId(request.getObraId());
         obraOtroCosto.setEmpresaId(empresaId);
+        obraOtroCosto.setPresupuestoOtroCostoId(request.getPresupuestoOtroCostoId());
         obraOtroCosto.setGastoGeneralId(request.getGastoGeneralId());
         obraOtroCosto.setImporteAsignado(request.getImporteAsignado());
         obraOtroCosto.setSemana(request.getSemana());
+        obraOtroCosto.setFechaAsignacion(request.getFechaAsignacion());
+        obraOtroCosto.setDescripcion(request.getDescripcion());
+        obraOtroCosto.setCategoria(request.getCategoria());
         obraOtroCosto.setObservaciones(request.getObservaciones());
+        obraOtroCosto.setEsSemanal(esSemanal);
+        obraOtroCosto.setEsManual(esManual);
         
-        log.info("📝 Entidad antes de guardar - Semana: {}, ObraId: {}", obraOtroCosto.getSemana(), obraOtroCosto.getObraId());
+        log.info("📝 Entidad antes de guardar - Semana: {}, ObraId: {}, EsSemanal: {}, EsManual: {}", 
+                obraOtroCosto.getSemana(), obraOtroCosto.getObraId(), obraOtroCosto.getEsSemanal(), obraOtroCosto.getEsManual());
 
         // Guardar en BD
         ObraOtroCosto saved = obraOtroCostoRepository.save(obraOtroCosto);
 
-        log.info("✅ Asignación guardada con ID: {}", saved.getId());
+        log.info("✅ Asignación guardada con ID: {} (Semanal: {}, Manual: {})", saved.getId(), saved.getEsSemanal(), saved.getEsManual());
 
         // Convertir a DTO de respuesta
         return convertirAResponseDTO(saved);
@@ -93,10 +124,30 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
             throw new RuntimeException("Asignación no encontrada");
         }
 
+        // Detectar si es asignación semanal o diaria
+        boolean esSemanal = request.getFechaAsignacion() == null;
+        boolean esManual = request.getPresupuestoOtroCostoId() == null;
+
+        // Validaciones
+        if (esSemanal && request.getFechaAsignacion() != null) {
+            throw new IllegalArgumentException("Una asignación semanal no debe tener fecha específica");
+        }
+        
+        if (!esSemanal && request.getFechaAsignacion() == null) {
+            throw new IllegalArgumentException("Una asignación diaria debe tener fecha específica");
+        }
+
         // Actualizar campos
         asignacion.setImporteAsignado(request.getImporteAsignado());
         asignacion.setSemana(request.getSemana());
+        asignacion.setFechaAsignacion(request.getFechaAsignacion());
+        asignacion.setDescripcion(request.getDescripcion());
+        asignacion.setCategoria(request.getCategoria());
         asignacion.setObservaciones(request.getObservaciones());
+        asignacion.setEsSemanal(esSemanal);
+        asignacion.setEsManual(esManual);
+        asignacion.setPresupuestoOtroCostoId(request.getPresupuestoOtroCostoId());
+        asignacion.setGastoGeneralId(request.getGastoGeneralId());
 
         ObraOtroCosto updated = obraOtroCostoRepository.save(asignacion);
 
@@ -125,11 +176,12 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
      * Convierte entidad a DTO de respuesta
      */
     private ObraOtroCostoResponseDTO convertirAResponseDTO(ObraOtroCosto entity) {
-        // Buscar información del gasto general
-        String descripcion = "Gasto General ID: " + entity.getGastoGeneralId();
-        String categoria = "Otros Costos";
+        // Buscar información del gasto general si existe
+        String descripcion = entity.getDescripcion();
+        String categoria = entity.getCategoria();
         
-        if (entity.getGastoGeneralId() != null) {
+        // Si no tiene descripción propia, buscar del gasto general
+        if ((descripcion == null || descripcion.isEmpty()) && entity.getGastoGeneralId() != null) {
             PresupuestoGastoGeneral gasto = presupuestoGastoGeneralRepository
                 .findById(entity.getGastoGeneralId())
                 .orElse(null);
@@ -142,17 +194,31 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
             }
         }
         
+        // Si aún no tiene categoría, usar default
+        if (categoria == null || categoria.isEmpty()) {
+            categoria = "Otros Costos";
+        }
+        
+        // Si no tiene descripción, usar fallback
+        if (descripcion == null || descripcion.isEmpty()) {
+            descripcion = "Gasto General ID: " + entity.getGastoGeneralId();
+        }
+        
         return ObraOtroCostoResponseDTO.builder()
                 .id(entity.getId())
                 .obraId(entity.getObraId())
                 .nombreObra("Obra ID: " + entity.getObraId())
+                .presupuestoOtroCostoId(entity.getPresupuestoOtroCostoId())
                 .gastoGeneralId(entity.getGastoGeneralId())
                 .categoria(categoria)
                 .descripcion(descripcion)
+                .nombreOtroCosto(descripcion) // Alias para compatibilidad
                 .importeAsignado(entity.getImporteAsignado())
-                .fechaAsignacion(entity.getFechaAsignacion())
+                .fechaAsignacion(entity.getFechaAsignacion()) // Solo presente si no es semanal
                 .semana(entity.getSemana())
                 .observaciones(entity.getObservaciones())
+                .esSemanal(entity.getEsSemanal())
+                .esManual(entity.getEsManual())
                 .build();
     }
 }
