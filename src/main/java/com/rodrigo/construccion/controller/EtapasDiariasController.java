@@ -21,7 +21,6 @@ import java.util.Map;
 @RequestMapping("/api/profesionales/etapas-diarias")
 @RequiredArgsConstructor
 @Slf4j
-@CrossOrigin(origins = "*")
 public class EtapasDiariasController {
 
     private final EtapasDiariasService etapasDiariasService;

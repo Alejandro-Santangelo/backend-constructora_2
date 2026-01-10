@@ -61,11 +61,11 @@ public class Material {
 
     // Relaciones
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonManagedReference("material-stocks")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<StockMaterial> stocks = new ArrayList<>();
 
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonManagedReference("material-movimientos")
+    @com.fasterxml.jackson.annotation.JsonIgnore
     private List<MovimientoMaterial> movimientos = new ArrayList<>();
 
     // Métodos de conveniencia

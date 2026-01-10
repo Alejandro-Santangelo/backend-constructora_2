@@ -18,7 +18,6 @@ import java.util.List;
 
 @RestController
 @RequestMapping("/api")
-@CrossOrigin(origins = "*")
 @Tag(name = "Gastos Generales", description = "Gestión de catálogo de gastos generales")
 public class GastoGeneralController {
     
