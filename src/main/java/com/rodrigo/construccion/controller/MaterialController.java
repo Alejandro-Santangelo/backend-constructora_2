@@ -167,4 +167,42 @@ public class MaterialController {
         List<Material> materiales = materialService.obtenerTodosOrdenadosPorNombre();
         return ResponseEntity.ok(materiales);
     }
+
+    @Operation(summary = "Actualizar precio de todos los materiales", description = "Aplica un porcentaje de incremento/decremento a todos los materiales. Ejemplo: 10 para aumentar 10%, -5 para reducir 5%")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Precios actualizados exitosamente")
+    })
+    @PutMapping("/actualizar-precio-todos")
+    public ResponseEntity<String> actualizarPrecioTodos(@RequestParam("porcentaje") double porcentaje) {
+        materialService.actualizarPrecioTodos(porcentaje);
+        return ResponseEntity.ok("Los precios de todos los materiales se han actualizado con éxito.");
+    }
+
+    @Operation(summary = "Actualizar precio de un material", description = "Aplica un porcentaje de incremento/decremento a un material específico")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Precio actualizado exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Material no encontrado")
+    })
+    @PutMapping("/{id}/actualizar-precio")
+    public ResponseEntity<String> actualizarPrecioPorId(
+        @Parameter(description = "ID del material") @PathVariable Long id,
+        @RequestParam("porcentaje") double porcentaje) {
+        materialService.actualizarPrecioPorId(id, porcentaje);
+        return ResponseEntity.ok("El precio del material se ha actualizado con éxito.");
+    }
+
+    @Operation(summary = "Actualizar precio de varios materiales", description = "Aplica un porcentaje de incremento/decremento a varios materiales. Body: {\"ids\": [1,2,3], \"porcentaje\": 10}")
+    @ApiResponses(value = {
+        @ApiResponse(responseCode = "200", description = "Precios actualizados exitosamente"),
+        @ApiResponse(responseCode = "404", description = "Materiales no encontrados")
+    })
+    @PutMapping("/actualizar-precio-varios")
+    public ResponseEntity<String> actualizarPrecioVarios(@RequestBody java.util.Map<String, Object> request) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = (List<Long>) request.get("ids");
+        double porcentaje = ((Number) request.get("porcentaje")).doubleValue();
+        
+        materialService.actualizarPrecioVarios(ids, porcentaje);
+        return ResponseEntity.ok("Los precios de " + ids.size() + " materiales se han actualizado con éxito.");
+    }
 }

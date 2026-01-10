@@ -135,4 +135,18 @@ public class ProfesionalController {
         profesionalService.actualizarPorcentajeGananciaPorId(id, porcentaje);
         return ResponseEntity.ok().body("El porcentaje de ganancia del profesional se ha actualizado con éxito.");
     }
+
+    /**
+     * Actualizar el porcentajeGanancia de varios profesionales por lista de IDs
+     */
+    @PutMapping("/actualizar-porcentaje-ganancia-varios")
+    @Operation(summary = "Actualizar porcentajeGanancia de varios profesionales", description = "Modifica el porcentajeGanancia de varios profesionales seleccionados. Body: {\"ids\": [1,2,3], \"porcentaje\": 15}")
+    public ResponseEntity<String> actualizarPorcentajeGananciaVarios(@RequestBody java.util.Map<String, Object> request) {
+        @SuppressWarnings("unchecked")
+        List<Long> ids = (List<Long>) request.get("ids");
+        double porcentaje = ((Number) request.get("porcentaje")).doubleValue();
+        
+        profesionalService.actualizarPorcentajeGananciaVarios(ids, porcentaje);
+        return ResponseEntity.ok().body("El porcentaje de ganancia de " + ids.size() + " profesionales se ha actualizado con éxito.");
+    }
 }

@@ -168,4 +168,56 @@ public class MaterialService {
     public List<Material> obtenerTodosOrdenadosPorNombre() {
         return materialRepository.findAllActivosOrdenadosPorNombre();
     }
+
+    /**
+     * Actualizar precio de todos los materiales activos aplicando un porcentaje de incremento
+     * @param porcentaje Porcentaje de incremento (puede ser positivo o negativo). Ej: 10 para aumentar 10%, -5 para reducir 5%
+     */
+    public void actualizarPrecioTodos(double porcentaje) {
+        List<Material> materiales = materialRepository.findByActivoTrue();
+        BigDecimal factor = BigDecimal.ONE.add(BigDecimal.valueOf(porcentaje / 100));
+        
+        for (Material material : materiales) {
+            BigDecimal nuevoPrecio = material.getPrecioUnitario().multiply(factor);
+            material.setPrecioUnitario(nuevoPrecio);
+        }
+        
+        materialRepository.saveAll(materiales);
+    }
+
+    /**
+     * Actualizar precio de un material específico aplicando un porcentaje de incremento
+     * @param id ID del material
+     * @param porcentaje Porcentaje de incremento (puede ser positivo o negativo)
+     */
+    public void actualizarPrecioPorId(Long id, double porcentaje) {
+        Material material = materialRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Material no encontrado con ID: " + id));
+        
+        BigDecimal factor = BigDecimal.ONE.add(BigDecimal.valueOf(porcentaje / 100));
+        BigDecimal nuevoPrecio = material.getPrecioUnitario().multiply(factor);
+        material.setPrecioUnitario(nuevoPrecio);
+        
+        materialRepository.save(material);
+    }
+
+    /**
+     * Actualizar precio de varios materiales aplicando un porcentaje de incremento
+     * @param ids Lista de IDs de materiales
+     * @param porcentaje Porcentaje de incremento (puede ser positivo o negativo)
+     */
+    public void actualizarPrecioVarios(List<Long> ids, double porcentaje) {
+        List<Material> materiales = materialRepository.findAllById(ids);
+        if (materiales.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron materiales con los IDs proporcionados");
+        }
+        
+        BigDecimal factor = BigDecimal.ONE.add(BigDecimal.valueOf(porcentaje / 100));
+        for (Material material : materiales) {
+            BigDecimal nuevoPrecio = material.getPrecioUnitario().multiply(factor);
+            material.setPrecioUnitario(nuevoPrecio);
+        }
+        
+        materialRepository.saveAll(materiales);
+    }
 }

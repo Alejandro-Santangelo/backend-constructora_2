@@ -49,6 +49,9 @@ public class AsignarOtroCostoRequestDTO {
     @Schema(description = "Categoría del gasto. Requerida si es manual.", example = "Albañilería")
     private String categoria;
 
+    @Schema(description = "Indica si es una asignación global (true) que aplica a toda la obra o específica a item/etapa (false)", example = "true")
+    private Boolean esGlobal;
+
     @Schema(description = "Observaciones adicionales sobre la asignación", example = "Volquetes [Gasto Semanal Global]")
     private String observaciones;
 }

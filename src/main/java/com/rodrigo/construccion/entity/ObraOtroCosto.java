@@ -68,6 +68,13 @@ public class ObraOtroCosto {
     @Column(name = "es_manual", nullable = false)
     private Boolean esManual = false;
 
+    /**
+     * Indica si es una asignación global (true) que aplica a toda la obra
+     * o una asignación específica a un item/etapa (false).
+     */
+    @Column(name = "es_global", nullable = false)
+    private Boolean esGlobal = false;
+
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;
 }

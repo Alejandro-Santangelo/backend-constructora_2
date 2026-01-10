@@ -37,6 +37,8 @@ public interface IProfesionalService {
 
     public void actualizarPorcentajeGananciaPorId(Long id, double porcentaje);
 
+    public void actualizarPorcentajeGananciaVarios(List<Long> ids, double porcentaje);
+
     public List<String> obtenerTiposProfesionales();
 
     public Profesional findProfesionalParaAsignacion(AsignarProfesionalRequest request);

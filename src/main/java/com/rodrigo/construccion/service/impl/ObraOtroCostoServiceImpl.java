@@ -70,9 +70,11 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
         obraOtroCosto.setObservaciones(request.getObservaciones());
         obraOtroCosto.setEsSemanal(esSemanal);
         obraOtroCosto.setEsManual(esManual);
+        obraOtroCosto.setEsGlobal(request.getEsGlobal() != null ? request.getEsGlobal() : false);
         
-        log.info("📝 Entidad antes de guardar - Semana: {}, ObraId: {}, EsSemanal: {}, EsManual: {}", 
-                obraOtroCosto.getSemana(), obraOtroCosto.getObraId(), obraOtroCosto.getEsSemanal(), obraOtroCosto.getEsManual());
+        log.info("📝 Entidad antes de guardar - Semana: {}, ObraId: {}, EsSemanal: {}, EsManual: {}, EsGlobal: {}", 
+                obraOtroCosto.getSemana(), obraOtroCosto.getObraId(), obraOtroCosto.getEsSemanal(), 
+                obraOtroCosto.getEsManual(), obraOtroCosto.getEsGlobal());
 
         // Guardar en BD
         ObraOtroCosto saved = obraOtroCostoRepository.save(obraOtroCosto);
@@ -146,6 +148,7 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
         asignacion.setObservaciones(request.getObservaciones());
         asignacion.setEsSemanal(esSemanal);
         asignacion.setEsManual(esManual);
+        asignacion.setEsGlobal(request.getEsGlobal() != null ? request.getEsGlobal() : false);
         asignacion.setPresupuestoOtroCostoId(request.getPresupuestoOtroCostoId());
         asignacion.setGastoGeneralId(request.getGastoGeneralId());
 
@@ -219,6 +222,7 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
                 .observaciones(entity.getObservaciones())
                 .esSemanal(entity.getEsSemanal())
                 .esManual(entity.getEsManual())
+                .esGlobal(entity.getEsGlobal())
                 .build();
     }
 }

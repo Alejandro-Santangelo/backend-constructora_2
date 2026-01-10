@@ -45,6 +45,7 @@ public class PresupuestoGastoGeneral {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
+    @Column(name = "id_gasto_general")
     private Long id;
 
     /**

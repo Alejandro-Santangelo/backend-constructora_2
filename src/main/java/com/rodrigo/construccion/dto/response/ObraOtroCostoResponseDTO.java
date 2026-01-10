@@ -64,4 +64,7 @@ public class ObraOtroCostoResponseDTO {
 
     @Schema(description = "Indica si el gasto fue creado manualmente (true) o vinculado a presupuesto (false)", example = "true")
     private Boolean esManual;
+
+    @Schema(description = "Indica si es una asignación global (true) que aplica a toda la obra o específica (false)", example = "true")
+    private Boolean esGlobal;
 }

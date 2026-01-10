@@ -250,6 +250,27 @@ public class ProfesionalService implements IProfesionalService {
     }
 
     /**
+     * Actualizar porcentajeGanancia de varios profesionales por lista de IDs
+     */
+    @Override
+    public void actualizarPorcentajeGananciaVarios(List<Long> ids, double porcentaje) {
+        List<Profesional> profesionales = profesionalRepository.findAllById(ids);
+        if (profesionales.isEmpty()) {
+            throw new ResourceNotFoundException("No se encontraron profesionales con los IDs proporcionados");
+        }
+        
+        BigDecimal porcentajeBD = BigDecimal.valueOf(porcentaje);
+        for (Profesional profesional : profesionales) {
+            profesional.setPorcentajeGanancia(porcentajeBD);
+            BigDecimal importe = profesional.getValorHoraDefault()
+                    .multiply(porcentajeBD)
+                    .divide(BigDecimal.valueOf(100));
+            profesional.setImporteGanancia(importe);
+        }
+        profesionalRepository.saveAll(profesionales);
+    }
+
+    /**
      * Busca un profesional para ser asignado, priorizando por ID y luego por
      * tipo/nombre.
      * Usado por ProfesionalObraService para encapsular la lógica de búsqueda.
