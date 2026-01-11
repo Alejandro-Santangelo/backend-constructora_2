@@ -10,7 +10,8 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * DTO de respuesta con información del material asignado a una obra
+ * DTO de respuesta con información del material asignado a una obra.
+ * Soporta materiales del presupuesto (modo DETALLADO) y del catálogo (modo GLOBAL)
  */
 @Data
 @Builder
@@ -28,8 +29,17 @@ public class ObraMaterialResponseDTO {
     @Schema(description = "Nombre de la obra", example = "Av. Libertador 1234")
     private String nombreObra;
 
-    @Schema(description = "ID del material del presupuesto", example = "10")
+    @Schema(description = "ID del material del presupuesto (null si es modo GLOBAL)", example = "10")
     private Long presupuestoMaterialId;
+
+    @Schema(description = "ID del material calculadora del presupuesto (null si es modo GLOBAL)", example = "10")
+    private Long materialCalculadoraId;
+
+    @Schema(description = "ID del material del catálogo general (null si es modo DETALLADO)", example = "3")
+    private Long materialCatalogoId;
+
+    @Schema(description = "Descripción del material (requerida para modo GLOBAL)", example = "Cemento Portland")
+    private String descripcion;
 
     @Schema(description = "Nombre del material", example = "Cemento Portland")
     private String nombreMaterial;
@@ -46,8 +56,11 @@ public class ObraMaterialResponseDTO {
     @Schema(description = "Precio unitario del material", example = "850.00")
     private BigDecimal precioUnitario;
 
-    @Schema(description = "Unidad de medida", example = "bolsa")
+    @Schema(description = "Unidad de medida (requerida para modo GLOBAL)", example = "kg")
     private String unidadMedida;
+
+    @Schema(description = "Indica si es modo CANTIDAD_GLOBAL (true) o ELEMENTO_DETALLADO (false)", example = "true")
+    private Boolean esGlobal;
 
     @Schema(description = "Total calculado (cantidadAsignada * precioUnitario)", example = "85425.00")
     private BigDecimal totalCalculado;

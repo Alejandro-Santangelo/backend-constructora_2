@@ -12,14 +12,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 /**
- * Relación N:N entre Obra y Material del Presupuesto
- * Permite asignar materiales específicos del presupuesto a una obra
+ * Relación N:N entre Obra y Material del Presupuesto o Material Global
+ * Soporta dos modos:
+ * - ELEMENTO_DETALLADO: Material del presupuesto (materialCalculadoraId)
+ * - CANTIDAD_GLOBAL: Material del catálogo general (materialCatalogoId)
  */
 @Entity
-@Table(name = "asignaciones_material_obra", 
-       uniqueConstraints = @UniqueConstraint(
-           name = "uq_asignaciones_material_obra", 
-           columnNames = {"obra_id", "material_calculadora_id"}))
+@Table(name = "asignaciones_material_obra")
 @Filter(name = "empresaFilter", condition = "empresa_id = :empresaId")
 @Getter
 @Setter
@@ -37,8 +36,24 @@ public class ObraMaterial {
     @Column(name = "material_calculadora_id")
     private Long materialCalculadoraId;
 
+    @Column(name = "material_catalogo_id")
+    private Long materialCatalogoId;
+
+    @Column(name = "descripcion", length = 255)
+    private String descripcion;
+
+    @Column(name = "unidad_medida", length = 50)
+    private String unidadMedida;
+
     @Column(name = "cantidad_asignada", nullable = false, precision = 10, scale = 2)
     private BigDecimal cantidadAsignada = BigDecimal.ZERO;
+
+    /**
+     * Indica si es una asignación global (true) del modo CANTIDAD_GLOBAL
+     * o del presupuesto (false) en modo ELEMENTO_DETALLADO.
+     */
+    @Column(name = "es_global", nullable = false)
+    private Boolean esGlobal = false;
 
     @CreationTimestamp
     @Column(name = "fecha_asignacion", nullable = false, updatable = false)
@@ -61,4 +76,8 @@ public class ObraMaterial {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "material_calculadora_id", insertable = false, updatable = false)
     private MaterialCalculadora materialCalculadora;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "material_catalogo_id", insertable = false, updatable = false)
+    private Material materialCatalogo;
 }

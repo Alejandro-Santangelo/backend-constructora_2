@@ -184,12 +184,14 @@
                 <artifactId>flyway-maven-plugin</artifactId>
                 <version>9.22.3</version>
                 <configuration>
-                    <url>jdbc:postgresql://localhost:5432/construccion_app</url>
+                    <url>jdbc:postgresql://localhost:5432/construccion_app_v3</url>
                     <user>postgres</user>
                     <password>Cacho3103</password>
                     <schemas>public</schemas>
                     <locations>classpath:db/migration</locations>
                     <baselineOnMigrate>true</baselineOnMigrate>
+                    <outOfOrder>true</outOfOrder>
+                    <validateOnMigrate>false</validateOnMigrate>
                 </configuration>
             </plugin>
             
