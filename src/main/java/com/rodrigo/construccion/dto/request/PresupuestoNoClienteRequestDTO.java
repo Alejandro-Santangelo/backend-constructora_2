@@ -95,6 +95,9 @@ public class PresupuestoNoClienteRequestDTO {
     private Integer tiempoEstimadoTerminacion;
 
 
+    @Schema(description = "Elementos nuevos para agregar al catálogo (Materiales, Profesionales, Gastos)")
+    private List<ElementoCatalogoDTO> elementosParaCatalogo;
+
     @Schema(description = "Estado del presupuesto (nullable). Valores válidos: A enviar, Borrador, Modificado, Enviado, APROBADO, EN EJECUCION, TERMINADO. " +
                          "Si no se especifica, se asigna automáticamente según tipo de presupuesto: TRADICIONAL → 'A enviar', TRABAJOS_SEMANALES → 'APROBADO'",
             example = "A enviar",

@@ -67,6 +67,14 @@ public class GastoGeneralController {
         }
     }
     
+    @Operation(summary = "Listar gastos generales por ID de empresa (Endpoint para catálogo)")
+    @GetMapping("/gastos-generales/empresa/{empresaId}")
+    public ResponseEntity<List<GastoGeneral>> listarGastosGeneralesPorPath(@PathVariable Long empresaId) {
+        log.info("🔍 GET /api/gastos-generales/empresa/{}", empresaId);
+        return ResponseEntity.ok(gastoGeneralService.listarPorEmpresa(empresaId));
+    }
+
+    
     @Operation(summary = "Obtener gasto general por ID")
     @GetMapping("/gastos-generales/{id}")
     public ResponseEntity<?> obtenerGastoGeneral(

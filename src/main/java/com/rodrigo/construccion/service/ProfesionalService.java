@@ -27,6 +27,29 @@ public class ProfesionalService implements IProfesionalService {
     private final ProfesionalRepository profesionalRepository;
     private final ProfesionalMapper profesionalMapper;
 
+    @Transactional(readOnly = true)
+    public List<java.util.Map<String, Object>> obtenerCatalogoPorEmpresa(Long empresaId) {
+        List<Profesional> profesionales = profesionalRepository.findByEmpresaId(empresaId);
+        return profesionales.stream().map(p -> {
+            java.util.Map<String, Object> map = new java.util.HashMap<>();
+            map.put("id", p.getId());
+            if (p.getNombre() != null && !p.getNombre().isEmpty()) {
+                map.put("nombre", p.getNombre() + " - " + p.getTipoProfesional());
+                map.put("nombreProfesional", p.getNombre());
+            } else {
+                map.put("nombre", p.getTipoProfesional());
+                map.put("nombreProfesional", null);
+            }
+            map.put("rol", p.getTipoProfesional());
+            map.put("tipoProfesional", p.getTipoProfesional());
+            // Use honorarioDia as valorUnitario equivalent
+            map.put("valorUnitario", p.getHonorarioDia() != null ? p.getHonorarioDia() : java.math.BigDecimal.ZERO);
+            map.put("precio", map.get("valorUnitario"));
+            map.put("categoria", p.getEspecialidad());
+            return map;
+        }).collect(java.util.stream.Collectors.toList());
+    }
+
     /* Crear nuevo profesional desde DTO */
     @Override
     public ProfesionalResponseDTO crearProfesional(ProfesionalRequestDTO requestDTO) {

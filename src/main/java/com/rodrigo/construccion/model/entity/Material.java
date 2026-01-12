@@ -36,6 +36,9 @@ public class Material {
     @Column(name = "id_material")
     private Long id;
 
+    @Column(name = "empresa_id")
+    private Long empresaId;
+
     @NotBlank(message = "El nombre del material es obligatorio")
     @Size(max = 200, message = "El nombre no puede exceder 200 caracteres")
     @Column(name = "nombre", nullable = false, length = 200)

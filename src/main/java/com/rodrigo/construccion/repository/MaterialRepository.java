@@ -48,7 +48,18 @@ public interface MaterialRepository extends JpaRepository<Material, Long> {
     @Query("SELECT m FROM Material m WHERE m.activo = true ORDER BY m.nombre")
     List<Material> findAllActivosOrdenadosPorNombre();
 
-    boolean existsByActivoTrueAndNombreIgnoreCaseAndIdNot(String nombre, Long materialId);
+    /**
+     * Buscar materiales por empresa
+     */
+    List<Material> findByEmpresaIdAndActivoTrue(Long empresaId);
+
+    /**
+     * Verificar existencia por nombre y empresa
+     */
+    boolean existsByNombreIgnoreCaseAndEmpresaIdAndActivoTrue(String nombre, Long empresaId);
     
+    // Método legacy para compatibilidad o uso global si aplica
     boolean existsByActivoTrueAndNombreIgnoreCase(String nombre);
+    
+    boolean existsByActivoTrueAndNombreIgnoreCaseAndIdNot(String nombre, Long materialId);
 }

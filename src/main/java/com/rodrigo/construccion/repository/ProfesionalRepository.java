@@ -145,6 +145,15 @@ public interface ProfesionalRepository extends JpaRepository<Profesional, Long> 
        @Query("SELECT DISTINCT p.tipoProfesional FROM Profesional p WHERE p.tipoProfesional IS NOT NULL ORDER BY p.tipoProfesional")
        List<String> findDistinctTipoProfesional();
 
+       /* Por Empresa */
+       List<Profesional> findByEmpresaId(Long empresaId);
+       
+       /* Existencia duplicados por Empresa */
+       boolean existsByTipoProfesionalAndNombreAndEmpresaId(String tipoProfesional, String nombre, Long empresaId);
+       
+       // Para Jornales sin nombre profesional (rol genérico)
+       boolean existsByTipoProfesionalAndNombreIsNullAndEmpresaId(String tipoProfesional, Long empresaId);
+
        @Query(value = "SELECT DISTINCT h.profesional FROM Honorario h " +
                       "JOIN h.obra.cliente.empresas e " +
                       "WHERE e.id = :empresaId",

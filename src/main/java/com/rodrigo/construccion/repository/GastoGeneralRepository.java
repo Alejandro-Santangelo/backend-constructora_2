@@ -18,4 +18,6 @@ public interface GastoGeneralRepository extends JpaRepository<GastoGeneral, Long
     
     @Query("SELECT gg FROM GastoGeneral gg WHERE gg.empresaId = :empresaId AND gg.categoria = :categoria ORDER BY gg.nombre")
     List<GastoGeneral> findByEmpresaIdAndCategoriaOrderByNombre(@Param("empresaId") Long empresaId, @Param("categoria") String categoria);
+
+    boolean existsByNombreIgnoreCaseAndEmpresaId(String nombre, Long empresaId);
 }

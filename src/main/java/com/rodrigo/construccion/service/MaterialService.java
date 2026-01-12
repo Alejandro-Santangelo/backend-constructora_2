@@ -39,6 +39,15 @@ public class MaterialService {
     }
 
     /**
+     * Obtener materiales por ID de empresa
+     */
+    @Transactional(readOnly = true)
+    public List<Material> obtenerPorEmpresaId(Long empresaId) {
+        return materialRepository.findByEmpresaIdAndActivoTrue(empresaId);
+    }
+
+
+    /**
      * Obtener materiales con paginación
      */
     @Transactional(readOnly = true)

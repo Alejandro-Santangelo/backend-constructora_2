@@ -16,7 +16,7 @@ param(
     [string]$DbPort = "5432",
     
     [Parameter(Mandatory=$false)]
-    [string]$DbName = "construccion_app_v2",
+    [string]$DbName = "construccion_app_v3",
     
     [Parameter(Mandatory=$false)]
     [string]$DbUser = "postgres",

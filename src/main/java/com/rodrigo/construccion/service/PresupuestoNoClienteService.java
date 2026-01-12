@@ -30,6 +30,11 @@ import com.rodrigo.construccion.repository.PresupuestoGastoGeneralRepository;
 import com.rodrigo.construccion.repository.EmpresaRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.repository.ClienteRepository;
+import com.rodrigo.construccion.repository.MaterialRepository;
+import com.rodrigo.construccion.repository.GastoGeneralRepository;
+import com.rodrigo.construccion.dto.request.ElementoCatalogoDTO;
+import com.rodrigo.construccion.model.entity.Material;
+import com.rodrigo.construccion.model.entity.GastoGeneral;
 import com.rodrigo.construccion.dto.request.PresupuestoNoClienteRequestDTO;
 import com.rodrigo.construccion.dto.request.ItemCalculadoraPresupuestoDTO;
 import com.rodrigo.construccion.dto.request.MaterialCalculadoraDTO;
@@ -98,6 +103,8 @@ public class PresupuestoNoClienteService {
     private final ClienteRepository clienteRepository;
     private final com.rodrigo.construccion.repository.ProfesionalObraRepository profesionalObraRepository;
     private final ProfesionalRepository profesionalRepository;
+    private final MaterialRepository catalogoMaterialRepository;
+    private final GastoGeneralRepository catalogoGastoGeneralRepository;
     // REPOSITORIO LEGACY ELIMINADO
     // private final com.rodrigo.construccion.repository.PresupuestoNoClienteJornalRepository jornalRepository;
     private final com.rodrigo.construccion.repository.JornalCalculadoraRepository jornalCalculadoraRepository;
@@ -137,6 +144,8 @@ public class PresupuestoNoClienteService {
             ClienteRepository clienteRepository,
             com.rodrigo.construccion.repository.ProfesionalObraRepository profesionalObraRepository,
             ProfesionalRepository profesionalRepository,
+            MaterialRepository catalogoMaterialRepository,
+            GastoGeneralRepository catalogoGastoGeneralRepository,
             // ELIMINADO: PresupuestoNoClienteJornalRepository jornalRepository,
             com.rodrigo.construccion.repository.JornalCalculadoraRepository jornalCalculadoraRepository,
             com.rodrigo.construccion.repository.PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository,
@@ -152,6 +161,8 @@ public class PresupuestoNoClienteService {
         this.clienteRepository = clienteRepository;
         this.profesionalObraRepository = profesionalObraRepository;
         this.profesionalRepository = profesionalRepository;
+        this.catalogoMaterialRepository = catalogoMaterialRepository;
+        this.catalogoGastoGeneralRepository = catalogoGastoGeneralRepository;
         // ELIMINADO: this.jornalRepository = jornalRepository;
         this.jornalCalculadoraRepository = jornalCalculadoraRepository;
         this.pagoGastoGeneralObraRepository = pagoGastoGeneralObraRepository;
@@ -719,6 +730,9 @@ public class PresupuestoNoClienteService {
                 log.info("✅ NUEVA VERSIÓN CREADA - ID: {}, Versión: {}, Estado: {}, Total: {}", 
                     guardado.getId(), guardado.getNumeroVersion(), guardado.getEstado(), guardado.getTotalPresupuesto());
                 
+                // Procesar catálogo
+                try { procesarElementosParaCatalogo(dto, dto.getIdEmpresa()); } catch (Exception e) { log.error("Error catálogo", e); }
+
                 return guardado;
                 
             } else {
@@ -727,6 +741,9 @@ public class PresupuestoNoClienteService {
                     existente.getEstado(), existente.getId(), existente.getNumeroVersion());
                 
                 PresupuestoNoCliente actualizado = actualizarVersionExistenteCompleto(existente, dto);
+
+                // Procesar catálogo
+                try { procesarElementosParaCatalogo(dto, dto.getIdEmpresa()); } catch (Exception e) { log.error("Error catálogo", e); }
                 log.info("✅ Presupuesto ACTUALIZADO (mismo registro) - ID: {}, Versión: {}, Estado: {}, Total: {}", 
                     actualizado.getId(), actualizado.getNumeroVersion(), actualizado.getEstado(), actualizado.getTotalPresupuesto());
                 
@@ -4648,5 +4665,139 @@ public class PresupuestoNoClienteService {
         return resultado;
     }
     
-}
+    // ========================================================================================
+    // LOGICA DE CATALOGO AUTOMATICO
+    // ========================================================================================
 
+    private void procesarElementosParaCatalogo(PresupuestoNoClienteRequestDTO dto, Long empresaId) {
+        if (dto.getElementosParaCatalogo() == null || dto.getElementosParaCatalogo().isEmpty()) {
+            return;
+        }
+
+        log.info("Procesando {} elementos para catálogo de empresa {}", dto.getElementosParaCatalogo().size(), empresaId);
+
+        int materialesCreados = 0;
+        int gastosCreados = 0;
+        int jornalesCreados = 0; // Profesionales tipo "JORNAL"
+        int profesionalesCreados = 0; // Profesionales tipo "PROFESIONAL"
+
+        for (ElementoCatalogoDTO elemento : dto.getElementosParaCatalogo()) {
+            try {
+                if (elemento.getTipo() == null) continue;
+
+                switch (elemento.getTipo().toUpperCase()) {
+                    case "MATERIAL":
+                        if (crearMaterialSiNoExiste(elemento, empresaId)) materialesCreados++;
+                        break;
+                    case "GASTO_GENERAL":
+                        if (crearGastoSiNoExiste(elemento, empresaId)) gastosCreados++;
+                        break;
+                    case "JORNAL":
+                        if (crearJornalSiNoExiste(elemento, empresaId)) jornalesCreados++;
+                        break;
+                    case "PROFESIONAL":
+                        if (crearProfesionalSiNoExiste(elemento, empresaId)) profesionalesCreados++;
+                        break;
+                }
+            } catch (Exception e) {
+                log.error("Error procesando elemento catálogo {}: {}", elemento.getNombre(), e.getMessage());
+            }
+        }
+        
+        log.info("Catálogo actualizado. Nuevos - Mat: {}, Gas: {}, Jor: {}, Prof: {}", 
+            materialesCreados, gastosCreados, jornalesCreados, profesionalesCreados);
+    }
+
+    private boolean crearMaterialSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
+        if (elemento.getNombre() == null || elemento.getNombre().isBlank()) return false;
+        if (elemento.getPrecioUnitario() == null || elemento.getPrecioUnitario().compareTo(BigDecimal.ZERO) <= 0) return false;
+
+        boolean existe = catalogoMaterialRepository.existsByNombreIgnoreCaseAndEmpresaIdAndActivoTrue(elemento.getNombre(), empresaId);
+        if (!existe) {
+            Material nuevo = new Material();
+            nuevo.setNombre(elemento.getNombre());
+            nuevo.setDescripcion(elemento.getDescripcion());
+            nuevo.setPrecioUnitario(elemento.getPrecioUnitario());
+            nuevo.setUnidadMedida(elemento.getUnidadMedida());
+            nuevo.setEmpresaId(empresaId);
+            nuevo.setActivo(true);
+            catalogoMaterialRepository.save(nuevo);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean crearGastoSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
+        if (elemento.getNombre() == null || elemento.getNombre().isBlank()) return false;
+        
+        boolean existe = catalogoGastoGeneralRepository.existsByNombreIgnoreCaseAndEmpresaId(elemento.getNombre(), empresaId);
+        if (!existe) {
+            GastoGeneral nuevo = new GastoGeneral();
+            nuevo.setNombre(elemento.getNombre());
+            nuevo.setDescripcion(elemento.getDescripcion());
+            nuevo.setPrecioUnitarioBase(elemento.getPrecioUnitario());
+            nuevo.setUnidadMedida(elemento.getUnidadMedida());
+            nuevo.setCategoria(elemento.getCategoria());
+            nuevo.setEmpresaId(empresaId);
+            catalogoGastoGeneralRepository.save(nuevo);
+            return true;
+        }
+        return false;
+    }
+    
+    private boolean crearJornalSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
+        // Validation: Rol required
+        if (elemento.getRol() == null || elemento.getRol().isBlank()) return false;
+        
+        boolean existe;
+        if (elemento.getNombreProfesional() != null && !elemento.getNombreProfesional().isBlank()) {
+             existe = profesionalRepository.existsByTipoProfesionalAndNombreAndEmpresaId(
+                 elemento.getRol(), elemento.getNombreProfesional(), empresaId);
+        } else {
+             existe = profesionalRepository.existsByTipoProfesionalAndNombreIsNullAndEmpresaId(
+                 elemento.getRol(), empresaId);
+        }
+        
+        if (!existe) {
+            Profesional nuevo = new Profesional();
+            nuevo.setEmpresaId(empresaId);
+            nuevo.setTipoProfesional(elemento.getRol());
+            nuevo.setNombre(elemento.getNombreProfesional()); // Can be null
+            nuevo.setHonorarioDia(elemento.getValorUnitario());
+            nuevo.setEspecialidad(elemento.getCategoria()); // Use categoria as especialidad
+            nuevo.setActivo(true);
+            profesionalRepository.save(nuevo);
+            return true;
+        }
+        return false;
+    }
+
+    private boolean crearProfesionalSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
+        if (elemento.getTipoProfesional() == null || elemento.getTipoProfesional().isBlank()) return false;
+        String nombre = elemento.getNombreProfesional(); // Usually required for PROFESIONAL type
+        
+       boolean existe;
+        if (nombre != null && !nombre.isBlank()) {
+             existe = profesionalRepository.existsByTipoProfesionalAndNombreAndEmpresaId(
+                 elemento.getTipoProfesional(), nombre, empresaId);
+        } else {
+             existe = profesionalRepository.existsByTipoProfesionalAndNombreIsNullAndEmpresaId(
+                 elemento.getTipoProfesional(), empresaId);
+        }
+
+        if (!existe) {
+             Profesional nuevo = new Profesional();
+             nuevo.setEmpresaId(empresaId);
+             nuevo.setTipoProfesional(elemento.getTipoProfesional());
+             nuevo.setNombre(nombre);
+             nuevo.setTelefono(elemento.getTelefono());
+             nuevo.setHonorarioDia(elemento.getValorUnitario());
+             nuevo.setEspecialidad(elemento.getCategoria());
+             nuevo.setActivo(true);
+             profesionalRepository.save(nuevo);
+             return true;
+        }
+        return false;
+    }
+
+}

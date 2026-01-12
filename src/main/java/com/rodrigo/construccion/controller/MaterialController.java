@@ -33,6 +33,13 @@ public class MaterialController {
         this.materialService = materialService;
     }
 
+    @GetMapping("/empresa/{empresaId}")
+    @Operation(summary = "Obtener materiales por empresa", description = "Obtiene la lista de materiales filtrada por empresa")
+    public ResponseEntity<List<Material>> obtenerPorEmpresa(@PathVariable Long empresaId) {
+        return ResponseEntity.ok(materialService.obtenerPorEmpresaId(empresaId));
+    }
+
+
     @Operation(summary = "Obtener todos los materiales activos")
     @ApiResponses(value = {
         @ApiResponse(responseCode = "200", description = "Lista de materiales obtenida exitosamente")
