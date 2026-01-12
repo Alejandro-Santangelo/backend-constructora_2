@@ -1,0 +1,206 @@
+               table_name               |                   column_name                   |          data_type          | character_maximum_length 
+----------------------------------------+-------------------------------------------------+-----------------------------+--------------------------
+ trabajos_extra                         | cliente_id                                      | bigint                      |                         
+ trabajos_extra                         | created_at                                      | timestamp without time zone |                         
+ trabajos_extra                         | empresa_id                                      | bigint                      |                         
+ trabajos_extra                         | id                                              | bigint                      |                         
+ trabajos_extra                         | obra_id                                         | bigint                      |                         
+ trabajos_extra                         | updated_at                                      | timestamp without time zone |                         
+ trabajos_extra                         | nombre                                          | character varying           |                      255
+ trabajos_extra                         | observaciones                                   | text                        |                         
+ trabajos_extra                         | estado_pago_general                             | character varying           |                       50
+ trabajos_extra                         | id_trabajo_extra                                | bigint                      |                         
+ trabajos_extra                         | calculo_automatico_dias_habiles                 | boolean                     |                         
+ trabajos_extra                         | descripcion                                     | text                        |                         
+ trabajos_extra                         | direccion_obra_altura                           | character varying           |                       50
+ trabajos_extra                         | direccion_obra_barrio                           | character varying           |                      100
+ trabajos_extra                         | direccion_obra_calle                            | character varying           |                      255
+ trabajos_extra                         | direccion_obra_codigo_postal                    | character varying           |                       20
+ trabajos_extra                         | direccion_obra_departamento                     | character varying           |                       50
+ trabajos_extra                         | direccion_obra_localidad                        | character varying           |                      100
+ trabajos_extra                         | direccion_obra_piso                             | character varying           |                       50
+ trabajos_extra                         | direccion_obra_provincia                        | character varying           |                      100
+ trabajos_extra                         | direccion_obra_torre                            | character varying           |                       50
+ trabajos_extra                         | direccion_particular                            | character varying           |                      500
+ trabajos_extra                         | es_trabajo_extra                                | boolean                     |                         
+ trabajos_extra                         | estado                                          | character varying           |                       50
+ trabajos_extra                         | fecha_creacion                                  | date                        |                         
+ trabajos_extra                         | fecha_emision                                   | date                        |                         
+ trabajos_extra                         | fecha_probable_inicio                           | date                        |                         
+ trabajos_extra                         | honorario_direccion_importe                     | numeric                     |                         
+ trabajos_extra                         | honorario_direccion_porcentaje                  | numeric                     |                         
+ trabajos_extra                         | honorario_direccion_valor_fijo                  | numeric                     |                         
+ trabajos_extra                         | honorarios_aplicar_a_todos                      | boolean                     |                         
+ trabajos_extra                         | honorarios_configuracion_presupuesto_activo     | boolean                     |                         
+ trabajos_extra                         | honorarios_configuracion_presupuesto_tipo       | character varying           |                       20
+ trabajos_extra                         | honorarios_configuracion_presupuesto_valor      | numeric                     |                         
+ trabajos_extra                         | honorarios_jornales_activo                      | boolean                     |                         
+ trabajos_extra                         | honorarios_jornales_tipo                        | character varying           |                       20
+ trabajos_extra                         | honorarios_jornales_valor                       | numeric                     |                         
+ trabajos_extra                         | honorarios_materiales_activo                    | boolean                     |                         
+ trabajos_extra                         | honorarios_materiales_tipo                      | character varying           |                       20
+ trabajos_extra                         | honorarios_materiales_valor                     | numeric                     |                         
+ trabajos_extra                         | honorarios_otros_costos_activo                  | boolean                     |                         
+ trabajos_extra                         | honorarios_otros_costos_tipo                    | character varying           |                       20
+ trabajos_extra                         | honorarios_otros_costos_valor                   | numeric                     |                         
+ trabajos_extra                         | honorarios_profesionales_activo                 | boolean                     |                         
+ trabajos_extra                         | honorarios_profesionales_tipo                   | character varying           |                       20
+ trabajos_extra                         | honorarios_profesionales_valor                  | numeric                     |                         
+ trabajos_extra                         | honorarios_tipo_general                         | character varying           |                       20
+ trabajos_extra                         | honorarios_valor_general                        | numeric                     |                         
+ trabajos_extra                         | mail                                            | character varying           |                      255
+ trabajos_extra                         | mayores_costos_aplicar_valor_general            | boolean                     |                         
+ trabajos_extra                         | mayores_costos_configuracion_presupuesto_activo | boolean                     |                         
+ trabajos_extra                         | mayores_costos_configuracion_presupuesto_tipo   | character varying           |                       20
+ trabajos_extra                         | mayores_costos_configuracion_presupuesto_valor  | numeric                     |                         
+ trabajos_extra                         | mayores_costos_explicacion                      | text                        |                         
+ trabajos_extra                         | mayores_costos_general_importado                | boolean                     |                         
+ trabajos_extra                         | mayores_costos_honorarios_activo                | boolean                     |                         
+ trabajos_extra                         | mayores_costos_honorarios_tipo                  | character varying           |                       20
+ trabajos_extra                         | mayores_costos_honorarios_valor                 | numeric                     |                         
+ trabajos_extra                         | mayores_costos_jornales_activo                  | boolean                     |                         
+ trabajos_extra                         | mayores_costos_jornales_tipo                    | character varying           |                       20
+ trabajos_extra                         | mayores_costos_jornales_valor                   | numeric                     |                         
+ trabajos_extra                         | mayores_costos_materiales_activo                | boolean                     |                         
+ trabajos_extra                         | mayores_costos_materiales_tipo                  | character varying           |                       20
+ trabajos_extra                         | mayores_costos_materiales_valor                 | numeric                     |                         
+ trabajos_extra                         | mayores_costos_nombre_rubro_importado           | character varying           |                      255
+ trabajos_extra                         | mayores_costos_otros_costos_activo              | boolean                     |                         
+ trabajos_extra                         | mayores_costos_otros_costos_tipo                | character varying           |                       20
+ trabajos_extra                         | mayores_costos_otros_costos_valor               | numeric                     |                         
+ trabajos_extra                         | mayores_costos_profesionales_activo             | boolean                     |                         
+ trabajos_extra                         | mayores_costos_profesionales_tipo               | character varying           |                       20
+ trabajos_extra                         | mayores_costos_profesionales_valor              | numeric                     |                         
+ trabajos_extra                         | mayores_costos_rubro_importado                  | character varying           |                      255
+ trabajos_extra                         | mayores_costos_tipo_general                     | character varying           |                       20
+ trabajos_extra                         | mayores_costos_valor_general                    | numeric                     |                         
+ trabajos_extra                         | monto_total                                     | numeric                     |                         
+ trabajos_extra                         | nombre_empresa                                  | character varying           |                      255
+ trabajos_extra                         | nombre_obra                                     | character varying           |                      255
+ trabajos_extra                         | nombre_solicitante                              | character varying           |                      255
+ trabajos_extra                         | numero_presupuesto                              | character varying           |                       50
+ trabajos_extra                         | telefono                                        | character varying           |                       50
+ trabajos_extra                         | tiempo_estimado_terminacion                     | integer                     |                         
+ trabajos_extra                         | total_final                                     | numeric                     |                         
+ trabajos_extra                         | total_general                                   | numeric                     |                         
+ trabajos_extra                         | total_honorarios                                | numeric                     |                         
+ trabajos_extra                         | total_honorarios_calculado                      | numeric                     |                         
+ trabajos_extra                         | total_materiales                                | numeric                     |                         
+ trabajos_extra                         | total_mayores_costos                            | numeric                     |                         
+ trabajos_extra                         | total_presupuesto                               | numeric                     |                         
+ trabajos_extra                         | total_presupuesto_con_honorarios                | numeric                     |                         
+ trabajos_extra                         | total_profesionales                             | numeric                     |                         
+ trabajos_extra                         | vencimiento                                     | date                        |                         
+ trabajos_extra                         | version                                         | integer                     |                         
+ trabajos_extra_dias                    | fecha                                           | date                        |                         
+ trabajos_extra_dias                    | id                                              | bigint                      |                         
+ trabajos_extra_dias                    | trabajo_extra_id                                | bigint                      |                         
+ trabajos_extra_gasto_general           | id                                              | bigint                      |                         
+ trabajos_extra_gasto_general           | cantidad                                        | numeric                     |                         
+ trabajos_extra_gasto_general           | created_at                                      | timestamp without time zone |                         
+ trabajos_extra_gasto_general           | descripcion                                     | character varying           |                      500
+ trabajos_extra_gasto_general           | empresa_id                                      | bigint                      |                         
+ trabajos_extra_gasto_general           | frontend_id                                     | bigint                      |                         
+ trabajos_extra_gasto_general           | observaciones                                   | text                        |                         
+ trabajos_extra_gasto_general           | orden                                           | integer                     |                         
+ trabajos_extra_gasto_general           | precio_unitario                                 | numeric                     |                         
+ trabajos_extra_gasto_general           | sin_cantidad                                    | boolean                     |                         
+ trabajos_extra_gasto_general           | sin_precio                                      | boolean                     |                         
+ trabajos_extra_gasto_general           | subtotal                                        | numeric                     |                         
+ trabajos_extra_gasto_general           | updated_at                                      | timestamp without time zone |                         
+ trabajos_extra_gasto_general           | item_calculadora_id                             | bigint                      |                         
+ trabajos_extra_items_calculadora       | id                                              | bigint                      |                         
+ trabajos_extra_items_calculadora       | cantidad_jornales                               | numeric                     |                         
+ trabajos_extra_items_calculadora       | created_at                                      | timestamp without time zone |                         
+ trabajos_extra_items_calculadora       | descripcion                                     | character varying           |                      500
+ trabajos_extra_items_calculadora       | descripcion_gastos_generales                    | character varying           |                      500
+ trabajos_extra_items_calculadora       | descripcion_materiales                          | character varying           |                      500
+ trabajos_extra_items_calculadora       | descripcion_profesionales                       | character varying           |                      500
+ trabajos_extra_items_calculadora       | descripcion_total_manual                        | character varying           |                      500
+ trabajos_extra_items_calculadora       | empresa_id                                      | bigint                      |                         
+ trabajos_extra_items_calculadora       | es_gasto_general                                | boolean                     |                         
+ trabajos_extra_items_calculadora       | es_modo_manual                                  | boolean                     |                         
+ trabajos_extra_items_calculadora       | es_rubro_vacio                                  | boolean                     |                         
+ trabajos_extra_items_calculadora       | importe_jornal                                  | numeric                     |                         
+ trabajos_extra_items_calculadora       | incluir_en_calculo_dias                         | boolean                     |                         
+ trabajos_extra_items_calculadora       | materiales                                      | numeric                     |                         
+ trabajos_extra_items_calculadora       | observaciones                                   | text                        |                         
+ trabajos_extra_items_calculadora       | observaciones_gastos_generales                  | text                        |                         
+ trabajos_extra_items_calculadora       | observaciones_materiales                        | text                        |                         
+ trabajos_extra_items_calculadora       | observaciones_profesionales                     | text                        |                         
+ trabajos_extra_items_calculadora       | observaciones_total_manual                      | text                        |                         
+ trabajos_extra_items_calculadora       | subtotal_gastos_generales                       | numeric                     |                         
+ trabajos_extra_items_calculadora       | subtotal_mano_obra                              | numeric                     |                         
+ trabajos_extra_items_calculadora       | subtotal_materiales                             | numeric                     |                         
+ trabajos_extra_items_calculadora       | tipo_profesional                                | character varying           |                      255
+ trabajos_extra_items_calculadora       | total                                           | numeric                     |                         
+ trabajos_extra_items_calculadora       | total_manual                                    | numeric                     |                         
+ trabajos_extra_items_calculadora       | trabaja_en_paralelo                             | boolean                     |                         
+ trabajos_extra_items_calculadora       | updated_at                                      | timestamp without time zone |                         
+ trabajos_extra_items_calculadora       | trabajo_extra_id                                | bigint                      |                         
+ trabajos_extra_jornal_calculadora      | id                                              | bigint                      |                         
+ trabajos_extra_jornal_calculadora      | cantidad                                        | numeric                     |                         
+ trabajos_extra_jornal_calculadora      | empresa_id                                      | bigint                      |                         
+ trabajos_extra_jornal_calculadora      | frontend_id                                     | bigint                      |                         
+ trabajos_extra_jornal_calculadora      | incluir_en_calculo_dias                         | boolean                     |                         
+ trabajos_extra_jornal_calculadora      | observaciones                                   | text                        |                         
+ trabajos_extra_jornal_calculadora      | profesional_obra_id                             | bigint                      |                         
+ trabajos_extra_jornal_calculadora      | rol                                             | character varying           |                      255
+ trabajos_extra_jornal_calculadora      | subtotal                                        | numeric                     |                         
+ trabajos_extra_jornal_calculadora      | valor_unitario                                  | numeric                     |                         
+ trabajos_extra_jornal_calculadora      | item_calculadora_id                             | bigint                      |                         
+ trabajos_extra_material_calculadora    | id                                              | bigint                      |                         
+ trabajos_extra_material_calculadora    | cantidad                                        | numeric                     |                         
+ trabajos_extra_material_calculadora    | descripcion                                     | character varying           |                      500
+ trabajos_extra_material_calculadora    | empresa_id                                      | bigint                      |                         
+ trabajos_extra_material_calculadora    | frontend_id                                     | bigint                      |                         
+ trabajos_extra_material_calculadora    | nombre                                          | character varying           |                      255
+ trabajos_extra_material_calculadora    | obra_material_id                                | bigint                      |                         
+ trabajos_extra_material_calculadora    | observaciones                                   | text                        |                         
+ trabajos_extra_material_calculadora    | precio                                          | numeric                     |                         
+ trabajos_extra_material_calculadora    | subtotal                                        | numeric                     |                         
+ trabajos_extra_material_calculadora    | unidad                                          | character varying           |                      100
+ trabajos_extra_material_calculadora    | item_calculadora_id                             | bigint                      |                         
+ trabajos_extra_pdf                     | id_pdf_trabajo_extra                            | bigint                      |                         
+ trabajos_extra_pdf                     | contenido_pdf                                   | bytea                       |                         
+ trabajos_extra_pdf                     | empresa_id                                      | bigint                      |                         
+ trabajos_extra_pdf                     | fecha_generacion                                | timestamp without time zone |                         
+ trabajos_extra_pdf                     | generado_por                                    | character varying           |                      100
+ trabajos_extra_pdf                     | incluye_configuracion                           | boolean                     |                         
+ trabajos_extra_pdf                     | incluye_honorarios                              | boolean                     |                         
+ trabajos_extra_pdf                     | nombre_archivo                                  | character varying           |                      255
+ trabajos_extra_pdf                     | tamanio_bytes                                   | bigint                      |                         
+ trabajos_extra_pdf                     | trabajo_extra_id                                | bigint                      |                         
+ trabajos_extra_pdf                     | version_trabajo_extra                           | integer                     |                         
+ trabajos_extra_profesional_calculadora | id                                              | bigint                      |                         
+ trabajos_extra_profesional_calculadora | cantidad_jornales                               | numeric                     |                         
+ trabajos_extra_profesional_calculadora | created_at                                      | timestamp without time zone |                         
+ trabajos_extra_profesional_calculadora | empresa_id                                      | bigint                      |                         
+ trabajos_extra_profesional_calculadora | frontend_id                                     | bigint                      |                         
+ trabajos_extra_profesional_calculadora | incluir_en_calculo_dias                         | boolean                     |                         
+ trabajos_extra_profesional_calculadora | nombre_completo                                 | character varying           |                      255
+ trabajos_extra_profesional_calculadora | observaciones                                   | text                        |                         
+ trabajos_extra_profesional_calculadora | profesional_obra_id                             | bigint                      |                         
+ trabajos_extra_profesional_calculadora | rol                                             | character varying           |                      255
+ trabajos_extra_profesional_calculadora | subtotal                                        | numeric                     |                         
+ trabajos_extra_profesional_calculadora | updated_at                                      | timestamp without time zone |                         
+ trabajos_extra_profesional_calculadora | valor_jornal                                    | numeric                     |                         
+ trabajos_extra_profesional_calculadora | item_calculadora_id                             | bigint                      |                         
+ trabajos_extra_profesionales           | importe                                         | numeric                     |                         
+ trabajos_extra_profesionales           | id                                              | bigint                      |                         
+ trabajos_extra_profesionales           | profesional_id                                  | bigint                      |                         
+ trabajos_extra_profesionales           | trabajo_extra_id                                | bigint                      |                         
+ trabajos_extra_profesionales           | tipo                                            | character varying           |                       50
+ trabajos_extra_profesionales           | especialidad                                    | character varying           |                      255
+ trabajos_extra_profesionales           | nombre                                          | character varying           |                      255
+ trabajos_extra_profesionales           | estado_pago                                     | character varying           |                       50
+ trabajos_extra_tareas                  | importe                                         | numeric                     |                         
+ trabajos_extra_tareas                  | id                                              | bigint                      |                         
+ trabajos_extra_tareas                  | trabajo_extra_id                                | bigint                      |                         
+ trabajos_extra_tareas                  | estado                                          | character varying           |                       50
+ trabajos_extra_tareas                  | descripcion                                     | text                        |                         
+ trabajos_extra_tareas                  | estado_pago                                     | character varying           |                       50
+ trabajos_extra_tareas_profesionales    | profesional_index                               | integer                     |                         
+ trabajos_extra_tareas_profesionales    | tarea_id                                        | bigint                      |                         
+(202 filas)
+
