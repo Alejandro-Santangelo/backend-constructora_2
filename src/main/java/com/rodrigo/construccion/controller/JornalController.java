@@ -7,8 +7,6 @@ import com.rodrigo.construccion.dto.response.EstadisticasJornalResponseDTO;
 import com.rodrigo.construccion.dto.response.ProfesionalJornalResponseDTO;
 import com.rodrigo.construccion.dto.response.ResumenJornalesProfesionalDTO;
 import com.rodrigo.construccion.service.JornalService;
-import com.rodrigo.construccion.service.ProfesionalService;
-// import com.rodrigo.construccion.dto.response.ProfesionalCatalogoDTO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -25,23 +23,14 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @RestController
-@RequestMapping("/api/jornales") // Changed to /api/jornales
+@RequestMapping("/jornales")
 @RequiredArgsConstructor
 @Tag(name = "Jornales", description = "Operaciones de trabajo diario de cada profesional")
 public class JornalController {
 
     private final JornalService jornalService;
-    private final ProfesionalService profesionalService;
-
-    @GetMapping("/empresa/{empresaId}")
-    @Operation(summary = "Obtener catálogo de jornales/profesionales", description = "Devuelve profesionales formateados para catálogo")
-    public ResponseEntity<List<java.util.Map<String, Object>>> obtenerCatalogo(@PathVariable Long empresaId) {
-        return ResponseEntity.ok(profesionalService.obtenerCatalogoPorEmpresa(empresaId));
-    }
-
 
     /* ENDPOINTS QUE RETORNAN DTO'S - LISTOS PARA USAR, VERIFICAR URLS */
     @GetMapping("/todos")

@@ -1,8 +1,8 @@
 package com.rodrigo.construccion.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.rodrigo.construccion.enums.TipoPresupuesto;
 import com.rodrigo.construccion.model.entity.PresupuestoAuditoria;
 import org.springframework.beans.factory.annotation.Autowired;
-import com.rodrigo.construccion.service.PresupuestoAuditoriaService;
 
 import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
 // ENTIDADES LEGACY ELIMINADAS - Ahora todo va a items_calculadora_presupuesto
@@ -30,11 +30,6 @@ import com.rodrigo.construccion.repository.PresupuestoGastoGeneralRepository;
 import com.rodrigo.construccion.repository.EmpresaRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.repository.ClienteRepository;
-import com.rodrigo.construccion.repository.MaterialRepository;
-import com.rodrigo.construccion.repository.GastoGeneralRepository;
-import com.rodrigo.construccion.dto.request.ElementoCatalogoDTO;
-import com.rodrigo.construccion.model.entity.Material;
-import com.rodrigo.construccion.model.entity.GastoGeneral;
 import com.rodrigo.construccion.dto.request.PresupuestoNoClienteRequestDTO;
 import com.rodrigo.construccion.dto.request.ItemCalculadoraPresupuestoDTO;
 import com.rodrigo.construccion.dto.request.MaterialCalculadoraDTO;
@@ -46,7 +41,6 @@ import com.rodrigo.construccion.enums.EstadoObra;
 import com.rodrigo.construccion.enums.PresupuestoEstado;
 
 // IMPORTS PARA GASTOS GENERALES CON STOCK
-import com.rodrigo.construccion.service.StockGastoGeneralService;
 import com.rodrigo.construccion.dto.response.GastoGeneralConStockResponseDTO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -57,10 +51,9 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 import java.util.Map;
-import java.util.HashMap;
 import java.util.ArrayList;
 import java.util.Set;
-import java.util.HashSet;
+
 import jakarta.persistence.EntityManager;
 import jakarta.persistence.PersistenceContext;
 import jakarta.persistence.criteria.CriteriaBuilder;
@@ -103,8 +96,6 @@ public class PresupuestoNoClienteService {
     private final ClienteRepository clienteRepository;
     private final com.rodrigo.construccion.repository.ProfesionalObraRepository profesionalObraRepository;
     private final ProfesionalRepository profesionalRepository;
-    private final MaterialRepository catalogoMaterialRepository;
-    private final GastoGeneralRepository catalogoGastoGeneralRepository;
     // REPOSITORIO LEGACY ELIMINADO
     // private final com.rodrigo.construccion.repository.PresupuestoNoClienteJornalRepository jornalRepository;
     private final com.rodrigo.construccion.repository.JornalCalculadoraRepository jornalCalculadoraRepository;
@@ -144,8 +135,6 @@ public class PresupuestoNoClienteService {
             ClienteRepository clienteRepository,
             com.rodrigo.construccion.repository.ProfesionalObraRepository profesionalObraRepository,
             ProfesionalRepository profesionalRepository,
-            MaterialRepository catalogoMaterialRepository,
-            GastoGeneralRepository catalogoGastoGeneralRepository,
             // ELIMINADO: PresupuestoNoClienteJornalRepository jornalRepository,
             com.rodrigo.construccion.repository.JornalCalculadoraRepository jornalCalculadoraRepository,
             com.rodrigo.construccion.repository.PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository,
@@ -161,8 +150,6 @@ public class PresupuestoNoClienteService {
         this.clienteRepository = clienteRepository;
         this.profesionalObraRepository = profesionalObraRepository;
         this.profesionalRepository = profesionalRepository;
-        this.catalogoMaterialRepository = catalogoMaterialRepository;
-        this.catalogoGastoGeneralRepository = catalogoGastoGeneralRepository;
         // ELIMINADO: this.jornalRepository = jornalRepository;
         this.jornalCalculadoraRepository = jornalCalculadoraRepository;
         this.pagoGastoGeneralObraRepository = pagoGastoGeneralObraRepository;
@@ -304,16 +291,16 @@ public class PresupuestoNoClienteService {
         }
         pnc.setObservaciones(dto.getObservaciones());
         // ========== TIPO DE PRESUPUESTO ==========
-        com.rodrigo.construccion.model.enums.TipoPresupuesto tipoPresupuesto;
+        TipoPresupuesto tipoPresupuesto;
         if (dto.getTipoPresupuesto() != null && !dto.getTipoPresupuesto().trim().isEmpty()) {
             try {
-                tipoPresupuesto = com.rodrigo.construccion.model.enums.TipoPresupuesto.valueOf(dto.getTipoPresupuesto().toUpperCase());
+                tipoPresupuesto = TipoPresupuesto.valueOf(dto.getTipoPresupuesto().toUpperCase());
             } catch (IllegalArgumentException e) {
                 log.warn("Tipo de presupuesto inválido: {}. Usando TRADICIONAL por defecto.", dto.getTipoPresupuesto());
-                tipoPresupuesto = com.rodrigo.construccion.model.enums.TipoPresupuesto.TRADICIONAL;
+                tipoPresupuesto = TipoPresupuesto.TRADICIONAL;
             }
         } else {
-            tipoPresupuesto = com.rodrigo.construccion.model.enums.TipoPresupuesto.TRADICIONAL;
+            tipoPresupuesto = TipoPresupuesto.TRADICIONAL;
         }
         pnc.setTipoPresupuesto(tipoPresupuesto);
         log.info("📋 Creando presupuesto tipo: {} para empresa: {}", tipoPresupuesto, empresa.getId());
@@ -323,7 +310,7 @@ public class PresupuestoNoClienteService {
             
             // Validar OBRA_A_CONFIRMAR solo para TRABAJOS_SEMANALES
             if (e == com.rodrigo.construccion.enums.PresupuestoEstado.OBRA_A_CONFIRMAR && 
-                tipoPresupuesto != com.rodrigo.construccion.model.enums.TipoPresupuesto.TRABAJOS_SEMANALES) {
+                tipoPresupuesto != TipoPresupuesto.TRABAJOS_SEMANALES) {
                 log.warn("⚠️ Estado OBRA_A_CONFIRMAR solo permitido para TRABAJOS_SEMANALES. Tipo actual: {}. Usando A_ENVIAR", tipoPresupuesto);
                 pnc.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
             } else {
@@ -331,7 +318,7 @@ public class PresupuestoNoClienteService {
             }
         } else {
             // Si no viene estado, asignar según el tipo de presupuesto
-            if (tipoPresupuesto == com.rodrigo.construccion.model.enums.TipoPresupuesto.TRABAJOS_SEMANALES) {
+            if (tipoPresupuesto == TipoPresupuesto.TRABAJOS_SEMANALES) {
                 pnc.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
                 log.info("✅ Presupuesto TRABAJOS_SEMANALES → Estado automático: APROBADO");
             } else {
@@ -483,44 +470,6 @@ public class PresupuestoNoClienteService {
         
         log.info("🔍 DEBUG DESPUÉS DE MAPEO - Valor en entity antes de guardar: {}",
             pnc.getHonorariosConfiguracionPresupuestoValor());
-
-        /* LEGACY CODE COMENTADO - Estas tablas ya no existen en la BD
-        // Mapear profesionales a tabla normalizada
-        if (dto.getProfesionales() != null) {
-            for (var profDto : dto.getProfesionales()) {
-                PresupuestoNoClienteProfesional prof = new PresupuestoNoClienteProfesional();
-                // ... código eliminado ...
-                pnc.getProfesionales().add(prof);
-            }
-        }
-
-        // Mapear materiales a tabla normalizada
-        if (dto.getMaterialesList() != null) {
-            for (var matDto : dto.getMaterialesList()) {
-                PresupuestoNoClienteMaterial mat = new PresupuestoNoClienteMaterial();
-                // ... código eliminado ...
-                pnc.getMateriales().add(mat);
-            }
-        }
-
-        // Mapear jornales a tabla normalizada
-        if (dto.getJornales() != null) {
-            for (var jornalDto : dto.getJornales()) {
-                PresupuestoNoClienteJornal jornal = new PresupuestoNoClienteJornal();
-                // ... código eliminado ...
-                pnc.getJornales().add(jornal);
-            }
-        }
-        */
-        
-        // NOTA: Ahora TODO se maneja a través de items_calculadora_presupuesto
-        // Los profesionales, materiales y jornales están en las tablas:
-        // - profesional_calculadora
-        // - material_calculadora  
-        // - jornal_calculadora
-        // Todas vinculadas a items_calculadora_presupuesto
-
-        // ...existing code...
         
         // Guardar el presupuesto primero para obtener su ID
         log.info("💾 INICIANDO GUARDADO - Presupuesto ID: {}", pnc.getId());
@@ -730,9 +679,6 @@ public class PresupuestoNoClienteService {
                 log.info("✅ NUEVA VERSIÓN CREADA - ID: {}, Versión: {}, Estado: {}, Total: {}", 
                     guardado.getId(), guardado.getNumeroVersion(), guardado.getEstado(), guardado.getTotalPresupuesto());
                 
-                // Procesar catálogo
-                try { procesarElementosParaCatalogo(dto, dto.getIdEmpresa()); } catch (Exception e) { log.error("Error catálogo", e); }
-
                 return guardado;
                 
             } else {
@@ -741,9 +687,6 @@ public class PresupuestoNoClienteService {
                     existente.getEstado(), existente.getId(), existente.getNumeroVersion());
                 
                 PresupuestoNoCliente actualizado = actualizarVersionExistenteCompleto(existente, dto);
-
-                // Procesar catálogo
-                try { procesarElementosParaCatalogo(dto, dto.getIdEmpresa()); } catch (Exception e) { log.error("Error catálogo", e); }
                 log.info("✅ Presupuesto ACTUALIZADO (mismo registro) - ID: {}, Versión: {}, Estado: {}, Total: {}", 
                     actualizado.getId(), actualizado.getNumeroVersion(), actualizado.getEstado(), actualizado.getTotalPresupuesto());
                 
@@ -853,7 +796,7 @@ public class PresupuestoNoClienteService {
         
         // ========== ESTADO SEGÚN TIPO DE PRESUPUESTO ==========
         // Si es TRABAJOS_SEMANALES, mantener APROBADO; si es TRADICIONAL, resetear a A_ENVIAR
-        if (presupuestoConDatosActualizados.getTipoPresupuesto() == com.rodrigo.construccion.model.enums.TipoPresupuesto.TRABAJOS_SEMANALES) {
+        if (presupuestoConDatosActualizados.getTipoPresupuesto() == TipoPresupuesto.TRABAJOS_SEMANALES) {
             nuevaVersion.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
             log.info("✅ Nueva versión TRABAJOS_SEMANALES → Estado: APROBADO (automático)");
         } else {
@@ -1119,14 +1062,9 @@ public class PresupuestoNoClienteService {
             log.info("🔗 Sincronizando datos del cliente...");
             sincronizarDatosClienteConObra(actualizado);
             
-            // PASO 6: Calcular campos calculados antes de devolver (solo si no vienen del frontend)
-            log.info("🧮 Verificando si necesita calcular campos calculados...");
-            if (actualizado.getTotalPresupuestoConHonorarios() == null) {
-                log.info("🧮 Calculando campos calculados (no venían del frontend)...");
-                actualizado.calcularCamposCalculados();
-            } else {
-                log.info("✅ Manteniendo totales del frontend: {}", actualizado.getTotalPresupuestoConHonorarios());
-            }
+            // PASO 6: Calcular campos calculados antes de devolver
+            log.info("🧮 Calculando campos calculados...");
+            actualizado.calcularCamposCalculados();
             
             // ✅ NUEVO: Sincronizar TODOS los campos de la obra vinculada
             log.info("🔄 Sincronizando todos los campos con obra vinculada...");
@@ -1463,8 +1401,8 @@ public class PresupuestoNoClienteService {
         // ========== TIPO DE PRESUPUESTO ==========
         if (dto.getTipoPresupuesto() != null && !dto.getTipoPresupuesto().trim().isEmpty()) {
             try {
-                com.rodrigo.construccion.model.enums.TipoPresupuesto tipo = 
-                    com.rodrigo.construccion.model.enums.TipoPresupuesto.valueOf(dto.getTipoPresupuesto().toUpperCase());
+                TipoPresupuesto tipo =
+                    TipoPresupuesto.valueOf(dto.getTipoPresupuesto().toUpperCase());
                 pnc.setTipoPresupuesto(tipo);
                 log.info("📋 Tipo de presupuesto actualizado a: {}", tipo);
             } catch (IllegalArgumentException e) {
@@ -1726,10 +1664,8 @@ public class PresupuestoNoClienteService {
         // Sincronizar datos del cliente con la obra (si existe obra asociada)
         sincronizarDatosClienteConObra(actualizado);
         
-        // Calcular campos calculados solo si no vienen del frontend
-        if (actualizado.getTotalPresupuestoConHonorarios() == null) {
-            actualizado.calcularCamposCalculados();
-        }
+        // Calcular campos calculados antes de devolver
+        actualizado.calcularCamposCalculados();
         
         log.info("✅ Nueva versión creada (sin items calculadora): ID {} | Versión {}", 
             actualizado.getId(), actualizado.getNumeroVersion());
@@ -2261,10 +2197,8 @@ public class PresupuestoNoClienteService {
         
         // Sincronizar datos del cliente con la obra (si existe obra asociada)
         sincronizarDatosClienteConObra(guardado);
-        // Calcular campos calculados solo si no vienen del frontend
-        if (guardado.getTotalPresupuestoConHonorarios() == null) {
-            guardado.calcularCamposCalculados();
-        }
+        // Calcular campos calculados antes de devolver
+        guardado.calcularCamposCalculados();
         return guardado;
     }
 
@@ -3338,17 +3272,10 @@ public class PresupuestoNoClienteService {
             profesional.setFrontendId(dto.getId());
             profesional.setTipo(dto.getTipo());
             profesional.setNombre(dto.getNombre());
-            profesional.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             profesional.setDescripcion(dto.getDescripcion());
             profesional.setObservaciones(dto.getObservaciones());
             profesional.setTelefono(dto.getTelefono());
-            
-            String unidadProf = dto.getUnidad();
-            if (unidadProf == null || unidadProf.trim().isEmpty()) {
-                unidadProf = Boolean.TRUE.equals(profesional.getEsGlobal()) ? "Global" : "Jornales";
-            }
-            profesional.setUnidad(unidadProf);
-            
+            profesional.setUnidad(dto.getUnidad());
             profesional.setCantidadJornales(dto.getCantidadJornales());
             profesional.setImporteJornal(dto.getImporteJornal());
             profesional.setSubtotal(dto.getSubtotal());
@@ -3402,29 +3329,13 @@ public class PresupuestoNoClienteService {
             }
             
             material.setFrontendId(dto.getId());
-            
-            // Fix: Asegurar que el nombre no sea nulo (requerido por DB)
-            String nombreMat = dto.getNombre();
-            if (nombreMat == null || nombreMat.trim().isEmpty()) {
-                nombreMat = Boolean.TRUE.equals(dto.getEsGlobal()) ? "Materiales Globales" : "Sin nombre";
-            }
-            material.setNombre(nombreMat);
-            
+            material.setNombre(dto.getNombre());
             material.setDescripcion(dto.getDescripcion());
             material.setObservaciones(dto.getObservaciones());
-            
-            material.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
-            
-            String unidadMat = dto.getUnidad();
-            if (unidadMat == null || unidadMat.trim().isEmpty()) {
-                unidadMat = Boolean.TRUE.equals(material.getEsGlobal()) ? "GLB" : "un";
-            }
-            material.setUnidad(unidadMat);
-            
+            material.setUnidad(dto.getUnidad());
             material.setCantidad(dto.getCantidad());
             material.setPrecio(dto.getPrecio());
             material.setSubtotal(dto.getSubtotal());
-            material.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             
             materialCalculadoraRepository.save(material);
         }
@@ -3488,7 +3399,6 @@ public class PresupuestoNoClienteService {
             BigDecimal subtotal = jornal.getCantidad().multiply(jornal.getValorUnitario());
             jornal.setSubtotal(subtotal);
             jornal.setObservaciones(dto.getObservaciones());
-            jornal.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             
             jornalCalculadoraRepository.save(jornal);
             log.debug("✅ Jornal guardado: {} - {} × {} = {}", 
@@ -3551,7 +3461,6 @@ public class PresupuestoNoClienteService {
             gasto.setSinCantidad(dto.getSinCantidad() != null ? dto.getSinCantidad() : false);
             gasto.setSinPrecio(dto.getSinPrecio() != null ? dto.getSinPrecio() : false);
             gasto.setOrden(dto.getOrden() != null ? dto.getOrden() : orden++);
-            gasto.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             
             gasto.configurarDefaults();
             gasto.validar();
@@ -4665,139 +4574,5 @@ public class PresupuestoNoClienteService {
         return resultado;
     }
     
-    // ========================================================================================
-    // LOGICA DE CATALOGO AUTOMATICO
-    // ========================================================================================
-
-    private void procesarElementosParaCatalogo(PresupuestoNoClienteRequestDTO dto, Long empresaId) {
-        if (dto.getElementosParaCatalogo() == null || dto.getElementosParaCatalogo().isEmpty()) {
-            return;
-        }
-
-        log.info("Procesando {} elementos para catálogo de empresa {}", dto.getElementosParaCatalogo().size(), empresaId);
-
-        int materialesCreados = 0;
-        int gastosCreados = 0;
-        int jornalesCreados = 0; // Profesionales tipo "JORNAL"
-        int profesionalesCreados = 0; // Profesionales tipo "PROFESIONAL"
-
-        for (ElementoCatalogoDTO elemento : dto.getElementosParaCatalogo()) {
-            try {
-                if (elemento.getTipo() == null) continue;
-
-                switch (elemento.getTipo().toUpperCase()) {
-                    case "MATERIAL":
-                        if (crearMaterialSiNoExiste(elemento, empresaId)) materialesCreados++;
-                        break;
-                    case "GASTO_GENERAL":
-                        if (crearGastoSiNoExiste(elemento, empresaId)) gastosCreados++;
-                        break;
-                    case "JORNAL":
-                        if (crearJornalSiNoExiste(elemento, empresaId)) jornalesCreados++;
-                        break;
-                    case "PROFESIONAL":
-                        if (crearProfesionalSiNoExiste(elemento, empresaId)) profesionalesCreados++;
-                        break;
-                }
-            } catch (Exception e) {
-                log.error("Error procesando elemento catálogo {}: {}", elemento.getNombre(), e.getMessage());
-            }
-        }
-        
-        log.info("Catálogo actualizado. Nuevos - Mat: {}, Gas: {}, Jor: {}, Prof: {}", 
-            materialesCreados, gastosCreados, jornalesCreados, profesionalesCreados);
-    }
-
-    private boolean crearMaterialSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
-        if (elemento.getNombre() == null || elemento.getNombre().isBlank()) return false;
-        if (elemento.getPrecioUnitario() == null || elemento.getPrecioUnitario().compareTo(BigDecimal.ZERO) <= 0) return false;
-
-        boolean existe = catalogoMaterialRepository.existsByNombreIgnoreCaseAndEmpresaIdAndActivoTrue(elemento.getNombre(), empresaId);
-        if (!existe) {
-            Material nuevo = new Material();
-            nuevo.setNombre(elemento.getNombre());
-            nuevo.setDescripcion(elemento.getDescripcion());
-            nuevo.setPrecioUnitario(elemento.getPrecioUnitario());
-            nuevo.setUnidadMedida(elemento.getUnidadMedida());
-            nuevo.setEmpresaId(empresaId);
-            nuevo.setActivo(true);
-            catalogoMaterialRepository.save(nuevo);
-            return true;
-        }
-        return false;
-    }
-
-    private boolean crearGastoSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
-        if (elemento.getNombre() == null || elemento.getNombre().isBlank()) return false;
-        
-        boolean existe = catalogoGastoGeneralRepository.existsByNombreIgnoreCaseAndEmpresaId(elemento.getNombre(), empresaId);
-        if (!existe) {
-            GastoGeneral nuevo = new GastoGeneral();
-            nuevo.setNombre(elemento.getNombre());
-            nuevo.setDescripcion(elemento.getDescripcion());
-            nuevo.setPrecioUnitarioBase(elemento.getPrecioUnitario());
-            nuevo.setUnidadMedida(elemento.getUnidadMedida());
-            nuevo.setCategoria(elemento.getCategoria());
-            nuevo.setEmpresaId(empresaId);
-            catalogoGastoGeneralRepository.save(nuevo);
-            return true;
-        }
-        return false;
-    }
-    
-    private boolean crearJornalSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
-        // Validation: Rol required
-        if (elemento.getRol() == null || elemento.getRol().isBlank()) return false;
-        
-        boolean existe;
-        if (elemento.getNombreProfesional() != null && !elemento.getNombreProfesional().isBlank()) {
-             existe = profesionalRepository.existsByTipoProfesionalAndNombreAndEmpresaId(
-                 elemento.getRol(), elemento.getNombreProfesional(), empresaId);
-        } else {
-             existe = profesionalRepository.existsByTipoProfesionalAndNombreIsNullAndEmpresaId(
-                 elemento.getRol(), empresaId);
-        }
-        
-        if (!existe) {
-            Profesional nuevo = new Profesional();
-            nuevo.setEmpresaId(empresaId);
-            nuevo.setTipoProfesional(elemento.getRol());
-            nuevo.setNombre(elemento.getNombreProfesional()); // Can be null
-            nuevo.setHonorarioDia(elemento.getValorUnitario());
-            nuevo.setEspecialidad(elemento.getCategoria()); // Use categoria as especialidad
-            nuevo.setActivo(true);
-            profesionalRepository.save(nuevo);
-            return true;
-        }
-        return false;
-    }
-
-    private boolean crearProfesionalSiNoExiste(ElementoCatalogoDTO elemento, Long empresaId) {
-        if (elemento.getTipoProfesional() == null || elemento.getTipoProfesional().isBlank()) return false;
-        String nombre = elemento.getNombreProfesional(); // Usually required for PROFESIONAL type
-        
-       boolean existe;
-        if (nombre != null && !nombre.isBlank()) {
-             existe = profesionalRepository.existsByTipoProfesionalAndNombreAndEmpresaId(
-                 elemento.getTipoProfesional(), nombre, empresaId);
-        } else {
-             existe = profesionalRepository.existsByTipoProfesionalAndNombreIsNullAndEmpresaId(
-                 elemento.getTipoProfesional(), empresaId);
-        }
-
-        if (!existe) {
-             Profesional nuevo = new Profesional();
-             nuevo.setEmpresaId(empresaId);
-             nuevo.setTipoProfesional(elemento.getTipoProfesional());
-             nuevo.setNombre(nombre);
-             nuevo.setTelefono(elemento.getTelefono());
-             nuevo.setHonorarioDia(elemento.getValorUnitario());
-             nuevo.setEspecialidad(elemento.getCategoria());
-             nuevo.setActivo(true);
-             profesionalRepository.save(nuevo);
-             return true;
-        }
-        return false;
-    }
-
 }
+

@@ -12,6 +12,8 @@ public interface IObraService {
 
     public ObraSimpleDTO obtenerPorId(Long id);
 
+    public Obra encontrarObraPorIdYEmpresa(Long id, Long idEmpresa);
+
     public Obra findById(Long id);
 
     public List<ObraResponseDTO> obtenerPorCliente(Long clienteId);
