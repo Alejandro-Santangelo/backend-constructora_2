@@ -13,10 +13,6 @@ import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 
-/**
- * Repository para la entidad Costo
- * Incluye consultas especializadas para análisis financiero y reportes
- */
 @Repository
 public interface CostoRepository extends JpaRepository<Costo, Long> {
 
@@ -30,13 +26,6 @@ public interface CostoRepository extends JpaRepository<Costo, Long> {
     // Consultas por obra
     @Query("SELECT c FROM Costo c WHERE c.obra.id = :obraId AND :empresaId MEMBER OF c.obra.cliente.empresas")
     Page<Costo> findByObra_IdAndObra_Cliente_Empresa_Id(@Param("obraId") Long obraId, @Param("empresaId") Long empresaId, Pageable pageable);
-
-    // Consultas por categoría y tipo
-    @Query("SELECT c FROM Costo c WHERE :empresaId MEMBER OF c.obra.cliente.empresas AND c.categoria = :categoria")
-    Page<Costo> findByObra_Cliente_Empresa_IdAndCategoria(@Param("empresaId") Long empresaId, @Param("categoria") String categoria, Pageable pageable);
-
-    @Query("SELECT c FROM Costo c WHERE :empresaId MEMBER OF c.obra.cliente.empresas AND c.tipoCosto = :tipoCosto")
-    Page<Costo> findByObra_Cliente_Empresa_IdAndTipoCosto(@Param("empresaId") Long empresaId, @Param("tipoCosto") String tipoCosto, Pageable pageable);
 
     // Consultas por fecha
     @Query("SELECT c FROM Costo c WHERE :empresaId MEMBER OF c.obra.cliente.empresas AND c.fecha BETWEEN :fechaDesde AND :fechaHasta")
@@ -108,7 +97,6 @@ public interface CostoRepository extends JpaRepository<Costo, Long> {
     @Query("SELECT o.nombre, SUM(c.monto), o.presupuestoEstimado FROM Costo c JOIN c.obra o WHERE :empresaId MEMBER OF c.obra.cliente.empresas GROUP BY o.id, o.nombre, o.presupuestoEstimado ORDER BY o.nombre")
     List<Object[]> getReporteResumenObras(@Param("empresaId") Long empresaId);
 
-
     @Query("SELECT o.nombre, SUM(c.monto), o.presupuestoEstimado, (SUM(c.monto) - o.presupuestoEstimado) as variacion FROM Costo c JOIN c.obra o WHERE :empresaId MEMBER OF c.obra.cliente.empresas GROUP BY o.id, o.nombre, o.presupuestoEstimado HAVING ABS(SUM(c.monto) - o.presupuestoEstimado) > 0 ORDER BY ABS(SUM(c.monto) - o.presupuestoEstimado) DESC")
     List<Object[]> getReporteVariacionesPresupuesto(@Param("empresaId") Long empresaId);
 
@@ -121,8 +109,6 @@ public interface CostoRepository extends JpaRepository<Costo, Long> {
     }
 
     // Validación de existencia
-    @Query("SELECT COUNT(c) > 0 FROM Costo c WHERE c.id = :id AND :empresaId MEMBER OF c.obra.cliente.empresas")
-    boolean existsByIdAndObra_Cliente_Empresa_Id(@Param("id") Long id, @Param("empresaId") Long empresaId);
 
     @Query("SELECT c FROM Costo c WHERE :empresaId MEMBER OF c.obra.cliente.empresas AND LOWER(FUNCTION('unaccent', c.tipoCosto)) = LOWER(FUNCTION('unaccent', :tipo))")
     Page<Costo> buscarPorTipoFlexible(@Param("empresaId") Long empresaId, @Param("tipo") String tipo, Pageable pageable);
@@ -130,10 +116,4 @@ public interface CostoRepository extends JpaRepository<Costo, Long> {
     @Query("SELECT c FROM Costo c WHERE :empresaId MEMBER OF c.obra.cliente.empresas AND LOWER(FUNCTION('unaccent', c.categoria)) = LOWER(FUNCTION('unaccent', :categoria))")
     Page<Costo> buscarPorCategoriaFlexible(@Param("empresaId") Long empresaId, @Param("categoria") String categoria, Pageable pageable);
 
-    @Query("SELECT c FROM Costo c WHERE :empresaId MEMBER OF c.obra.cliente.empresas AND LOWER(FUNCTION('unaccent', c.estado)) = LOWER(FUNCTION('unaccent', :estado))")
-    Page<Costo> buscarPorEstadoFlexible(@Param("empresaId") Long empresaId, @Param("estado") String estado, Pageable pageable);
-
-    // Método para eliminación en cascada
-    @Query("SELECT c FROM Costo c WHERE c.obra.id = :obraId")
-    List<Costo> findByObra_Id(@Param("obraId") Long obraId);
 }

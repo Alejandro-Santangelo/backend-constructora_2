@@ -17,7 +17,6 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/profesionales")
-@Tag(name = "Profesionales", description = "Gestión de profesionales")
 public class ProfesionalController {
 
     private final IProfesionalService profesionalService;
@@ -25,10 +24,8 @@ public class ProfesionalController {
     @PostMapping
     @Operation(summary = "Registrar nuevo profesional", description = "Registra un nuevo profesional en el sistema con sus datos básicos, especialidad y tarifa por hora. "
             + "Campos requeridos: nombre, tipoProfesional. Campos opcionales: teléfono, email, especialidad, valorHoraDefault.")
-    public ResponseEntity<ProfesionalResponseDTO> crearProfesional(
-            @Valid @RequestBody ProfesionalRequestDTO requestDTO) {
-        ProfesionalResponseDTO responseDTO = profesionalService.crearProfesional(requestDTO);
-        return ResponseEntity.status(HttpStatus.CREATED).body(responseDTO);
+    public ResponseEntity<ProfesionalResponseDTO> crearProfesional(@Valid @RequestBody ProfesionalRequestDTO requestDTO) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(profesionalService.crearProfesional(requestDTO));
     }
 
     @GetMapping
@@ -50,17 +47,6 @@ public class ProfesionalController {
     public ResponseEntity<List<ProfesionalResponseDTO>> buscarPorNombre(
             @Parameter(description = "Nombre o parte del nombre del profesional a buscar", example = "Juan") @RequestParam String nombre) {
         return ResponseEntity.ok(profesionalService.buscarPorNombre(nombre));
-    }
-
-    // Para que Rodrigo pueda crear un tipo de profesional, en caso de que no haya uno en el
-    // sistema, se debe crear una tabla especifica en la BD para gestionar dichos tipos.
-    @GetMapping("/ver/tipos-profesionales")
-    @Operation(summary = "Listar los tipos disponibles de profesionales", description = "Obtiene la lista de todos los tipos de profesionales disponibles en el sistema. "
-            + "Útil para formularios de selección y validaciones. Incluye: Arquitecto, Ingeniero, Maestro Mayor, " +
-            "Albañil, Electricista, Plomero, Pintor, Carpintero, etc.")
-    public ResponseEntity<List<String>> obtenerTiposDisponibles() {
-        List<String> tipos = profesionalService.obtenerTiposProfesionales();
-        return ResponseEntity.ok(tipos);
     }
 
     @GetMapping("/por-tipo")
@@ -92,9 +78,7 @@ public class ProfesionalController {
         return ResponseEntity.ok().body("Profesional eliminado exitosamente.");
     }
 
-    /**
-     * Actualizar el valorHoraDefault de todos los profesionales por un porcentaje
-     */
+    /* Actualizar el valorHoraDefault de todos los profesionales por un porcentaje */
     @PutMapping("/actualizar-valor-hora-todos")
     @Operation(summary = "Actualizar valorHoraDefault de todos los profesionales por porcentaje", description = "Modifica el valorHoraDefault de todos los profesionales aumentando o disminuyendo según el porcentaje ingresado. Ejemplo: 10 para aumentar un 10%, -5 para disminuir un 5%.")
     public ResponseEntity<String> actualizarValorHoraTodos(@RequestParam("porcentaje") double porcentaje) {
@@ -102,32 +86,24 @@ public class ProfesionalController {
         return ResponseEntity.ok().body("El valor por hora de todos los profesionales se ha actualizado con éxito.");
     }
 
-    /**
-     * Actualizar el valorHoraDefault de un profesional específico por porcentaje
-     */
+    /* Actualizar el valorHoraDefault de un profesional específico por porcentaje */
     @PutMapping("/{id}/actualizar-valor-hora")
     @Operation(summary = "Actualizar valorHoraDefault de un profesional por porcentaje", description = "Modifica el valorHoraDefault de un profesional específico aumentando o disminuyendo según el porcentaje ingresado. Ejemplo: 10 para aumentar un 10%, -5 para disminuir un 5%.")
-    public ResponseEntity<String> actualizarValorHoraPorId(@PathVariable Long id,
-            @RequestParam("porcentaje") double porcentaje) {
+    public ResponseEntity<String> actualizarValorHoraPorId(@PathVariable Long id, @RequestParam("porcentaje") double porcentaje) {
         profesionalService.actualizarValorHoraPorIdPorPorcentaje(id, porcentaje);
         return ResponseEntity.ok().body("El valor por hora del profesional se ha actualizado con éxito.");
     }
 
-    /**
-     * Actualizar el porcentajeGanancia de todos los profesionales por un valor
-     */
+    /* Actualizar el porcentajeGanancia de todos los profesionales por un valor */
     @PutMapping("/actualizar-porcentaje-ganancia-todos")
     @Operation(summary = "Actualizar porcentajeGanancia de todos los profesionales", description = "Modifica el porcentajeGanancia de todos los profesionales al valor ingresado. Ejemplo: 15 para establecer 15% de ganancia.")
     public ResponseEntity<String> actualizarPorcentajeGananciaTodos(@RequestParam("porcentaje") double porcentaje) {
         profesionalService.actualizarPorcentajeGananciaTodos(porcentaje);
         return ResponseEntity.ok()
                 .body("El porcentaje de ganancia de todos los profesionales se ha actualizado con éxito.");
-
     }
 
-    /**
-     * Actualizar el porcentajeGanancia de un profesional específico por valor
-     */
+    /* Actualizar el porcentajeGanancia de un profesional específico por valor */
     @PutMapping("/{id}/actualizar-porcentaje-ganancia")
     @Operation(summary = "Actualizar porcentajeGanancia de un profesional por valor", description = "Modifica el porcentajeGanancia de un profesional específico al valor ingresado. Ejemplo: 20 para establecer 20% de ganancia.")
     public ResponseEntity<String> actualizarPorcentajeGananciaPorId(@PathVariable Long id,
@@ -136,17 +112,16 @@ public class ProfesionalController {
         return ResponseEntity.ok().body("El porcentaje de ganancia del profesional se ha actualizado con éxito.");
     }
 
-    /**
-     * Actualizar el porcentajeGanancia de varios profesionales por lista de IDs
-     */
-    @PutMapping("/actualizar-porcentaje-ganancia-varios")
-    @Operation(summary = "Actualizar porcentajeGanancia de varios profesionales", description = "Modifica el porcentajeGanancia de varios profesionales seleccionados. Body: {\"ids\": [1,2,3], \"porcentaje\": 15}")
-    public ResponseEntity<String> actualizarPorcentajeGananciaVarios(@RequestBody java.util.Map<String, Object> request) {
-        @SuppressWarnings("unchecked")
-        List<Long> ids = (List<Long>) request.get("ids");
-        double porcentaje = ((Number) request.get("porcentaje")).doubleValue();
-        
-        profesionalService.actualizarPorcentajeGananciaVarios(ids, porcentaje);
-        return ResponseEntity.ok().body("El porcentaje de ganancia de " + ids.size() + " profesionales se ha actualizado con éxito.");
+    /* MÉTODO QUE NO ESTÁ SIENDO USADO EN LA VISTA DEL NAVEGADOR, EN FRONTEND */
+
+    // Para que Rodrigo pueda crear un tipo de profesional, en caso de que no haya uno en el
+    // sistema, se debe crear una tabla especifica en la BD para gestionar dichos tipos.
+    @GetMapping("/ver/tipos-profesionales")
+    @Operation(summary = "Listar los tipos disponibles de profesionales", description = "Obtiene la lista de todos los tipos de profesionales disponibles en el sistema. "
+            + "Útil para formularios de selección y validaciones. Incluye: Arquitecto, Ingeniero, Maestro Mayor, " +
+            "Albañil, Electricista, Plomero, Pintor, Carpintero, etc.")
+    public ResponseEntity<List<String>> obtenerTiposDisponibles() {
+        List<String> tipos = profesionalService.obtenerTiposProfesionales();
+        return ResponseEntity.ok(tipos);
     }
 }

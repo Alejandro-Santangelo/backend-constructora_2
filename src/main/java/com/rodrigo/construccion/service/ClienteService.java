@@ -94,8 +94,6 @@ public class ClienteService implements IClienteService {
     @Override
     @Transactional(readOnly = true)
     public Page<ClienteResponseDTO> obtenerPorEmpresaConPaginacion(Long empresaId, Pageable pageable) {
-        log.debug("Obteniendo clientes paginados para empresa: {}", empresaId);
-
         empresaService.findEmpresaById(empresaId);
 
         Page<Cliente> clientePage = clienteRepository.findByEmpresaId(empresaId, pageable);
@@ -120,8 +118,6 @@ public class ClienteService implements IClienteService {
                 new ResourceNotFoundException("El cliente no existe o no pertenece a la empresa"));
         return clienteMapper.toResponseDTO(clienteEncontrado);
     }
-
-    /* CONSULTAS ESPECIALIZADAS y de peticion GET */
 
     /* (Usados por el controlador) */
 
@@ -218,52 +214,6 @@ public class ClienteService implements IClienteService {
         }
 
         return Optional.empty();
-    }
-
-    /******* MÉTODOS QUE NO SE USAN EN OTROS LADOS DE MOMENTO ********/
-
-    /* VALIDACIONES Y UTILIDADES */
-
-    /* Validar disponibilidad de CUIT/CUIL */
-    @Transactional(readOnly = true)
-    public boolean esCuitCuilDisponible(String cuitCuil, Long empresaId) {
-        return !clienteRepository.existsByEmpresaIdAndCuitCuil(empresaId, cuitCuil);
-    }
-
-    /* Contar clientes por empresa */
-    @Transactional(readOnly = true)
-    public long contarClientesPorEmpresa(Long empresaId) {
-        return clienteRepository.countByEmpresaId(empresaId);
-    }
-
-    /* Buscar clientes por nombre con paginación */
-    @Transactional(readOnly = true)
-    public Page<Cliente> buscarPorNombre(String nombre, Long empresaId, Pageable pageable) {
-        return clienteRepository.findByEmpresaIdAndNombreContainingIgnoreCase(empresaId, nombre, pageable);
-    }
-
-    /* Buscar cliente por CUIT/CUIL */
-    @Transactional(readOnly = true)
-    public Optional<Cliente> buscarPorCuitCuil(String cuitCuil, Long empresaId) {
-        return clienteRepository.findByEmpresaIdAndCuitCuil(empresaId, cuitCuil);
-    }
-
-    /* Obtener clientes con resumen de obras */
-    @Transactional(readOnly = true)
-    public List<Object[]> obtenerClientesConResumenObras(Long empresaId) {
-        return clienteRepository.findClientesConResumenObras(empresaId);
-    }
-
-    /* Obtener clientes con obras activas */
-    @Transactional(readOnly = true)
-    public List<Cliente> obtenerClientesConObrasActivas(Long empresaId) {
-        return clienteRepository.findClientesConObrasActivas(empresaId);
-    }
-
-    /* Verifica si un cliente pertenece a una empresa */
-    @Transactional(readOnly = true)
-    public boolean clientePerteneceAEmpresa(Long clienteId, Long empresaId) {
-        return clienteRepository.findByIdAndEmpresaId(clienteId, empresaId).isPresent();
     }
 
 }

@@ -1,12 +1,12 @@
 package com.rodrigo.construccion.controller;
 
+import com.rodrigo.construccion.dto.response.MaterialEstadisticaResponseDTO;
 import com.rodrigo.construccion.model.entity.Material;
 import com.rodrigo.construccion.service.MaterialService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
-import io.swagger.v3.oas.annotations.responses.ApiResponses;
-import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.HttpStatus;
@@ -16,200 +16,90 @@ import org.springframework.web.bind.annotation.*;
 import java.math.BigDecimal;
 import java.util.List;
 
-/**
- * Controller para gestión de materiales (catálogo general)
- * 
- * Este controller maneja el catálogo general de materiales
- * que pueden ser utilizados por todas las empresas.
- */
-@Tag(name = "Material", description = "Gestión de catálogo de materiales")
 @RestController
+@RequiredArgsConstructor
 @RequestMapping("/api/materiales")
 public class MaterialController {
 
     private final MaterialService materialService;
 
-    public MaterialController(MaterialService materialService) {
-        this.materialService = materialService;
-    }
-
-    @GetMapping("/empresa/{empresaId}")
-    @Operation(summary = "Obtener materiales por empresa", description = "Obtiene la lista de materiales filtrada por empresa")
-    public ResponseEntity<List<Material>> obtenerPorEmpresa(@PathVariable Long empresaId) {
-        return ResponseEntity.ok(materialService.obtenerPorEmpresaId(empresaId));
-    }
-
-
     @Operation(summary = "Obtener todos los materiales activos")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Lista de materiales obtenida exitosamente")
-    })
     @GetMapping
     public ResponseEntity<List<Material>> obtenerTodosLosMateriales() {
-        List<Material> materiales = materialService.obtenerTodosActivos();
-        return ResponseEntity.ok(materiales);
-    }
-
-    @Operation(summary = "Obtener materiales con paginación")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Página de materiales obtenida exitosamente")
-    })
-    @GetMapping("/paginados")
-    public ResponseEntity<Page<Material>> obtenerMaterialesPaginados(
-        @Parameter(description = "Parámetros de paginación") Pageable pageable) {
-        Page<Material> materiales = materialService.obtenerMaterialesPaginados(pageable);
-        return ResponseEntity.ok(materiales);
+        return ResponseEntity.ok(materialService.obtenerTodosActivos());
     }
 
     @Operation(summary = "Obtener material por ID")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Material encontrado"),
-        @ApiResponse(responseCode = "404", description = "Material no encontrado")
-    })
     @GetMapping("/{id}")
-    public ResponseEntity<Material> obtenerMaterialPorId(
-        @Parameter(description = "ID del material") @PathVariable Long id) {
-        Material material = materialService.obtenerPorId(id);
-        return ResponseEntity.ok(material);
+    public ResponseEntity<Material> obtenerMaterialPorId(@Parameter(description = "ID del material") @PathVariable Long id) {
+        return ResponseEntity.ok(materialService.obtenerPorId(id));
     }
 
     @Operation(summary = "Buscar materiales por texto")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Materiales encontrados")
-    })
     @GetMapping("/buscar")
-    public ResponseEntity<Page<Material>> buscarMateriales(
-        @Parameter(description = "Texto a buscar") @RequestParam String texto,
-        @Parameter(description = "Parámetros de paginación") Pageable pageable) {
-        Page<Material> materiales = materialService.buscarPorTexto(texto, pageable);
-        return ResponseEntity.ok(materiales);
+    public ResponseEntity<Page<Material>> buscarMateriales(@Parameter(description = "Texto a buscar") @RequestParam String texto,
+                                                           @Parameter(description = "Parámetros de paginación") Pageable pageable) {
+        return ResponseEntity.ok(materialService.buscarPorTexto(texto, pageable));
     }
 
-    @Operation(summary = "Obtener materiales por unidad de medida")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Materiales encontrados")
-    })
-    @GetMapping("/unidad/{unidadMedida}")
-    public ResponseEntity<List<Material>> obtenerPorUnidadMedida(
-        @Parameter(description = "Unidad de medida") @PathVariable String unidadMedida) {
-        List<Material> materiales = materialService.obtenerPorUnidadMedida(unidadMedida);
-        return ResponseEntity.ok(materiales);
-    }
 
     @Operation(summary = "Obtener materiales por rango de precio")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Materiales encontrados")
-    })
     @GetMapping("/precio")
-    public ResponseEntity<List<Material>> obtenerPorRangoPrecio(
-        @Parameter(description = "Precio mínimo") @RequestParam BigDecimal precioMin,
-        @Parameter(description = "Precio máximo") @RequestParam BigDecimal precioMax) {
-        List<Material> materiales = materialService.obtenerPorRangoPrecio(precioMin, precioMax);
-        return ResponseEntity.ok(materiales);
+    public ResponseEntity<List<Material>> obtenerPorRangoPrecio(@Parameter(description = "Precio mínimo") @RequestParam BigDecimal precioMin,
+                                                                @Parameter(description = "Precio máximo") @RequestParam BigDecimal precioMax) {
+        return ResponseEntity.ok(materialService.obtenerPorRangoPrecio(precioMin, precioMax));
     }
 
     @Operation(summary = "Crear nuevo material")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "201", description = "Material creado exitosamente"),
-        @ApiResponse(responseCode = "400", description = "Error de validación")
-    })
     @PostMapping
-    public ResponseEntity<Material> crearMaterial(@RequestBody Material material) {
-        Material nuevoMaterial = materialService.crear(material);
-        return ResponseEntity.status(HttpStatus.CREATED).body(nuevoMaterial);
+    public ResponseEntity<Material> crearMaterial(@Valid @RequestBody Material material) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(materialService.crear(material));
     }
 
     @Operation(summary = "Actualizar material")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Material actualizado exitosamente"),
-        @ApiResponse(responseCode = "404", description = "Material no encontrado"),
-        @ApiResponse(responseCode = "400", description = "Error de validación")
-    })
     @PutMapping("/{id}")
-    public ResponseEntity<Material> actualizarMaterial(
-        @Parameter(description = "ID del material") @PathVariable Long id,
-        @RequestBody Material material) {
-        Material materialActualizado = materialService.actualizar(id, material);
-        return ResponseEntity.ok(materialActualizado);
+    public ResponseEntity<Material> actualizarMaterial(@Parameter(description = "ID del material") @PathVariable Long id,
+                                                       @Valid @RequestBody Material material) {
+        return ResponseEntity.ok(materialService.actualizar(id, material));
     }
 
     @Operation(summary = "Eliminar material (desactivar)")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "204", description = "Material eliminado exitosamente"),
-        @ApiResponse(responseCode = "404", description = "Material no encontrado")
-    })
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> eliminarMaterial(
-        @Parameter(description = "ID del material") @PathVariable Long id) {
+    public ResponseEntity<String> eliminarMaterial(@Parameter(description = "ID del material") @PathVariable Long id) {
         materialService.eliminar(id);
-        return ResponseEntity.noContent().build();
+        return ResponseEntity.ok("Material eliminado exitosamente");
+    }
+
+    /* MÉTODOS QUE NO ESTÁN SIENDO USADOS POR EL FRONTEND - PARA BORRAR */
+    @Operation(summary = "Obtener materiales con paginación")
+    @GetMapping("/paginados")
+    public ResponseEntity<Page<Material>> obtenerMaterialesPaginados(
+            @Parameter(description = "Parámetros de paginación") Pageable pageable) {
+        return ResponseEntity.ok(materialService.obtenerMaterialesPaginados(pageable));
+    }
+
+    @Operation(summary = "Obtener materiales por unidad de medida")
+    @GetMapping("/unidad/{unidadMedida}")
+    public ResponseEntity<List<Material>> obtenerPorUnidadMedida(
+            @Parameter(description = "Unidad de medida") @PathVariable String unidadMedida) {
+        return ResponseEntity.ok(materialService.obtenerPorUnidadMedida(unidadMedida));
     }
 
     @Operation(summary = "Obtener estadísticas de materiales")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Estadísticas obtenidas exitosamente")
-    })
     @GetMapping("/estadisticas")
-    public ResponseEntity<Object> obtenerEstadisticas() {
-        Object estadisticas = materialService.obtenerEstadisticas();
-        return ResponseEntity.ok(estadisticas);
+    public ResponseEntity<MaterialEstadisticaResponseDTO> obtenerEstadisticas() {
+        return ResponseEntity.ok(materialService.obtenerEstadisticas());
     }
 
     @Operation(summary = "Obtener precio promedio de materiales")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Precio promedio obtenido exitosamente")
-    })
     @GetMapping("/precio-promedio")
     public ResponseEntity<BigDecimal> obtenerPrecioPromedio() {
-        BigDecimal precioPromedio = materialService.obtenerPrecioPromedio();
-        return ResponseEntity.ok(precioPromedio);
+        return ResponseEntity.ok(materialService.obtenerPrecioPromedio());
     }
 
     @Operation(summary = "Obtener materiales ordenados por nombre")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Materiales ordenados obtenidos exitosamente")
-    })
     @GetMapping("/ordenados")
     public ResponseEntity<List<Material>> obtenerMaterialesOrdenados() {
-        List<Material> materiales = materialService.obtenerTodosOrdenadosPorNombre();
-        return ResponseEntity.ok(materiales);
-    }
-
-    @Operation(summary = "Actualizar precio de todos los materiales", description = "Aplica un porcentaje de incremento/decremento a todos los materiales. Ejemplo: 10 para aumentar 10%, -5 para reducir 5%")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Precios actualizados exitosamente")
-    })
-    @PutMapping("/actualizar-precio-todos")
-    public ResponseEntity<String> actualizarPrecioTodos(@RequestParam("porcentaje") double porcentaje) {
-        materialService.actualizarPrecioTodos(porcentaje);
-        return ResponseEntity.ok("Los precios de todos los materiales se han actualizado con éxito.");
-    }
-
-    @Operation(summary = "Actualizar precio de un material", description = "Aplica un porcentaje de incremento/decremento a un material específico")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Precio actualizado exitosamente"),
-        @ApiResponse(responseCode = "404", description = "Material no encontrado")
-    })
-    @PutMapping("/{id}/actualizar-precio")
-    public ResponseEntity<String> actualizarPrecioPorId(
-        @Parameter(description = "ID del material") @PathVariable Long id,
-        @RequestParam("porcentaje") double porcentaje) {
-        materialService.actualizarPrecioPorId(id, porcentaje);
-        return ResponseEntity.ok("El precio del material se ha actualizado con éxito.");
-    }
-
-    @Operation(summary = "Actualizar precio de varios materiales", description = "Aplica un porcentaje de incremento/decremento a varios materiales. Body: {\"ids\": [1,2,3], \"porcentaje\": 10}")
-    @ApiResponses(value = {
-        @ApiResponse(responseCode = "200", description = "Precios actualizados exitosamente"),
-        @ApiResponse(responseCode = "404", description = "Materiales no encontrados")
-    })
-    @PutMapping("/actualizar-precio-varios")
-    public ResponseEntity<String> actualizarPrecioVarios(@RequestBody java.util.Map<String, Object> request) {
-        @SuppressWarnings("unchecked")
-        List<Long> ids = (List<Long>) request.get("ids");
-        double porcentaje = ((Number) request.get("porcentaje")).doubleValue();
-        
-        materialService.actualizarPrecioVarios(ids, porcentaje);
-        return ResponseEntity.ok("Los precios de " + ids.size() + " materiales se han actualizado con éxito.");
+        return ResponseEntity.ok(materialService.obtenerTodosOrdenadosPorNombre());
     }
 }

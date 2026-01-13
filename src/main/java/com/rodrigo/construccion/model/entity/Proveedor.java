@@ -124,9 +124,6 @@ public class Proveedor {
     @Column(name = "tipo_cuenta", length = 50)
     private String tipoCuenta;
 
-    @Column(name = "id_empresa", nullable = false)
-    private Long empresaId;
-
     @Column(name = "activo")
     private Boolean activo = true;
 

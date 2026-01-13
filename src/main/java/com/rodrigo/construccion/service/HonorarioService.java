@@ -24,7 +24,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 import java.math.RoundingMode;
 
@@ -181,29 +180,6 @@ public class HonorarioService {
         return honorarioMapper.toResumenHonorariosProfesionalDTOList(honorariosEncontrados);
     }
 
-    /* Contar el total de honorarios, sin tener en cuenta la empresa */
-    public long contarTotal() {
-        return honorarioRepository.count();
-    }
-
-    /* Contar total de honorarios por empresa */
-    public long contarTotalPorEmpresa(Long empresaId) {
-        empresaService.findEmpresaById(empresaId);
-        return honorarioRepository.countByObra_Cliente_Empresa_Id(empresaId);
-    }
-
-    /**
-     * Calcula el total de honorarios en un período para una empresa específica.
-     * Optimizado para realizar la suma directamente en la base de datos.
-     */
-    public BigDecimal calcularTotalHonorariosPeriodo(LocalDate fechaInicio, LocalDate fechaFin, Long empresaId) {
-        empresaService.findEmpresaById(empresaId);
-        BigDecimal total = honorarioRepository.sumMontoByEmpresaIdAndFechaBetween(empresaId, fechaInicio, fechaFin);
-        // Si la consulta no devuelve resultados, SUM puede retornar null. Lo
-        // convertimos a 0.
-        return total != null ? total : BigDecimal.ZERO;
-    }
-
     /* Obtener honorarios del mes actual */
     public List<ResumenHonorariosProfesionalDTO> obtenerHonorariosMesActualDto(Long empresaId) {
         empresaService.findEmpresaById(empresaId);
@@ -271,90 +247,5 @@ public class HonorarioService {
                 montoMinimo);
         // 2. Usar el mapper para agrupar los resultados por profesional.
         return honorarioMapper.toResumenHonorariosProfesionalDTOList(honorariosEncontrados);
-    }
-
-    // --------------------------------------------------------------
-
-    /* MÉTODOS QUE NO SE RECOMIENDAN USAR POR BUCLES INFINITOS */
-
-    /* Obtener todos los honorarios */
-    public List<Honorario> obtenerTodos() {
-        return honorarioRepository.findAll();
-    }
-
-    /* Obtener honorarios con paginación */
-    public Page<Honorario> obtenerTodosPaginados(Pageable pageable) {
-        return honorarioRepository.findAll(pageable);
-    }
-
-    /* Obtener honorario por ID */
-    public Optional<Honorario> obtenerPorId(Long id) {
-        return honorarioRepository.findById(id);
-    }
-
-    /* Crear nuevo honorario */
-    public Honorario crear(Honorario honorario) {
-        return honorarioRepository.save(honorario);
-    }
-
-    /* Actualizar honorario existente */
-    public Honorario actualizar(Long id, Honorario honorarioActualizado) {
-        return honorarioRepository.findById(id)
-                .map(honorario -> {
-                    // Actualizar campos disponibles
-                    if (honorarioActualizado.getFecha() != null) {
-                        honorario.setFecha(honorarioActualizado.getFecha());
-                    }
-                    if (honorarioActualizado.getMonto() != null) {
-                        honorario.setMonto(honorarioActualizado.getMonto());
-                    }
-                    if (honorarioActualizado.getObservaciones() != null) {
-                        honorario.setObservaciones(honorarioActualizado.getObservaciones());
-                    }
-
-                    return honorarioRepository.save(honorario);
-                })
-                .orElseThrow(() -> new RuntimeException("Honorario no encontrado con ID: " + id));
-    }
-
-    /* Buscar honorarios por rango de fechas */
-    public List<Honorario> buscarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
-        return honorarioRepository.findAll().stream()
-                .filter(honorario -> {
-                    LocalDate fecha = honorario.getFecha();
-                    return fecha != null &&
-                            !fecha.isBefore(fechaInicio) &&
-                            !fecha.isAfter(fechaFin);
-                })
-                .toList();
-    }
-
-    /* Buscar honorarios por monto mínimo */
-    public List<Honorario> buscarPorMontoMinimo(BigDecimal montoMinimo) {
-        System.out.println("Buscando honorarios con monto mayor a: " + montoMinimo);
-        return honorarioRepository.findAll().stream()
-                .filter(honorario -> honorario.getMonto() != null &&
-                        honorario.getMonto().compareTo(montoMinimo) >= 0)
-                .toList();
-    }
-
-    /**
-     * Calcular total de honorarios en un período
-     */
-    public BigDecimal calcularTotalPeriodo(LocalDate fechaInicio, LocalDate fechaFin) {
-        System.out.println("Calculando total de honorarios entre " + fechaInicio + " y " + fechaFin);
-        return buscarPorRangoFechas(fechaInicio, fechaFin).stream()
-                .map(Honorario::getMonto)
-                .filter(monto -> monto != null)
-                .reduce(BigDecimal.ZERO, BigDecimal::add);
-    }
-
-    /**
-     * Obtener honorarios del mes actual
-     */
-    public List<Honorario> obtenerHonorariosMesActual() {
-        LocalDate inicioMes = LocalDate.now().withDayOfMonth(1);
-        LocalDate finMes = LocalDate.now().withDayOfMonth(LocalDate.now().lengthOfMonth());
-        return buscarPorRangoFechas(inicioMes, finMes);
     }
 }

@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -16,14 +17,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entidad Material
- * 
- * Representa los materiales utilizados en las obras.
- * Para otros tipos de empresa:
- * - Mueblería: Maderas, herrajes, telas, etc.
- * - Seguros: No aplica directamente
- */
 @Entity
 @Getter
 @Setter
@@ -35,9 +28,6 @@ public class Material {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_material")
     private Long id;
-
-    @Column(name = "empresa_id")
-    private Long empresaId;
 
     @NotBlank(message = "El nombre del material es obligatorio")
     @Size(max = 200, message = "El nombre no puede exceder 200 caracteres")
@@ -64,11 +54,11 @@ public class Material {
 
     // Relaciones
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonManagedReference("material-stocks")
     private List<StockMaterial> stocks = new ArrayList<>();
 
     @OneToMany(mappedBy = "material", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonManagedReference("material-movimientos")
     private List<MovimientoMaterial> movimientos = new ArrayList<>();
 
     // Métodos de conveniencia

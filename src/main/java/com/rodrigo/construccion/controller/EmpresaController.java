@@ -19,13 +19,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/* Controlador REST para la gestión de Empresas */
-
 @RestController
 @RequestMapping("/api/empresas")
 @RequiredArgsConstructor
 @Slf4j
-@Tag(name = "Empresas", description = "Gestión de empresas (tenants) del sistema")
 public class EmpresaController {
 
     private final IEmpresaService empresaService;
@@ -33,8 +30,7 @@ public class EmpresaController {
     /* Crear una nueva empresa */
     @PostMapping
     @Operation(summary = "Registrar nueva empresa (tenant)", description = "Crea una nueva empresa en el sistema multi-tenant. Cada empresa funciona como un tenant independiente "
-            +
-            "con sus propios datos aislados. Campos requeridos: nombreEmpresa. Campos opcionales: CUIT, dirección, " +
+            + "con sus propios datos aislados. Campos requeridos: nombreEmpresa. Campos opcionales: CUIT, dirección, " +
             "teléfono, email, representante legal.")
     public ResponseEntity<EmpresaResponseDTO> crearEmpresa(@Valid @RequestBody EmpresaRequestDTO empresaRequestDTO) {
         EmpresaResponseDTO empresaCreada = empresaService.crearEmpresa(empresaRequestDTO);

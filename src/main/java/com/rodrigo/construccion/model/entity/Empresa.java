@@ -1,7 +1,6 @@
 package com.rodrigo.construccion.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
-import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -14,9 +13,7 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entidad Empresa - Punto de entrada Multi-Tenant
- * 
+/*
  * Cada empresa representa un tenant diferente:
  * - Constructora: maneja obras, profesionales, materiales de construcción
  * - Mueblería: maneja productos, diseñadores, materiales de muebles
@@ -66,7 +63,7 @@ public class Empresa {
     @ManyToMany(mappedBy = "empresas")
     private List<Cliente> clientes = new ArrayList<>();
 
-    @JsonManagedReference("empresa-usuarios")
+    @JsonIgnore
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Usuario> usuarios = new ArrayList<>();
 

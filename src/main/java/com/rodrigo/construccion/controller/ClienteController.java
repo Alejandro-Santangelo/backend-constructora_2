@@ -31,7 +31,6 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
-/* Controlador REST para la gestión de Clientes */
 @RestController
 @RequestMapping("/api/clientes")
 @RequiredArgsConstructor
@@ -43,8 +42,7 @@ public class ClienteController {
     /* Crear un nuevo cliente */
     @PostMapping
     @Operation(summary = "Registrar nuevo cliente", description = "Registra un nuevo cliente asociado a una empresa específica en el sistema multi-tenant. "
-            + "Cada cliente pertenece exclusivamente a una empresa (tenant). "
-            + "Campos requeridos: nombre, empresa. Campos opcionales: teléfono, email, dirección, tipo de cliente.")
+            + "Cada cliente pertenece exclusivamente a una empresa (tenant). Campos requeridos: nombre, empresa. Campos opcionales: teléfono, email, dirección, tipo de cliente.")
     public ResponseEntity<ClienteResponseDTO> crearCliente(@RequestParam Long empresaId, @Valid @RequestBody ClienteRequestDTO clienteRequestDTO) {
         ClienteResponseDTO clienteResponseDto = clienteService.crearCliente(clienteRequestDTO, Collections.singletonList(empresaId));
         return ResponseEntity.status(HttpStatus.CREATED).body(clienteResponseDto);

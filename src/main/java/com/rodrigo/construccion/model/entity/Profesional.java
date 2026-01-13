@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.List;
 
-import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.CreationTimestamp;
 
 import jakarta.persistence.CascadeType;
@@ -54,11 +53,9 @@ public class Profesional {
     @Column(name = "id_profesional")
     private Long id;
 
-    @Column(name = "empresa_id")
-    private Long empresaId;
-
+    @NotBlank(message = "El nombre del profesional es obligatorio")
     @Size(max = 200, message = "El nombre no puede exceder 200 caracteres")
-    @Column(name = "nombre", nullable = true, length = 200)
+    @Column(name = "nombre", nullable = false, length = 200)
     private String nombre;
 
     @NotBlank(message = "El tipo de profesional es obligatorio")
@@ -129,11 +126,9 @@ public class Profesional {
 
     // Relaciones
     @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @BatchSize(size = 50)
     private List<ProfesionalObra> obrasAsignadas = new ArrayList<>();
 
     @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @BatchSize(size = 50)
     private List<Honorario> honorarios = new ArrayList<>();
 
     @Column(name = "cuit", length = 20, nullable = true)

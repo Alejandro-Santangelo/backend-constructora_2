@@ -27,45 +27,13 @@ public class ProfesionalService implements IProfesionalService {
     private final ProfesionalRepository profesionalRepository;
     private final ProfesionalMapper profesionalMapper;
 
-    @Transactional(readOnly = true)
-    public List<java.util.Map<String, Object>> obtenerCatalogoPorEmpresa(Long empresaId) {
-        List<Profesional> profesionales = profesionalRepository.findByEmpresaId(empresaId);
-        return profesionales.stream().map(p -> {
-            java.util.Map<String, Object> map = new java.util.HashMap<>();
-            map.put("id", p.getId());
-            if (p.getNombre() != null && !p.getNombre().isEmpty()) {
-                map.put("nombre", p.getNombre() + " - " + p.getTipoProfesional());
-                map.put("nombreProfesional", p.getNombre());
-            } else {
-                map.put("nombre", p.getTipoProfesional());
-                map.put("nombreProfesional", null);
-            }
-            map.put("rol", p.getTipoProfesional());
-            map.put("tipoProfesional", p.getTipoProfesional());
-            // Use honorarioDia as valorUnitario equivalent
-            map.put("valorUnitario", p.getHonorarioDia() != null ? p.getHonorarioDia() : java.math.BigDecimal.ZERO);
-            map.put("precio", map.get("valorUnitario"));
-            map.put("categoria", p.getEspecialidad());
-            return map;
-        }).collect(java.util.stream.Collectors.toList());
-    }
-
     /* Crear nuevo profesional desde DTO */
     @Override
     public ProfesionalResponseDTO crearProfesional(ProfesionalRequestDTO requestDTO) {
         // Validar rol personalizado si el tipo es "Otro (personalizado)"
         validarRolPersonalizado(requestDTO.getTipoProfesional(), requestDTO.getRolPersonalizado());
-        
+
         Profesional profesional = profesionalMapper.toEntity(requestDTO);
-
-        // Mapeo manual de campos nuevos
-        if (requestDTO.getEmpresaId() != null) {
-            profesional.setEmpresaId(requestDTO.getEmpresaId());
-        }
-
-        if (requestDTO.getCostoJornal() != null) {
-            profesional.setHonorarioDia(requestDTO.getCostoJornal());
-        }
 
         // Lógica flexible para tipo de profesional
         TipoProfesional tipoEnum = TipoProfesional.fromDisplayName(requestDTO.getTipoProfesional());
@@ -85,23 +53,15 @@ public class ProfesionalService implements IProfesionalService {
             profesional.setValorHoraDefault(BigDecimal.ZERO);
         }
 
-        // Verificar si el nombre está vacío
-        boolean nombreVacio = profesional.getNombre() == null || profesional.getNombre().trim().isEmpty();
-        
-        // Si el nombre es nulo o vacío, asignamos el tipo de profesional como nombre
-        if (nombreVacio) {
-            profesional.setNombre(profesional.getTipoProfesional());
-        }
-
         Profesional profesionalGuardado = profesionalRepository.save(profesional);
 
         return profesionalMapper.toResponseDTO(profesionalGuardado);
     }
 
-    /* Obtener todos los profesionales con relaciones cargadas (evita N+1) */
+    /* Obtener todos los profesionales */
     @Override
     public List<ProfesionalResponseDTO> obtenerTodos() {
-        List<Profesional> profesionales = profesionalRepository.findAllWithRelations();
+        List<Profesional> profesionales = profesionalRepository.findAll();
         return profesionalMapper.toResponseDTOList(profesionales);
     }
 
@@ -118,12 +78,6 @@ public class ProfesionalService implements IProfesionalService {
         Profesional profesionalEncontrado = profesionalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
         return profesionalMapper.toResponseDTO(profesionalEncontrado);
-    }
-
-    /* Obtener tipos de profesionales únicos desde la base de datos */
-    @Override
-    public List<String> obtenerTiposProfesionales() {
-        return profesionalRepository.findDistinctTipoProfesional();
     }
 
     /**
@@ -170,7 +124,7 @@ public class ProfesionalService implements IProfesionalService {
     public ProfesionalResponseDTO actualizar(Long id, ProfesionalRequestDTO requestDTO) {
         // Validar rol personalizado si el tipo es "Otro (personalizado)"
         validarRolPersonalizado(requestDTO.getTipoProfesional(), requestDTO.getRolPersonalizado());
-        
+
         return profesionalRepository.findById(id)
                 .map(profesional -> {
                     profesionalMapper.updateEntity(requestDTO, profesional);
@@ -191,7 +145,7 @@ public class ProfesionalService implements IProfesionalService {
                     }
 
                     Profesional profesionalGuardado = profesionalRepository.save(profesional);
-                    
+
                     return profesionalMapper.toResponseDTO(profesionalGuardado);
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
@@ -221,24 +175,17 @@ public class ProfesionalService implements IProfesionalService {
     /* Actualizar valorHoraDefault de un profesional por ID y por porcentaje */
     @Override
     public void actualizarValorHoraPorIdPorPorcentaje(Long id, double porcentaje) {
-        // Buscamos el profesional. Si no existe, el método orElseThrow lanzará la
-        // excepción.
+        // Buscamos el profesional. Si no existe, el método orElseThrow lanzará la excepción.
         Profesional profesional = profesionalRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
 
         // Delegamos la lógica de cálculo a la entidad.
         profesional.actualizarValorHoraPorPorcentaje(porcentaje);
 
-        // Gracias a @Transactional, el cambio se guardará automáticamente al final del
-        // método.
-        // No es estrictamente necesario llamar a save, pero hacerlo es explícito y no
-        // daña.
         profesionalRepository.save(profesional);
     }
 
-    /**
-     * Actualizar porcentajeGanancia de todos los profesionales y calcular
-     * importeGanancia
+    /* Actualizar porcentajeGanancia de todos los profesionales y calcular importeGanancia
      */
     @Override
     public void actualizarPorcentajeGananciaTodos(double porcentaje) {
@@ -254,10 +201,7 @@ public class ProfesionalService implements IProfesionalService {
         profesionalRepository.saveAll(profesionales);
     }
 
-    /*
-     * Actualizar porcentajeGanancia de un profesional por ID y calcular
-     * importeGanancia
-     */
+    /* Actualizar porcentajeGanancia de un profesional por ID y calcular importeGanancia */
     @Override
     public void actualizarPorcentajeGananciaPorId(Long id, double porcentaje) {
         // 1. Buscamos el profesional. Si no existe, lanzará una excepción clara.
@@ -273,29 +217,7 @@ public class ProfesionalService implements IProfesionalService {
     }
 
     /**
-     * Actualizar porcentajeGanancia de varios profesionales por lista de IDs
-     */
-    @Override
-    public void actualizarPorcentajeGananciaVarios(List<Long> ids, double porcentaje) {
-        List<Profesional> profesionales = profesionalRepository.findAllById(ids);
-        if (profesionales.isEmpty()) {
-            throw new ResourceNotFoundException("No se encontraron profesionales con los IDs proporcionados");
-        }
-        
-        BigDecimal porcentajeBD = BigDecimal.valueOf(porcentaje);
-        for (Profesional profesional : profesionales) {
-            profesional.setPorcentajeGanancia(porcentajeBD);
-            BigDecimal importe = profesional.getValorHoraDefault()
-                    .multiply(porcentajeBD)
-                    .divide(BigDecimal.valueOf(100));
-            profesional.setImporteGanancia(importe);
-        }
-        profesionalRepository.saveAll(profesionales);
-    }
-
-    /**
-     * Busca un profesional para ser asignado, priorizando por ID y luego por
-     * tipo/nombre.
+     * Busca un profesional para ser asignado, priorizando por ID y luego por tipo/nombre.
      * Usado por ProfesionalObraService para encapsular la lógica de búsqueda.
      */
     @Override
@@ -324,11 +246,11 @@ public class ProfesionalService implements IProfesionalService {
     /**
      * Busca profesionales activos por tipo de forma flexible, encapsulando la
      * lógica de variaciones de género.
-     * 
+     *
      * @param tipoProfesional El tipo de profesional a buscar (ej: "Arquitecto").
      * @return Una lista de profesionales que coinciden.
-     * 
-     *         Metodo usado en ProfesionalObraService
+     * <p>
+     * Metodo usado en ProfesionalObraService
      */
     @Override
     @Transactional(readOnly = true)
@@ -372,29 +294,50 @@ public class ProfesionalService implements IProfesionalService {
         return profesionalRepository.findProfesionalesWithHonorarios(pageable, empresaId);
     }
 
-    /**
-     * Buscar profesionales por nombre (contiene)
-     */
+    /* Buscar profesionales por nombre (contiene) */
     @Override
     public List<ProfesionalResponseDTO> buscarPorNombre(String nombre) {
         List<Profesional> profesionalesEncontrados = profesionalRepository.findByNombreContaining(nombre);
         return profesionalMapper.toResponseDTOList(profesionalesEncontrados);
     }
 
+    /**
+     * Valida que el rol personalizado esté presente cuando el tipo de profesional es "Otro (personalizado)"
+     *
+     * @param tipoProfesional  El tipo de profesional seleccionado
+     * @param rolPersonalizado El rol personalizado ingresado (puede ser null)
+     * @throws IllegalArgumentException Si el tipo es "Otro (personalizado)" y no se proveyó un rol personalizado
+     */
+    private void validarRolPersonalizado(String tipoProfesional, String rolPersonalizado) {
+        if (tipoProfesional != null && tipoProfesional.trim().equalsIgnoreCase("Otro (personalizado)")) {
+            if (rolPersonalizado == null || rolPersonalizado.trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "El campo 'rolPersonalizado' es obligatorio cuando el tipo de profesional es 'Otro (personalizado)'"
+                );
+            }
+            if (rolPersonalizado.length() > 100) {
+                throw new IllegalArgumentException(
+                        "El campo 'rolPersonalizado' no puede exceder 100 caracteres"
+                );
+            }
+        }
+    }
+
     /* ------ MÉTODOS NO USADOS EN NINGÚN LADO DEL SISTEMA ------ */
 
-    /**
-     * Buscar profesionales activos - LO DEJO PORQUE PODRIAMOS USARLO.
-     */
+    /* Obtener tipos de profesionales únicos desde la base de datos */
+    @Override
+    public List<String> obtenerTiposProfesionales() {
+        return profesionalRepository.findDistinctTipoProfesional();
+    }
+
+    /* Buscar profesionales activos - LO DEJO PORQUE PODRIAMOS USARLO. */
     public List<Profesional> obtenerProfesionalesActivos() {
         System.out.println("Obteniendo profesionales activos");
         return profesionalRepository.findByActivoTrue();
     }
 
-    /**
-     * Estadísticas básicas
-     */
-    /* NO USADO */
+    /* Estadísticas básicas  */
     public long contarTotal() {
         return profesionalRepository.count();
     }
@@ -412,28 +355,6 @@ public class ProfesionalService implements IProfesionalService {
     /* NO USADO */
     public BigDecimal obtenerValorHoraPromedio() {
         return profesionalRepository.getValorHoraPromedio();
-    }
-
-    /**
-     * Valida que el rol personalizado esté presente cuando el tipo de profesional es "Otro (personalizado)"
-     * 
-     * @param tipoProfesional El tipo de profesional seleccionado
-     * @param rolPersonalizado El rol personalizado ingresado (puede ser null)
-     * @throws IllegalArgumentException Si el tipo es "Otro (personalizado)" y no se proveyó un rol personalizado
-     */
-    private void validarRolPersonalizado(String tipoProfesional, String rolPersonalizado) {
-        if (tipoProfesional != null && tipoProfesional.trim().equalsIgnoreCase("Otro (personalizado)")) {
-            if (rolPersonalizado == null || rolPersonalizado.trim().isEmpty()) {
-                throw new IllegalArgumentException(
-                    "El campo 'rolPersonalizado' es obligatorio cuando el tipo de profesional es 'Otro (personalizado)'"
-                );
-            }
-            if (rolPersonalizado.length() > 100) {
-                throw new IllegalArgumentException(
-                    "El campo 'rolPersonalizado' no puede exceder 100 caracteres"
-                );
-            }
-        }
     }
 
 }

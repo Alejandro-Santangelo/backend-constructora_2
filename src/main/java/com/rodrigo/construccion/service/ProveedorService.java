@@ -1,210 +1,167 @@
 package com.rodrigo.construccion.service;
 
+import com.rodrigo.construccion.dto.mapper.ProveedorMapper;
+import com.rodrigo.construccion.dto.request.ProveedorRequestDTO;
+import com.rodrigo.construccion.dto.response.ProveedorEstadisticaResponseDTO;
+import com.rodrigo.construccion.dto.response.ProveedorResponseDTO;
+import com.rodrigo.construccion.dto.response.RutValidacionResponseDTO;
+import com.rodrigo.construccion.exception.DuplicateRutException;
+import com.rodrigo.construccion.exception.ResourceNotFoundException;
+import com.rodrigo.construccion.model.entity.Empresa;
 import com.rodrigo.construccion.model.entity.Proveedor;
 import com.rodrigo.construccion.repository.ProveedorRepository;
+// ...existing imports...
+import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
-/**
- * Servicio para la gestión de Proveedores
- * 
- * Proporciona la lógica de negocio para todas las operaciones relacionadas con proveedores.
- * Incluye soporte Multi-Tenant donde todas las operaciones se filtran por empresa.
- */
 @Service
+@RequiredArgsConstructor
 @Transactional
 public class ProveedorService {
 
     private final ProveedorRepository proveedorRepository;
-        public ProveedorService(ProveedorRepository proveedorRepository) {
-            this.proveedorRepository = proveedorRepository;
-        }
-    // Logger eliminado
+    private final IEmpresaService empresaService;
+    private final ProveedorMapper proveedorMapper;
 
-    /**
-     * OPERACIONES CRUD
-     */
+    /* Crear un nuevo proveedor */
+    public ProveedorResponseDTO crearProveedor(ProveedorRequestDTO dto, Long empresaId) {
+        // Mapear DTO a entidad
+        Proveedor proveedor = proveedorMapper.toEntity(dto);
+        Empresa empresaEncontrada = empresaService.findEmpresaById(empresaId);
 
-    /**
-     * Crear un nuevo proveedor
-     */
-    public Proveedor crearProveedor(Proveedor proveedor, Long empresaId) {
-    System.out.println("Creando proveedor para empresa: " + empresaId);
-        
-        // Validaciones
-        if (proveedor.getNombre() == null || proveedor.getNombre().trim().isEmpty()) {
-            throw new IllegalArgumentException("El nombre del proveedor es obligatorio");
-        }
-        
         // Verificar si el RUT ya existe (si se proporciona)
         if (proveedor.getRut() != null && !proveedor.getRut().trim().isEmpty()) {
-            if (proveedorRepository.existsByRutAndEmpresaId(proveedor.getRut(), empresaId)) {
-                throw new IllegalArgumentException("Ya existe un proveedor con este RUT");
+            if (proveedorRepository.existsByRutAndEmpresa_Id(proveedor.getRut(), empresaId)) {
+                throw new DuplicateRutException("proveedor", proveedor.getRut(), empresaId);
             }
         }
-        
-        // Setear valores por defecto
-        proveedor.setEmpresaId(empresaId);
+
+        // Setear valores por defecto y relación con empresa
+        proveedor.setEmpresa(empresaEncontrada);
         proveedor.setActivo(true);
         proveedor.setFechaCreacion(LocalDateTime.now());
-        proveedor.setFechaModificacion(LocalDateTime.now());
-        
-        return proveedorRepository.save(proveedor);
+
+        // Guardar y retornar el DTO de respuesta
+        Proveedor proveedorGuardado = proveedorRepository.save(proveedor);
+        return proveedorMapper.toResponseDTO(proveedorGuardado);
     }
 
-    /**
-     * Obtener proveedores por empresa con paginación
-     */
+    /* Obtener proveedores por empresa con paginación */
     @Transactional(readOnly = true)
-    public Page<Proveedor> obtenerPorEmpresaConPaginacion(Long empresaId, Pageable pageable) {
-    System.out.println("Obteniendo proveedores paginados para empresa: " + empresaId);
-        return proveedorRepository.findByEmpresaIdOrderByNombre(empresaId, pageable);
+    public Page<ProveedorResponseDTO> obtenerPorEmpresaConPaginacion(Long empresaId, Pageable pageable) {
+        Page<Proveedor> proveedoresPage = proveedorRepository.findByEmpresa_IdOrderByNombre(empresaId, pageable);
+        return proveedoresPage.map(proveedorMapper::toResponseDTO);
     }
 
-    /**
-     * Obtener proveedor por ID y empresa
-     */
+    /* Obtener proveedor por ID y empresa - usado para el frontend */
     @Transactional(readOnly = true)
-    public Proveedor obtenerPorIdYEmpresa(Long id, Long empresaId) {
-    System.out.println("Obteniendo proveedor ID: " + id + " para empresa: " + empresaId);
-        return proveedorRepository.findByIdAndEmpresaId(id, empresaId)
-                .orElseThrow(() -> new RuntimeException("Proveedor no encontrado"));
+    public ProveedorResponseDTO obtenerPorIdYEmpresaDTO(Long id, Long empresaId) {
+        Proveedor proveedorEncontrado = proveedorRepository.findByIdAndEmpresa_Id(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+        return proveedorMapper.toResponseDTO(proveedorEncontrado);
     }
 
-    /**
-     * Actualizar proveedor
-     */
-    public Proveedor actualizarProveedor(Long id, Proveedor proveedorActualizado, Long empresaId) {
-    System.out.println("Actualizando proveedor ID: " + id + " para empresa: " + empresaId);
-        
-        var proveedorExistente = obtenerPorIdYEmpresa(id, empresaId);
-        
+    /* Obtener proveedor por ID y empresa usado solamente en este archivo */
+    @Transactional(readOnly = true)
+    private Proveedor obtenerPorIdYEmpresa(Long id, Long empresaId) {
+        return proveedorRepository.findByIdAndEmpresa_Id(id, empresaId)
+                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+    }
+
+    /* Actualizar proveedor */
+    public ProveedorResponseDTO actualizarProveedor(Long idProveedor, ProveedorRequestDTO dto, Long empresaId) {
+        var proveedorExistente = obtenerPorIdYEmpresa(idProveedor, empresaId);
+
         // Validar RUT si cambió
-        if (proveedorActualizado.getRut() != null && !proveedorActualizado.getRut().equals(proveedorExistente.getRut())) {
-            if (proveedorRepository.existsByRutAndEmpresaIdAndIdNot(proveedorActualizado.getRut(), empresaId, id)) {
-                throw new IllegalArgumentException("Ya existe otro proveedor con este RUT");
+        if (dto.getRut() != null && !dto.getRut().equals(proveedorExistente.getRut())) {
+            if (proveedorRepository.existsByRutAndEmpresa_IdAndIdNot(dto.getRut(), empresaId, idProveedor)) {
+                throw new DuplicateRutException("proveedor", dto.getRut(), empresaId);
             }
         }
-        
-        // Actualizar campos
-        proveedorExistente.setNombre(proveedorActualizado.getNombre());
-        proveedorExistente.setRut(proveedorActualizado.getRut());
-        proveedorExistente.setTelefono(proveedorActualizado.getTelefono());
-        proveedorExistente.setEmail(proveedorActualizado.getEmail());
-        proveedorExistente.setDireccion(proveedorActualizado.getDireccion());
-        proveedorExistente.setCiudad(proveedorActualizado.getCiudad());
-        proveedorExistente.setRegion(proveedorActualizado.getRegion());
-        proveedorExistente.setCodigoPostal(proveedorActualizado.getCodigoPostal());
-        proveedorExistente.setFechaModificacion(LocalDateTime.now());
-        
-        return proveedorRepository.save(proveedorExistente);
+
+        // Actualizar todos los campos del DTO usando el mapper
+        proveedorMapper.updateEntityFromDto(dto, proveedorExistente);
+
+        Proveedor proveedorActualizado = proveedorRepository.save(proveedorExistente);
+        return proveedorMapper.toResponseDTO(proveedorActualizado);
     }
 
-    /**
-     * Eliminar proveedor
-     */
+    /* Eliminar proveedor */
     public void eliminarProveedor(Long id, Long empresaId) {
-    System.out.println("Eliminando proveedor ID: " + id + " para empresa: " + empresaId);
-        
-        var proveedor = obtenerPorIdYEmpresa(id, empresaId);        
+        var proveedor = obtenerPorIdYEmpresa(id, empresaId);
         proveedorRepository.delete(proveedor);
     }
 
-    /**
-     * CONSULTAS ESPECIALIZADAS
-     */
-
-    /**
-     * Buscar proveedores por nombre
-     */
+    /* Buscar proveedores por nombre  */
     @Transactional(readOnly = true)
-    public List<Proveedor> buscarPorNombre(String nombre, Long empresaId) {
-    System.out.println("Buscando proveedores por nombre '" + nombre + "' para empresa: " + empresaId);
-        return proveedorRepository.findByNombreContainingIgnoreCaseAndEmpresaId(nombre, empresaId);
+    public List<ProveedorResponseDTO> buscarPorNombre(String nombre, Long empresaId) {
+        return proveedorRepository.findByNombreContainingIgnoreCaseAndEmpresa_Id(nombre, empresaId)
+                .stream()
+                .map(proveedorMapper::toResponseDTO)
+                .toList();
     }
 
-    /**
-     * Obtener proveedores por ciudad
-     */
+    /* Obtener proveedores activos */
     @Transactional(readOnly = true)
-    public List<Proveedor> obtenerPorCiudad(String ciudad, Long empresaId) {
-    System.out.println("Obteniendo proveedores por ciudad '" + ciudad + "' para empresa: " + empresaId);
-        return proveedorRepository.findByCiudadIgnoreCaseAndEmpresaId(ciudad, empresaId);
+    public List<ProveedorResponseDTO> obtenerProveedoresActivos(Long empresaId) {
+        List<Proveedor> proveedoresEncontrados = proveedorRepository.findByActivoTrueAndEmpresa_IdOrderByNombre(empresaId);
+        return proveedoresEncontrados.stream().map(proveedorMapper::toResponseDTO).toList();
     }
 
-    /**
-     * Obtener proveedores por región
-     */
+    /* MÉTODOS QUE NO SE ESTÁN USANDO EN EL FRONTEND */
+
+    /* Obtener proveedores por ciudad */
     @Transactional(readOnly = true)
-    public List<Proveedor> obtenerPorRegion(String region, Long empresaId) {
-    System.out.println("Obteniendo proveedores por región '" + region + "' para empresa: " + empresaId);
-        return proveedorRepository.findByRegionIgnoreCaseAndEmpresaId(region, empresaId);
+    public List<ProveedorResponseDTO> obtenerPorCiudad(String ciudad, Long empresaId) {
+        List<Proveedor> proveedoresEncontrados = proveedorRepository.findByCiudadIgnoreCaseAndEmpresa_Id(ciudad, empresaId);
+        return proveedoresEncontrados.stream().map(proveedorMapper::toResponseDTO).toList();
     }
 
-    /**
-     * Validar si un RUT está disponible
-     */
+    /* Obtener proveedores por región */
     @Transactional(readOnly = true)
-    public boolean validarRutDisponible(String rut, Long empresaId) {
-    System.out.println("Validando disponibilidad de RUT '" + rut + "' para empresa: " + empresaId);
-        return !proveedorRepository.existsByRutAndEmpresaId(rut, empresaId);
+    public List<ProveedorResponseDTO> obtenerPorRegion(String region, Long empresaId) {
+        List<Proveedor> proveedoresEncontrados = proveedorRepository.findByRegionIgnoreCaseAndEmpresa_Id(region, empresaId);
+        return proveedoresEncontrados.stream().map(proveedorMapper::toResponseDTO).toList();
     }
 
-    /**
-     * Obtener proveedores activos
-     */
+    /* Validar si un RUT está disponible  */
     @Transactional(readOnly = true)
-    public List<Proveedor> obtenerProveedoresActivos(Long empresaId) {
-    System.out.println("Obteniendo proveedores activos para empresa: " + empresaId);
-        return proveedorRepository.findByActivoTrueAndEmpresaIdOrderByNombre(empresaId);
+    public RutValidacionResponseDTO validarRutDisponible(String rut, Long empresaId) {
+        boolean disponible = !proveedorRepository.existsByRutAndEmpresa_Id(rut, empresaId);
+        return new RutValidacionResponseDTO(disponible, rut);
     }
 
-    /**
-     * Obtener estadísticas de proveedores
-     */
+    /* Obtener estadísticas de proveedores */
     @Transactional(readOnly = true)
-    public Map<String, Object> obtenerEstadisticas(Long empresaId) {
-    System.out.println("Obteniendo estadísticas de proveedores para empresa: " + empresaId);
-        
-        Map<String, Object> estadisticas = new HashMap<>();
-        
-        // Totales
-        long totalProveedores = proveedorRepository.countByEmpresaId(empresaId);
-        long proveedoresActivos = proveedorRepository.countByActivoTrueAndEmpresaId(empresaId);
+    public ProveedorEstadisticaResponseDTO obtenerEstadisticas(Long empresaId) {
+        // Obtener datos del repository
+        long totalProveedores = proveedorRepository.countByEmpresa_Id(empresaId);
+        long proveedoresActivos = proveedorRepository.countByActivoTrueAndEmpresa_Id(empresaId);
         long proveedoresInactivos = totalProveedores - proveedoresActivos;
-        
-        estadisticas.put("total", totalProveedores);
-        estadisticas.put("activos", proveedoresActivos);
-        estadisticas.put("inactivos", proveedoresInactivos);
-        
-        // Distribución por ciudad
         var distribucionCiudad = proveedorRepository.countProveedoresPorCiudad(empresaId);
-        estadisticas.put("distribuccionCiudad", distribucionCiudad);
-        
-        // Distribución por región
-        var distribuccionRegion = proveedorRepository.countProveedoresPorRegion(empresaId);
-        estadisticas.put("distribuccionRegion", distribuccionRegion);
-        
-        return estadisticas;
+        var distribucionRegion = proveedorRepository.countProveedoresPorRegion(empresaId);
+
+        // Usar el mapper para construir el DTO
+        return proveedorMapper.toEstadisticasDTO(
+            totalProveedores,
+            proveedoresActivos,
+            proveedoresInactivos,
+            distribucionCiudad,
+            distribucionRegion
+        );
     }
 
-    /**
-     * Cambiar estado del proveedor
-     */
-    public Proveedor cambiarEstado(Long id, boolean activo, Long empresaId) {
-    System.out.println("Cambiando estado de proveedor ID: " + id + " a " + activo + " para empresa: " + empresaId);
-        
+    /* Cambiar estado del proveedor */
+    public ProveedorResponseDTO cambiarEstado(Long id, boolean activo, Long empresaId) {
         var proveedor = obtenerPorIdYEmpresa(id, empresaId);
         proveedor.setActivo(activo);
-        proveedor.setFechaModificacion(LocalDateTime.now());
-        
-        return proveedorRepository.save(proveedor);
+        Proveedor proveedorActualizado = proveedorRepository.save(proveedor);
+        return proveedorMapper.toResponseDTO(proveedorActualizado);
     }
 }

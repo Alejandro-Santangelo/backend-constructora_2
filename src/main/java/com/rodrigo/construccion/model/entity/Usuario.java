@@ -1,6 +1,6 @@
 package com.rodrigo.construccion.model.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
@@ -14,21 +14,12 @@ import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
 
-/**
- * Entidad Usuario
- * 
- * Representa los usuarios del sistema que pertenecen a una empresa específica.
- * Implementa el patrón Multi-Tenant donde cada usuario solo puede ver datos de
- * su empresa.
- */
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Table(name = "usuarios", uniqueConstraints = {
-        @UniqueConstraint(columnNames = "email")
-})
+@Table(name = "usuarios", uniqueConstraints = {@UniqueConstraint(columnNames = "email")})
 public class Usuario {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -50,7 +41,6 @@ public class Usuario {
     @Column(name = "password_hash", nullable = false, columnDefinition = "TEXT")
     private String passwordHash;
 
-    @NotBlank(message = "El rol es obligatorio")
     @Size(max = 50, message = "El rol no puede exceder 50 caracteres")
     @Column(name = "rol", nullable = false, length = 50)
     private String rol = "user";
@@ -63,7 +53,7 @@ public class Usuario {
     private LocalDateTime fechaCreacion;
 
     // Relación Multi-Tenant: Cada usuario pertenece a una empresa
-    @JsonBackReference("empresa-usuarios")
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_empresa")
     private Empresa empresa;

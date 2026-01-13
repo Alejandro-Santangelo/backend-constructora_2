@@ -28,22 +28,16 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
-/**
- * Entidad Costo
- * 
- * Representa los costos asociados a obras de construcción.
- * Incluye información de categorización, estado y fechas de gestión.
- */
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "costos", indexes = {
-    @Index(name = "idx_costos_obra", columnList = "id_obra"),
-    @Index(name = "idx_costos_fecha", columnList = "fecha"),
-    @Index(name = "idx_costos_categoria", columnList = "categoria"),
-    @Index(name = "idx_costos_estado", columnList = "estado")
+        @Index(name = "idx_costos_obra", columnList = "id_obra"),
+        @Index(name = "idx_costos_fecha", columnList = "fecha"),
+        @Index(name = "idx_costos_categoria", columnList = "categoria"),
+        @Index(name = "idx_costos_estado", columnList = "estado")
 })
 @Filter(name = "empresaFilter", condition = "EXISTS (SELECT 1 FROM obras o JOIN cliente_empresa ce ON o.id_cliente = ce.id_cliente WHERE o.id_obra = id_obra AND ce.id_empresa = :empresaId)")
 public class Costo {
@@ -140,5 +134,5 @@ public class Costo {
             this.anio = fecha.getYear();
         }
     }
-    
+
 }
