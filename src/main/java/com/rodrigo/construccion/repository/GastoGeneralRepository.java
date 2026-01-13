@@ -12,4 +12,8 @@ import java.util.Optional;
 @Repository
 public interface GastoGeneralRepository extends JpaRepository<GastoGeneral, Long> {
     Optional<GastoGeneral> findByIdAndEmpresaId(Long id, Long empresaId);
+    
+    List<GastoGeneral> findByEmpresaIdOrderByNombre(Long empresaId);
+    
+    List<GastoGeneral> findByEmpresaIdAndCategoriaOrderByNombre(Long empresaId, String categoria);
 }
