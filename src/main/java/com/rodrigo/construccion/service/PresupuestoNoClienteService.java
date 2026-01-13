@@ -1,6 +1,6 @@
 package com.rodrigo.construccion.service;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.rodrigo.construccion.enums.TipoPresupuesto;
+import com.rodrigo.construccion.model.enums.TipoPresupuesto;
 import com.rodrigo.construccion.model.entity.PresupuestoAuditoria;
 import org.springframework.beans.factory.annotation.Autowired;
 
