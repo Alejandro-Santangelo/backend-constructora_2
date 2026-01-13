@@ -47,6 +47,12 @@ public class ObraService implements IObraService {
         return obraMapper.toSimpleDTO(obraEncontrada);
     }
 
+    @Override
+    public Obra encontrarObraPorIdYEmpresa(Long id, Long idEmpresa) {
+        return obraRepository.findByIdAndEmpresaId(id, idEmpresa)
+                .orElseThrow(() -> new ResourceNotFoundException("No se encontró la obra especificada o no pertenece a la empresa."));
+    }
+
     /* Obtener obra por ID usado por otros servicios */
     @Override
     public Obra findById(Long id) {
@@ -95,7 +101,7 @@ public class ObraService implements IObraService {
     @Transactional
     public ObraResponseDTO crear(ObraRequestDTO obraRequestDto, Long clienteId) {
         Cliente cliente;
-        
+
         // LÓGICA 1: Determinar el cliente
         if (obraRequestDto.getIdCliente() != null) {
             // Caso A: Cliente existente proporcionado en el DTO
@@ -111,12 +117,12 @@ public class ObraService implements IObraService {
             nuevoClienteDTO.setTelefono(obraRequestDto.getTelefono());
             nuevoClienteDTO.setEmail(obraRequestDto.getMail());
             nuevoClienteDTO.setDireccion(obraRequestDto.getDireccionParticular());
-            
+
             // Crear el cliente asociado a la empresa
-            Long empresaIdParaCliente = obraRequestDto.getEmpresaId() != null 
-                ? obraRequestDto.getEmpresaId() 
-                : 1L; // Default empresa ID
-            
+            Long empresaIdParaCliente = obraRequestDto.getEmpresaId() != null
+                    ? obraRequestDto.getEmpresaId()
+                    : 1L; // Default empresa ID
+
             ClienteResponseDTO clienteCreado = clienteService.crearCliente(nuevoClienteDTO, List.of(empresaIdParaCliente));
             cliente = clienteService.obtenerPorId(clienteCreado.getId_cliente());
         } else {
@@ -154,31 +160,31 @@ public class ObraService implements IObraService {
      */
     private String generarNombreObra(ObraRequestDTO dto) {
         StringBuilder nombre = new StringBuilder();
-        
+
         if (dto.getDireccionObraCalle() != null && !dto.getDireccionObraCalle().isBlank()) {
             nombre.append(dto.getDireccionObraCalle());
         }
-        
+
         if (dto.getDireccionObraAltura() != null && !dto.getDireccionObraAltura().isBlank()) {
             nombre.append(" ").append(dto.getDireccionObraAltura());
         }
-        
+
         if (dto.getDireccionObraBarrio() != null && !dto.getDireccionObraBarrio().isBlank()) {
             nombre.append(" ").append(dto.getDireccionObraBarrio());
         }
-        
+
         if (dto.getDireccionObraTorre() != null && !dto.getDireccionObraTorre().isBlank()) {
             nombre.append(" Torre ").append(dto.getDireccionObraTorre());
         }
-        
+
         if (dto.getDireccionObraPiso() != null && !dto.getDireccionObraPiso().isBlank()) {
             nombre.append(" Piso ").append(dto.getDireccionObraPiso());
         }
-        
+
         if (dto.getDireccionObraDepartamento() != null && !dto.getDireccionObraDepartamento().isBlank()) {
             nombre.append(" Depto ").append(dto.getDireccionObraDepartamento());
         }
-        
+
         return nombre.toString().trim();
     }
 
@@ -189,7 +195,7 @@ public class ObraService implements IObraService {
     private void asignarProfesionalesDesdeFormulario(Obra obra, List<ProfesionalFormDTO> profesionalesForm) {
         for (ProfesionalFormDTO profForm : profesionalesForm) {
             Profesional profesional;
-            
+
             if (Boolean.TRUE.equals(profForm.getEsManual())) {
                 // Crear nuevo profesional
                 ProfesionalRequestDTO nuevoProfDTO = new ProfesionalRequestDTO();
@@ -197,7 +203,7 @@ public class ObraService implements IObraService {
                 nuevoProfDTO.setTipoProfesional(profForm.getTipoProfesional());
                 nuevoProfDTO.setValorHoraDefault(profForm.getValorHora());
                 nuevoProfDTO.setActivo(true);
-                
+
                 ProfesionalResponseDTO profCreado = profesionalService.crearProfesional(nuevoProfDTO);
                 profesional = profesionalService.obtenerPorId(profCreado.getId());
             } else {
@@ -205,7 +211,7 @@ public class ObraService implements IObraService {
                 Long profesionalId = Long.parseLong(profForm.getId());
                 profesional = profesionalService.obtenerPorId(profesionalId);
             }
-            
+
             // Crear la asignación en profesionales_obras
             ProfesionalObra asignacion = new ProfesionalObra();
             asignacion.setProfesional(profesional);
@@ -219,7 +225,7 @@ public class ObraService implements IObraService {
             asignacion.setActivo(true);
             asignacion.setMontoAsignado(BigDecimal.ZERO);
             asignacion.setSaldoDisponible(BigDecimal.ZERO);
-            
+
             profesionalObraRepository.save(asignacion);
         }
     }
@@ -281,48 +287,48 @@ public class ObraService implements IObraService {
                 .orElseThrow(() -> new ResourceNotFoundException("Obra no encontrada con ID: " + id));
 
         obra.setEstado(nuevoEstado);
-        
+
         // ⭐ SINCRONIZACIÓN BIDIRECCIONAL: Actualizar estado del presupuesto vinculado
         sincronizarEstadoObraConPresupuesto(obra, nuevoEstado);
-        
+
         return obraMapper.toResponseDTO(obra);
     }
-    
+
     /**
      * Sincroniza el estado de la obra con el presupuesto vinculado.
      * Ahora que los enums están sincronizados, la conversión es directa por nombre.
      */
     private void sincronizarEstadoObraConPresupuesto(Obra obra, EstadoObra estadoObra) {
         // Buscar el presupuesto vinculado a esta obra
-        List<com.rodrigo.construccion.model.entity.PresupuestoNoCliente> presupuestos = 
-            presupuestoNoClienteRepository.findByObra_IdOrderByNumeroVersionDesc(obra.getId());
-        
+        List<com.rodrigo.construccion.model.entity.PresupuestoNoCliente> presupuestos =
+                presupuestoNoClienteRepository.findByObra_IdOrderByNumeroVersionDesc(obra.getId());
+
         if (presupuestos.isEmpty()) {
             return; // No hay presupuesto vinculado, no hacer nada
         }
-        
+
         // Obtener el presupuesto más reciente (primero de la lista ordenada DESC)
         com.rodrigo.construccion.model.entity.PresupuestoNoCliente presupuesto = presupuestos.get(0);
-        
+
         // Convertir estado de obra a presupuesto (conversión directa por nombre)
         try {
-            com.rodrigo.construccion.enums.PresupuestoEstado nuevoEstadoPresupuesto = 
-                com.rodrigo.construccion.enums.PresupuestoEstado.valueOf(estadoObra.name());
-            
+            com.rodrigo.construccion.enums.PresupuestoEstado nuevoEstadoPresupuesto =
+                    com.rodrigo.construccion.enums.PresupuestoEstado.valueOf(estadoObra.name());
+
             if (presupuesto.getEstado() != nuevoEstadoPresupuesto) {
                 presupuesto.setEstado(nuevoEstadoPresupuesto);
                 presupuestoNoClienteRepository.save(presupuesto);
-                
+
                 org.slf4j.LoggerFactory.getLogger(ObraService.class).info(
-                    "🔄 Estado sincronizado: Obra {} ({}) → Presupuesto {} ({})",
-                    obra.getId(), estadoObra.getDisplayName(),
-                    presupuesto.getId(), nuevoEstadoPresupuesto.getDisplayValue()
+                        "🔄 Estado sincronizado: Obra {} ({}) → Presupuesto {} ({})",
+                        obra.getId(), estadoObra.getDisplayName(),
+                        presupuesto.getId(), nuevoEstadoPresupuesto.getDisplayValue()
                 );
             }
         } catch (IllegalArgumentException e) {
             org.slf4j.LoggerFactory.getLogger(ObraService.class).warn(
-                "⚠️ No se pudo sincronizar estado de obra {} a presupuesto: estado {} no existe en PresupuestoEstado",
-                obra.getId(), estadoObra.name()
+                    "⚠️ No se pudo sincronizar estado de obra {} a presupuesto: estado {} no existe en PresupuestoEstado",
+                    obra.getId(), estadoObra.name()
             );
         }
     }
