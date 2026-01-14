@@ -57,9 +57,47 @@ Write-Host ""
 $securePassword = Read-Host "Contrasena PostgreSQL" -AsSecureString
 $env:PGPASSWORD = [Runtime.InteropServices.Marshal]::PtrToStringAuto([Runtime.InteropServices.Marshal]::SecureStringToBSTR($securePassword))
 
-# Crear backup
-Write-Info "Creando backup..."
-& pg_dump -h $DbHost -p $DbPort -U $DbUser -d $DbName -F p -f $backupFile
+# Crear backup COMPLETO con todas las opciones necesarias
+Write-Info "Creando backup completo de la base de datos..."
+Write-Info "Incluyendo: estructura, datos, secuencias, indices, constraints, comentarios..."
+
+# Opciones explicadas:
+# -h: host
+# -p: puerto
+# -U: usuario
+# -d: nombre de la base de datos
+# -F p: formato plain (SQL text)
+# -f: archivo de salida
+# --data-only: NO, queremos estructura también
+# --schema-only: NO, queremos datos también
+# -a: incluir SOLO datos (deshabilitado, queremos todo)
+# -c: incluir DROP antes de CREATE (limpia antes de restaurar)
+# -C: incluir CREATE DATABASE
+# --column-inserts: usar INSERT con nombres de columnas (más legible y robusto)
+# --disable-dollar-quoting: usar comillas estándar
+# --disable-triggers: desactivar triggers durante restauración
+# -E UTF8: encoding UTF-8
+# -v: verbose (mostrar progreso)
+# --inserts: usar comandos INSERT en lugar de COPY (más compatible)
+# --no-owner: no incluir comandos SET OWNER
+# --no-privileges: no incluir comandos GRANT/REVOKE
+# -O: igual que --no-owner
+# -x: igual que --no-privileges
+
+& pg_dump `
+    -h $DbHost `
+    -p $DbPort `
+    -U $DbUser `
+    -d $DbName `
+    -F p `
+    -f $backupFile `
+    --column-inserts `
+    --create `
+    --clean `
+    -E UTF8 `
+    -v `
+    --no-owner `
+    --no-privileges
 
 if ($LASTEXITCODE -eq 0) {
     $size = (Get-Item $backupFile).Length / 1KB
