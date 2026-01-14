@@ -30,12 +30,16 @@ public class TenantFilter extends OncePerRequestFilter {
         System.out.println("🔍 TenantFilter procesando: " + request.getMethod() + " " + request.getRequestURI());
         
         // Debug: mostrar headers relevantes
-        System.out.println("📋 Headers empresaId: " + request.getHeader("empresaId"));
+        System.out.println("📋 Header 'empresaId': " + request.getHeader("empresaId"));
+        System.out.println("📋 Header 'X-Empresa-Id': " + request.getHeader("X-Empresa-Id"));
+        System.out.println("📋 Header 'empresa-id': " + request.getHeader("empresa-id"));
         System.out.println("📋 Parámetro empresaId: " + request.getParameter("empresaId"));
         
-        // Obtener empresaId del parámetro query o header
+        // Obtener empresaId del parámetro query o header (intentar varios nombres de header)
         String empresaIdParam = request.getParameter("empresaId");
-        String empresaIdHeader = request.getHeader("empresaId");  // Cambiado a "empresaId"
+        String empresaIdHeader = request.getHeader("empresaId");
+        if (empresaIdHeader == null) empresaIdHeader = request.getHeader("X-Empresa-Id");
+        if (empresaIdHeader == null) empresaIdHeader = request.getHeader("empresa-id");
         
         try {
             Long empresaId = null;

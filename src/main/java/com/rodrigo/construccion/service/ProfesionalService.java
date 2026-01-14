@@ -1,12 +1,15 @@
 package com.rodrigo.construccion.service;
 
+import com.rodrigo.construccion.config.TenantContext;
 import com.rodrigo.construccion.dto.mapper.ProfesionalMapper;
 import com.rodrigo.construccion.dto.request.ProfesionalRequestDTO;
 import com.rodrigo.construccion.enums.TipoProfesional;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
+import com.rodrigo.construccion.model.entity.Empresa;
 import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.dto.request.AsignarProfesionalRequest;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
+import com.rodrigo.construccion.repository.EmpresaRepository;
 import com.rodrigo.construccion.repository.ProfesionalRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -26,14 +29,42 @@ public class ProfesionalService implements IProfesionalService {
 
     private final ProfesionalRepository profesionalRepository;
     private final ProfesionalMapper profesionalMapper;
+    private final EmpresaRepository empresaRepository;
 
     /* Crear nuevo profesional desde DTO */
     @Override
     public ProfesionalResponseDTO crearProfesional(ProfesionalRequestDTO requestDTO) {
+        // Log para debug
+        System.out.println("DEBUG - empresaId del body: " + requestDTO.getEmpresaId());
+        System.out.println("DEBUG - empresaId del TenantContext: " + TenantContext.getTenantId());
+        
         // Validar rol personalizado si el tipo es "Otro (personalizado)"
         validarRolPersonalizado(requestDTO.getTipoProfesional(), requestDTO.getRolPersonalizado());
 
         Profesional profesional = profesionalMapper.toEntity(requestDTO);
+
+        // Setear la empresa: priorizar el del body, si no existe, usar el del contexto
+        Long empresaIdFromBody = requestDTO.getEmpresaId();
+        Long empresaIdFromContext = TenantContext.getTenantId();
+        final Long empresaId = empresaIdFromBody != null ? empresaIdFromBody : empresaIdFromContext;
+        
+        if (empresaIdFromBody == null && empresaIdFromContext != null) {
+            System.out.println("DEBUG - Usando empresaId del TenantContext: " + empresaIdFromContext);
+        }
+        
+        if (empresaId != null) {
+            System.out.println("DEBUG - Buscando empresa con ID: " + empresaId);
+            Empresa empresa = empresaRepository.findById(empresaId)
+                    .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + empresaId));
+            
+            // Forzar la inicialización de la empresa para evitar problemas con LAZY loading
+            empresa.getId(); // Esto asegura que la entidad esté completamente cargada
+            
+            profesional.setEmpresa(empresa);
+            System.out.println("DEBUG - Empresa seteada: " + empresa.getNombreEmpresa() + " (ID: " + empresa.getId() + ")");
+        } else {
+            System.out.println("DEBUG - empresaId es NULL en body y contexto, no se setea empresa");
+        }
 
         // Lógica flexible para tipo de profesional
         TipoProfesional tipoEnum = TipoProfesional.fromDisplayName(requestDTO.getTipoProfesional());
@@ -53,7 +84,23 @@ public class ProfesionalService implements IProfesionalService {
             profesional.setValorHoraDefault(BigDecimal.ZERO);
         }
 
+        // Debug antes de guardar
+        System.out.println("DEBUG - Antes de guardar:");
+        System.out.println("  - profesional.getEmpresa(): " + profesional.getEmpresa());
+        System.out.println("  - profesional.getEmpresa() != null: " + (profesional.getEmpresa() != null));
+        if (profesional.getEmpresa() != null) {
+            System.out.println("  - empresaId de la entidad: " + profesional.getEmpresa().getId());
+        }
+
         Profesional profesionalGuardado = profesionalRepository.save(profesional);
+
+        // Debug después de guardar
+        System.out.println("DEBUG - Después de guardar:");
+        System.out.println("  - profesionalGuardado.getId(): " + profesionalGuardado.getId());
+        System.out.println("  - profesionalGuardado.getEmpresa(): " + profesionalGuardado.getEmpresa());
+        if (profesionalGuardado.getEmpresa() != null) {
+            System.out.println("  - empresaId guardado: " + profesionalGuardado.getEmpresa().getId());
+        }
 
         return profesionalMapper.toResponseDTO(profesionalGuardado);
     }

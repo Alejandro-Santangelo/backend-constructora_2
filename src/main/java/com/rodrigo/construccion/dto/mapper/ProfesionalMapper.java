@@ -25,18 +25,12 @@ public interface ProfesionalMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "fechaCreacion", ignore = true)
+    @Mapping(target = "empresa", ignore = true)
     @Mapping(target = "obrasAsignadas", ignore = true)
     @Mapping(target = "honorarios", ignore = true)
     @Mapping(target = "importeGanancia", ignore = true)
     @Mapping(target = "tipoProfesionalEnum", ignore = true)
-    @Mapping(target = "horas", ignore = true)
-    @Mapping(target = "dias", ignore = true)
-    @Mapping(target = "semanas", ignore = true)
-    @Mapping(target = "meses", ignore = true)
-    @Mapping(target = "honorarioHora", ignore = true)
-    @Mapping(target = "honorarioDia", ignore = true)
-    @Mapping(target = "honorarioSemana", ignore = true)
-    @Mapping(target = "honorarioMes", ignore = true)
+    @Mapping(target = "honorarioDia", source = "costoJornal")  // Mapear costoJornal a honorarioDia
     Profesional toEntity(ProfesionalRequestDTO dto);
 
     /**
@@ -44,24 +38,19 @@ public interface ProfesionalMapper {
      */
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "fechaCreacion", ignore = true)
+    @Mapping(target = "empresa", ignore = true)
     @Mapping(target = "obrasAsignadas", ignore = true)
     @Mapping(target = "honorarios", ignore = true)
     @Mapping(target = "importeGanancia", ignore = true)
     @Mapping(target = "tipoProfesionalEnum", ignore = true)
-    @Mapping(target = "horas", ignore = true)
-    @Mapping(target = "dias", ignore = true)
-    @Mapping(target = "semanas", ignore = true)
-    @Mapping(target = "meses", ignore = true)
-    @Mapping(target = "honorarioHora", ignore = true)
-    @Mapping(target = "honorarioDia", ignore = true)
-    @Mapping(target = "honorarioSemana", ignore = true)
-    @Mapping(target = "honorarioMes", ignore = true)
+    @Mapping(target = "honorarioDia", source = "costoJornal")  // Mapear costoJornal a honorarioDia
     void updateEntity(ProfesionalRequestDTO requestDTO, @MappingTarget Profesional profesional);
 
     /**
      * Convierte una entidad Profesional a ProfesionalResponseDTO
      * Evita el bucle infinito al no incluir las relaciones bidireccionales
      */
+    @Mapping(target = "empresaId", expression = "java(profesional.getEmpresa() != null ? profesional.getEmpresa().getId() : null)")
     @Mapping(target = "cantidadObrasAsignadas", expression = "java(profesional.getObrasAsignadas() != null ? profesional.getObrasAsignadas().size() : 0)")
     @Mapping(target = "cantidadHonorarios", expression = "java(profesional.getHonorarios() != null ? profesional.getHonorarios().size() : 0)")
     @Mapping(target = "porcentajeGanancia", source = "porcentajeGanancia")
