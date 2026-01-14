@@ -48,12 +48,7 @@ public class HonorarioService {
     /**
      * Obtiene una página de resúmenes de honorarios agrupados por profesional.
      * Este método es óptimo porque pagina sobre los profesionales, no sobre los
-     * honorarios,
-     * evitando así la división de los datos de un mismo profesional en múltiples
-     * páginas.
-     * 
-     * @param pageable Configuración de la paginación.
-     * @return Una página de DTOs de resumen.
+     * honorarios, evitando así la división de los datos de un mismo profesional en múltiples páginas.
      */
     public Page<ResumenHonorariosProfesionalDTO> obtenerTodosHonorariosPaginados(Pageable pageable, Long empresaId) {
 
@@ -154,7 +149,7 @@ public class HonorarioService {
 
     /* Buscar honorarios por rango de fechas */
     public List<ResumenHonorariosProfesionalDTO> buscarHonorariosPorRangoFechas(LocalDate fechaInicio,
-            LocalDate fechaFin, Long empresaId) {
+                                                                                LocalDate fechaFin, Long empresaId) {
 
         empresaService.findEmpresaById(empresaId);
         // 1. Llamar al método optimizado del repositorio que filtra en la base de
@@ -168,7 +163,7 @@ public class HonorarioService {
 
     /* Buscar honorarios por monto mínimo */
     public List<ResumenHonorariosProfesionalDTO> buscarHonorariosPorMontoMinimo(BigDecimal montoMinimo,
-            Long empresaId) {
+                                                                                Long empresaId) {
 
         empresaService.findEmpresaById(empresaId);
         // 1. Llamar al método optimizado del repositorio que filtra en la base de
@@ -239,7 +234,7 @@ public class HonorarioService {
      * Filtra por los criterios proporcionados directamente en la base de datos.
      */
     public List<ResumenHonorariosProfesionalDTO> busquedaAvanzada(Long empresaId, LocalDate fechaInicio,
-            LocalDate fechaFin, BigDecimal montoMinimo) {
+                                                                  LocalDate fechaFin, BigDecimal montoMinimo) {
         empresaService.findEmpresaById(empresaId);
         // 1. Llamar al método optimizado del repositorio que filtra en la base de
         // datos.

@@ -1,6 +1,9 @@
 package com.rodrigo.construccion.controller;
 
-import com.rodrigo.construccion.model.dto.etapadiaria.*;
+import com.rodrigo.construccion.dto.request.EtapasDiariasRequestDTO;
+import com.rodrigo.construccion.dto.request.TareaRequestDTO;
+import com.rodrigo.construccion.dto.response.EtapaDiariaCreacionResponseDTO;
+import com.rodrigo.construccion.dto.response.EtapasDiariasResponseDTO;
 import com.rodrigo.construccion.service.EtapasDiariasService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

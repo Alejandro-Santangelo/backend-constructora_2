@@ -2,7 +2,7 @@ package com.rodrigo.construccion.service.impl;
 
 import com.rodrigo.construccion.model.entity.PresupuestoGastoGeneral;
 import com.rodrigo.construccion.repository.PresupuestoGastoGeneralRepository;
-import com.rodrigo.construccion.service.PresupuestoGastoGeneralService;
+import com.rodrigo.construccion.service.IPresupuestoGastoGeneralService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -11,7 +11,7 @@ import java.util.List;
 import java.util.Optional;
 
 @Service
-public class PresupuestoGastoGeneralServiceImpl implements PresupuestoGastoGeneralService {
+public class PresupuestoGastoGeneralServiceImpl implements IPresupuestoGastoGeneralService {
 
     @Autowired
     private PresupuestoGastoGeneralRepository repository;

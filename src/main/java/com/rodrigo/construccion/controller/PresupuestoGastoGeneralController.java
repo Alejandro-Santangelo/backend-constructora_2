@@ -1,7 +1,7 @@
 package com.rodrigo.construccion.controller;
 
 import com.rodrigo.construccion.model.entity.PresupuestoGastoGeneral;
-import com.rodrigo.construccion.service.PresupuestoGastoGeneralService;
+import com.rodrigo.construccion.service.IPresupuestoGastoGeneralService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +13,7 @@ import java.util.List;
 public class PresupuestoGastoGeneralController {
 
     @Autowired
-    private PresupuestoGastoGeneralService service;
+    private IPresupuestoGastoGeneralService service;
 
     @GetMapping
     public ResponseEntity<List<PresupuestoGastoGeneral>> getAllByEmpresa(@RequestParam Long empresaId) {

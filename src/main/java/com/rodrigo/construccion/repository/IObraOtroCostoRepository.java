@@ -1,6 +1,6 @@
 package com.rodrigo.construccion.repository;
 
-import com.rodrigo.construccion.entity.ObraOtroCosto;
+import com.rodrigo.construccion.model.entity.ObraOtroCosto;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;

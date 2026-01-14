@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.rodrigo.construccion.enums.PresupuestoEstado;
+import com.rodrigo.construccion.enums.TipoPresupuesto;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.EnumType;
 
@@ -18,7 +19,6 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
-import jakarta.persistence.OneToOne;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
@@ -29,8 +29,6 @@ import lombok.Setter;
 import org.hibernate.annotations.Filter;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -344,8 +342,8 @@ public class PresupuestoNoCliente {
      */
     @Enumerated(EnumType.STRING)
     @Column(name = "modo_presupuesto", nullable = false, length = 50)
-    private com.rodrigo.construccion.model.enums.TipoPresupuesto tipoPresupuesto = 
-        com.rodrigo.construccion.model.enums.TipoPresupuesto.TRADICIONAL;
+    private TipoPresupuesto tipoPresupuesto =
+        TipoPresupuesto.TRADICIONAL;
 
     /**
      * Fecha de la última modificación del estado.

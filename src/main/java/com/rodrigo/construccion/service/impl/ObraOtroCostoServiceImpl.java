@@ -2,7 +2,7 @@ package com.rodrigo.construccion.service.impl;
 
 import com.rodrigo.construccion.dto.request.AsignarOtroCostoRequestDTO;
 import com.rodrigo.construccion.dto.response.ObraOtroCostoResponseDTO;
-import com.rodrigo.construccion.entity.ObraOtroCosto;
+import com.rodrigo.construccion.model.entity.ObraOtroCosto;
 import com.rodrigo.construccion.model.entity.PresupuestoGastoGeneral;
 import com.rodrigo.construccion.repository.IObraOtroCostoRepository;
 import com.rodrigo.construccion.repository.PresupuestoGastoGeneralRepository;

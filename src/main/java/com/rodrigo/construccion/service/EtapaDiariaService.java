@@ -6,7 +6,7 @@ import com.rodrigo.construccion.dto.response.EtapaDiariaResponseDTO;
 import com.rodrigo.construccion.model.entity.EtapaDiaria;
 import com.rodrigo.construccion.model.entity.ProfesionalTareaEtapa;
 import com.rodrigo.construccion.model.entity.TareaEtapaDiaria;
-import com.rodrigo.construccion.model.repository.ProfesionalTareaEtapaRepository;
+import com.rodrigo.construccion.repository.ProfesionalTareaEtapaRepository;
 import com.rodrigo.construccion.repository.TareaEtapaDiariaRepository;
 import com.rodrigo.construccion.repository.EtapaDiariaRepository;
 import com.rodrigo.construccion.repository.ObraRepository;

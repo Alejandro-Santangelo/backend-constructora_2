@@ -1,6 +1,14 @@
 package com.rodrigo.construccion.service;
 
-import com.rodrigo.construccion.model.dto.etapadiaria.*;
+import com.rodrigo.construccion.dto.ProfesionalAsignadoTareaDTO;
+import com.rodrigo.construccion.dto.ProfesionalDisponibleDTO;
+import com.rodrigo.construccion.dto.ResumenDTO;
+import com.rodrigo.construccion.dto.request.EtapasDiariasRequestDTO;
+import com.rodrigo.construccion.dto.request.ProfesionalTareaRequestDTO;
+import com.rodrigo.construccion.dto.request.TareaRequestDTO;
+import com.rodrigo.construccion.dto.response.EtapaDiariaCreacionResponseDTO;
+import com.rodrigo.construccion.dto.response.EtapasDiariasResponseDTO;
+import com.rodrigo.construccion.dto.response.TareaResponseDTO;
 import com.rodrigo.construccion.model.entity.*;
 import com.rodrigo.construccion.repository.*;
 import jakarta.transaction.Transactional;
@@ -12,7 +20,6 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * Service para gestión de etapas diarias y asignación de profesionales a tareas
