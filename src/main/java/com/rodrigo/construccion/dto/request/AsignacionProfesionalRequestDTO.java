@@ -4,16 +4,12 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDate;
 
-/**
- * DTO para crear nueva asignación de profesional a rubro de obra
- */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Schema(description = "Request para asignar profesional a rubro de obra")
@@ -28,8 +24,8 @@ public class AsignacionProfesionalRequestDTO {
     private Long rubroId;
 
     @NotNull(message = "El ID del item es obligatorio")
-    @Schema(description = "ID del profesional o jornal específico dentro del rubro", 
-            example = "697", 
+    @Schema(description = "ID del profesional o jornal específico dentro del rubro",
+            example = "697",
             required = true)
     private Long itemId;
 
@@ -37,8 +33,8 @@ public class AsignacionProfesionalRequestDTO {
     private String rubroNombre;
 
     @NotBlank(message = "El tipo de asignación es obligatorio")
-    @Schema(description = "Tipo de asignación: PROFESIONAL (solo rol) o JORNAL (consume jornales)", 
-            example = "JORNAL", 
+    @Schema(description = "Tipo de asignación: PROFESIONAL (solo rol) o JORNAL (consume jornales)",
+            example = "JORNAL",
             allowableValues = {"PROFESIONAL", "JORNAL"},
             required = true)
     private String tipoAsignacion;

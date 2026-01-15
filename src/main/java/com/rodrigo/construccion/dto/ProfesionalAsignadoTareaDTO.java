@@ -1,21 +1,15 @@
 package com.rodrigo.construccion.dto;
 
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.math.BigDecimal;
 
-/**
- * DTO para profesional asignado a una tarea
- */
-@Data
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 public class ProfesionalAsignadoTareaDTO {
-
     private Long asignacionDiaId;
     private Long profesionalId;
     private String profesionalNombre;

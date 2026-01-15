@@ -11,15 +11,14 @@ import lombok.Setter;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.Filter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
  * Entidad AsignacionProfesionalObra
- * 
  * Representa la asignación de un profesional a un rubro específico de un presupuesto vinculado a una obra.
  * Permite asignaciones por ROL (solo el profesional) o por JORNAL (consume jornales del total disponible).
- * 
  * Diferencia con ProfesionalObra:
  * - ProfesionalObra: Asigna profesional a obra completa (sin rubro específico)
  * - AsignacionProfesionalObra: Asigna profesional a RUBRO del presupuesto de la obra
@@ -45,6 +44,8 @@ public class AsignacionProfesionalObra {
     @Column(name = "id")
     private Long id;
 
+    // ==================== RELACIONES Y SUS IDs ====================
+
     @NotNull(message = "El profesional es obligatorio")
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profesional_id", nullable = false, insertable = false, updatable = false)
@@ -61,6 +62,19 @@ public class AsignacionProfesionalObra {
     @Column(name = "obra_id", nullable = false)
     private Long obraId;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "presupuesto_no_cliente_id")
+    private PresupuestoNoCliente presupuestoNoCliente;
+
+    @Column(name = "presupuesto_no_cliente_id", insertable = false, updatable = false)
+    private Long presupuestoNoClienteId;
+
+    @NotNull(message = "La empresa es obligatoria")
+    @Column(name = "empresa_id", nullable = false)
+    private Long empresaId;
+
+    // ==================== CAMPOS DEL RUBRO ====================
+
     @NotNull(message = "El ID del rubro es obligatorio")
     @Column(name = "rubro_id", nullable = false)
     private Long rubroId;
@@ -72,15 +86,14 @@ public class AsignacionProfesionalObra {
     @Column(name = "rubro_nombre", nullable = false)
     private String rubroNombre;
 
-    @Column(name = "presupuesto_no_cliente_id")
-    private Long presupuestoNoClienteId;
+    // ==================== CAMPOS DE ASIGNACIÓN ====================
 
     @NotBlank(message = "El tipo de asignación es obligatorio")
     @Column(name = "tipo_asignacion", nullable = false, length = 50)
     private String tipoAsignacion; // PROFESIONAL o JORNAL
 
     @Column(name = "importe_jornal", precision = 15, scale = 2)
-    private java.math.BigDecimal importeJornal;
+    private BigDecimal importeJornal;
 
     @PositiveOrZero(message = "La cantidad de jornales debe ser mayor o igual a cero")
     @Column(name = "cantidad_jornales")
@@ -104,10 +117,6 @@ public class AsignacionProfesionalObra {
     @Column(name = "estado", nullable = false, length = 50)
     private String estado = "ACTIVO"; // ACTIVO, FINALIZADO, CANCELADO
 
-    @NotNull(message = "La empresa es obligatoria")
-    @Column(name = "empresa_id", nullable = false)
-    private Long empresaId;
-
     // Campos adicionales de la tabla (precargados para evitar joins)
     @Column(name = "profesional_tipo", length = 100)
     private String profesionalTipo;
@@ -122,6 +131,8 @@ public class AsignacionProfesionalObra {
     @Column(name = "semanas_objetivo")
     private Integer semanasObjetivo;
 
+    // ==================== AUDITORÍA ====================
+
     @CreationTimestamp
     @Column(name = "creado_en", updatable = false)
     private LocalDateTime creadoEn;
@@ -129,7 +140,8 @@ public class AsignacionProfesionalObra {
     @Column(name = "fecha_modificacion")
     private LocalDateTime fechaModificacion;
 
-    // Métodos de conveniencia
+    // ==================== MÉTODOS DE CONVENIENCIA ====================
+
     public Integer getJornalesRestantes() {
         if (cantidadJornales == null || jornalesUtilizados == null) {
             return 0;
