@@ -426,6 +426,18 @@ public class ProfesionalObraService implements IProfesionalObraService {
         throw new UnsupportedOperationException("Método pendiente de adaptación - usar búsqueda por dirección");
     }
 
+    /**
+     * Actualizar asignación existente
+     */
+    @Override
+    public void actualizarSaldoDisponible(Long profesionalObraId, BigDecimal nuevoSaldo) {
+        ProfesionalObra asignacion = profesionalObraRepository.findById(profesionalObraId)
+                .orElseThrow(() -> new ResourceNotFoundException("Asignación no encontrada con ID: " + profesionalObraId));
+
+        asignacion.setSaldoDisponible(nuevoSaldo);
+        profesionalObraRepository.save(asignacion);
+    }
+
     /*
      * ============================================
      * METODOS QUE NO SE ESTÁN USANDO LITERALMENTE EN NINGÚN LADO
@@ -451,34 +463,6 @@ public class ProfesionalObraService implements IProfesionalObraService {
      */
     public ProfesionalObra crear(ProfesionalObra asignacion) {
         return profesionalObraRepository.save(asignacion);
-    }
-
-    /**
-     * Actualizar asignación existente
-     */
-    public ProfesionalObra actualizar(Long id, ProfesionalObra asignacionActualizada) {
-        return profesionalObraRepository.findById(id)
-                .map(asignacion -> {
-                    // Actualizar campos disponibles
-                    if (asignacionActualizada.getFechaDesde() != null) {
-                        asignacion.setFechaDesde(asignacionActualizada.getFechaDesde());
-                    }
-                    if (asignacionActualizada.getFechaHasta() != null) {
-                        asignacion.setFechaHasta(asignacionActualizada.getFechaHasta());
-                    }
-                    if (asignacionActualizada.getRolEnObra() != null) {
-                        asignacion.setRolEnObra(asignacionActualizada.getRolEnObra());
-                    }
-                    if (asignacionActualizada.getValorHoraAsignado() != null) {
-                        asignacion.setValorHoraAsignado(asignacionActualizada.getValorHoraAsignado());
-                    }
-                    if (asignacionActualizada.getActivo() != null) {
-                        asignacion.setActivo(asignacionActualizada.getActivo());
-                    }
-
-                    return profesionalObraRepository.save(asignacion);
-                })
-                .orElseThrow(() -> new RuntimeException("Asignación no encontrada con ID: " + id));
     }
 
     /**

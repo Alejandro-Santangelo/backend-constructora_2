@@ -9,7 +9,6 @@ import com.rodrigo.construccion.model.entity.Empresa;
 import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.dto.request.AsignarProfesionalRequest;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
-import com.rodrigo.construccion.repository.EmpresaRepository;
 import com.rodrigo.construccion.repository.ProfesionalRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -29,15 +28,11 @@ public class ProfesionalService implements IProfesionalService {
 
     private final ProfesionalRepository profesionalRepository;
     private final ProfesionalMapper profesionalMapper;
-    private final EmpresaRepository empresaRepository;
+    private final IEmpresaService empresaService;
 
     /* Crear nuevo profesional desde DTO */
     @Override
     public ProfesionalResponseDTO crearProfesional(ProfesionalRequestDTO requestDTO) {
-        // Log para debug
-        System.out.println("DEBUG - empresaId del body: " + requestDTO.getEmpresaId());
-        System.out.println("DEBUG - empresaId del TenantContext: " + TenantContext.getTenantId());
-        
         // Validar rol personalizado si el tipo es "Otro (personalizado)"
         validarRolPersonalizado(requestDTO.getTipoProfesional(), requestDTO.getRolPersonalizado());
 
@@ -47,32 +42,18 @@ public class ProfesionalService implements IProfesionalService {
         Long empresaIdFromBody = requestDTO.getEmpresaId();
         Long empresaIdFromContext = TenantContext.getTenantId();
         final Long empresaId = empresaIdFromBody != null ? empresaIdFromBody : empresaIdFromContext;
-        
-        if (empresaIdFromBody == null && empresaIdFromContext != null) {
-            System.out.println("DEBUG - Usando empresaId del TenantContext: " + empresaIdFromContext);
-        }
-        
+
         if (empresaId != null) {
-            System.out.println("DEBUG - Buscando empresa con ID: " + empresaId);
-            Empresa empresa = empresaRepository.findById(empresaId)
-                    .orElseThrow(() -> new ResourceNotFoundException("Empresa no encontrada con ID: " + empresaId));
-            
-            // Forzar la inicialización de la empresa para evitar problemas con LAZY loading
-            empresa.getId(); // Esto asegura que la entidad esté completamente cargada
-            
+            Empresa empresa = empresaService.findEmpresaById(empresaId);
+            empresa.getId();
             profesional.setEmpresa(empresa);
-            System.out.println("DEBUG - Empresa seteada: " + empresa.getNombreEmpresa() + " (ID: " + empresa.getId() + ")");
-        } else {
-            System.out.println("DEBUG - empresaId es NULL en body y contexto, no se setea empresa");
         }
 
         // Lógica flexible para tipo de profesional
         TipoProfesional tipoEnum = TipoProfesional.fromDisplayName(requestDTO.getTipoProfesional());
         if (tipoEnum != null) {
-            // Si el tipo existe en el enum, estandarizamos el valor
             profesional.setTipoProfesional(tipoEnum.getDisplayName());
         } else {
-            // Si es un tipo nuevo, simplemente guardamos el texto ingresado por el usuario
             profesional.setTipoProfesional(requestDTO.getTipoProfesional());
         }
 
@@ -84,86 +65,7 @@ public class ProfesionalService implements IProfesionalService {
             profesional.setValorHoraDefault(BigDecimal.ZERO);
         }
 
-        // Debug antes de guardar
-        System.out.println("DEBUG - Antes de guardar:");
-        System.out.println("  - profesional.getEmpresa(): " + profesional.getEmpresa());
-        System.out.println("  - profesional.getEmpresa() != null: " + (profesional.getEmpresa() != null));
-        if (profesional.getEmpresa() != null) {
-            System.out.println("  - empresaId de la entidad: " + profesional.getEmpresa().getId());
-        }
-
-        Profesional profesionalGuardado = profesionalRepository.save(profesional);
-
-        // Debug después de guardar
-        System.out.println("DEBUG - Después de guardar:");
-        System.out.println("  - profesionalGuardado.getId(): " + profesionalGuardado.getId());
-        System.out.println("  - profesionalGuardado.getEmpresa(): " + profesionalGuardado.getEmpresa());
-        if (profesionalGuardado.getEmpresa() != null) {
-            System.out.println("  - empresaId guardado: " + profesionalGuardado.getEmpresa().getId());
-        }
-
-        return profesionalMapper.toResponseDTO(profesionalGuardado);
-    }
-
-    /* Obtener todos los profesionales */
-    @Override
-    public List<ProfesionalResponseDTO> obtenerTodos() {
-        List<Profesional> profesionales = profesionalRepository.findAll();
-        return profesionalMapper.toResponseDTOList(profesionales);
-    }
-
-    /* Obtener profesional por ID - Usado tambien en ProfesionalObraService */
-    @Override
-    public Profesional obtenerPorId(Long id) {
-        return profesionalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
-    }
-
-    /* Obtener profesional por ID - Usado en ProfesionalController */
-    @Override
-    public ProfesionalResponseDTO obtenerProfesionalPorId(Long id) {
-        Profesional profesionalEncontrado = profesionalRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
-        return profesionalMapper.toResponseDTO(profesionalEncontrado);
-    }
-
-    /**
-     * Buscar profesionales por tipo con búsqueda flexible
-     * Maneja variaciones de género y capitalización:
-     * - Arquitecto/Arquitecta, arquitecto/arquitecta
-     * - Ingeniero/Ingeniera, ingeniero/ingeniera
-     * - Diseñador/Diseñadora, diseñador/diseñadora
-     * etc.
-     */
-    @Override
-    public List<ProfesionalResponseDTO> buscarPorTipo(String tipoProfesional) {
-
-        // Normalizar el input del usuario
-        String tipoNormalizado = normalizarTipoProfesional(tipoProfesional);
-
-        // Primero intentar búsqueda exacta (ignorando mayúsculas)
-        List<Profesional> resultadosExactos = profesionalRepository.findByTipoProfesionalIgnoreCase(tipoNormalizado);
-
-        if (!resultadosExactos.isEmpty())
-            return profesionalMapper.toResponseDTOList(resultadosExactos);
-
-        // Si no hay resultados exactos, usar búsqueda flexible
-        List<Profesional> resultadosFlexibles = profesionalRepository.buscarPorTipoFlexible(tipoNormalizado);
-
-        return profesionalMapper.toResponseDTOList(resultadosFlexibles);
-    }
-
-    /* Normaliza el tipo de profesional para mejorar las búsquedas */
-    private String normalizarTipoProfesional(String tipo) {
-        if (tipo == null || tipo.trim().isEmpty()) {
-            return tipo;
-        }
-
-        String tipoLimpio = tipo.trim();
-
-        // Capitalizar primera letra
-        return tipoLimpio.substring(0, 1).toUpperCase() +
-                tipoLimpio.substring(1).toLowerCase();
+        return profesionalMapper.toResponseDTO(profesionalRepository.save(profesional));
     }
 
     /* Actualizar profesional existente desde DTO */
@@ -196,6 +98,71 @@ public class ProfesionalService implements IProfesionalService {
                     return profesionalMapper.toResponseDTO(profesionalGuardado);
                 })
                 .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
+    }
+
+    /* Valida que el rol personalizado esté presente cuando el tipo de profesional es "Otro (personalizado) */
+    private void validarRolPersonalizado(String tipoProfesional, String rolPersonalizado) {
+        if (tipoProfesional != null && tipoProfesional.trim().equalsIgnoreCase("Otro (personalizado)")) {
+            if (rolPersonalizado == null || rolPersonalizado.trim().isEmpty()) {
+                throw new IllegalArgumentException(
+                        "El campo 'Rol Personalizado' es obligatorio cuando el tipo de profesional es 'Otro (personalizado)'"
+                );
+            }
+        }
+    }
+
+    /* Obtener todos los profesionales */
+    @Override
+    public List<ProfesionalResponseDTO> obtenerTodos() {
+        List<Profesional> profesionales = profesionalRepository.findAll();
+        return profesionalMapper.toResponseDTOList(profesionales);
+    }
+
+    /* Obtener profesional por ID - Usado tambien en ProfesionalObraService */
+    @Override
+    public Profesional obtenerPorId(Long id) {
+        return profesionalRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
+    }
+
+    /* Obtener profesional por ID - Usado en ProfesionalController */
+    @Override
+    public ProfesionalResponseDTO obtenerProfesionalPorId(Long id) {
+        Profesional profesionalEncontrado = profesionalRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Profesional no encontrado con ID: " + id));
+        return profesionalMapper.toResponseDTO(profesionalEncontrado);
+    }
+
+    /* Buscar profesionales por tipo con búsqueda flexible */
+    @Override
+    public List<ProfesionalResponseDTO> buscarPorTipo(String tipoProfesional) {
+
+        // Normalizar el input del usuario
+        String tipoNormalizado = normalizarTipoProfesional(tipoProfesional);
+
+        // Primero intentar búsqueda exacta (ignorando mayúsculas)
+        List<Profesional> resultadosExactos = profesionalRepository.findByTipoProfesionalIgnoreCase(tipoNormalizado);
+
+        if (!resultadosExactos.isEmpty())
+            return profesionalMapper.toResponseDTOList(resultadosExactos);
+
+        // Si no hay resultados exactos, usar búsqueda flexible
+        List<Profesional> resultadosFlexibles = profesionalRepository.buscarPorTipoFlexible(tipoNormalizado);
+
+        return profesionalMapper.toResponseDTOList(resultadosFlexibles);
+    }
+
+    /* Normaliza el tipo de profesional para mejorar las búsquedas */
+    private String normalizarTipoProfesional(String tipo) {
+        if (tipo == null || tipo.trim().isEmpty()) {
+            return tipo;
+        }
+
+        String tipoLimpio = tipo.trim();
+
+        // Capitalizar primera letra
+        return tipoLimpio.substring(0, 1).toUpperCase() +
+                tipoLimpio.substring(1).toLowerCase();
     }
 
     /* Eliminar profesional */
@@ -278,7 +245,7 @@ public class ProfesionalService implements IProfesionalService {
             if (request.getTipoProfesional() == null || request.getTipoProfesional().isBlank() ||
                     request.getNombre() == null || request.getNombre().isBlank()) {
                 throw new IllegalArgumentException(
-                        "Si no se proporciona 'profesionalId', los campos 'tipoProfesional' y 'nombre' son obligatorios.");
+                        "Si no se proporciona 'profesionalId', los campos 'Tipo Profesional' y 'nombre' son obligatorios.");
             }
             // Se usa el tipo de profesional directamente, ya que ahora es flexible.
 
@@ -290,20 +257,10 @@ public class ProfesionalService implements IProfesionalService {
         }
     }
 
-    /**
-     * Busca profesionales activos por tipo de forma flexible, encapsulando la
-     * lógica de variaciones de género.
-     *
-     * @param tipoProfesional El tipo de profesional a buscar (ej: "Arquitecto").
-     * @return Una lista de profesionales que coinciden.
-     * <p>
-     * Metodo usado en ProfesionalObraService
-     */
+    /* Busca profesionales activos por tipo de forma flexible, encapsulando la lógica de variaciones de género. */
     @Override
     @Transactional(readOnly = true)
     public List<Profesional> buscarActivosPorTipoFlexible(String tipoProfesional) {
-        // La búsqueda ahora es flexible y no depende del enum.
-        // Se puede usar directamente el método que ignora mayúsculas/minúsculas.
         return profesionalRepository.findByTipoProfesionalIgnoreCaseAndActivoTrue(tipoProfesional);
     }
 
@@ -346,62 +303,6 @@ public class ProfesionalService implements IProfesionalService {
     public List<ProfesionalResponseDTO> buscarPorNombre(String nombre) {
         List<Profesional> profesionalesEncontrados = profesionalRepository.findByNombreContaining(nombre);
         return profesionalMapper.toResponseDTOList(profesionalesEncontrados);
-    }
-
-    /**
-     * Valida que el rol personalizado esté presente cuando el tipo de profesional es "Otro (personalizado)"
-     *
-     * @param tipoProfesional  El tipo de profesional seleccionado
-     * @param rolPersonalizado El rol personalizado ingresado (puede ser null)
-     * @throws IllegalArgumentException Si el tipo es "Otro (personalizado)" y no se proveyó un rol personalizado
-     */
-    private void validarRolPersonalizado(String tipoProfesional, String rolPersonalizado) {
-        if (tipoProfesional != null && tipoProfesional.trim().equalsIgnoreCase("Otro (personalizado)")) {
-            if (rolPersonalizado == null || rolPersonalizado.trim().isEmpty()) {
-                throw new IllegalArgumentException(
-                        "El campo 'rolPersonalizado' es obligatorio cuando el tipo de profesional es 'Otro (personalizado)'"
-                );
-            }
-            if (rolPersonalizado.length() > 100) {
-                throw new IllegalArgumentException(
-                        "El campo 'rolPersonalizado' no puede exceder 100 caracteres"
-                );
-            }
-        }
-    }
-
-    /* ------ MÉTODOS NO USADOS EN NINGÚN LADO DEL SISTEMA ------ */
-
-    /* Obtener tipos de profesionales únicos desde la base de datos */
-    @Override
-    public List<String> obtenerTiposProfesionales() {
-        return profesionalRepository.findDistinctTipoProfesional();
-    }
-
-    /* Buscar profesionales activos - LO DEJO PORQUE PODRIAMOS USARLO. */
-    public List<Profesional> obtenerProfesionalesActivos() {
-        System.out.println("Obteniendo profesionales activos");
-        return profesionalRepository.findByActivoTrue();
-    }
-
-    /* Estadísticas básicas  */
-    public long contarTotal() {
-        return profesionalRepository.count();
-    }
-
-    /* NO USADO */
-    public long contarActivos() {
-        return profesionalRepository.countByActivoTrue();
-    }
-
-    /* NO USADO */
-    public long contarPorTipo(String tipoProfesional) {
-        return profesionalRepository.countByTipoProfesional(tipoProfesional);
-    }
-
-    /* NO USADO */
-    public BigDecimal obtenerValorHoraPromedio() {
-        return profesionalRepository.getValorHoraPromedio();
     }
 
 }

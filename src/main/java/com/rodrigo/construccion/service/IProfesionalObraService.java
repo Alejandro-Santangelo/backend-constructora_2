@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.service;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 import com.rodrigo.construccion.dto.request.ActualizarAsignacionRequest;
@@ -9,10 +10,12 @@ import com.rodrigo.construccion.dto.response.AsignacionProfesionalResponse;
 import com.rodrigo.construccion.dto.response.DisponibilidadProfesionalResponse;
 import com.rodrigo.construccion.dto.response.ListaProfesionalesResponse;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
+import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
 import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
 
 public interface IProfesionalObraService {
+    public void actualizarSaldoDisponible(Long profesionalObraId, BigDecimal nuevoSaldo);
 
     public List<AsignacionProfesionalResponse> obtenerTodasComoDTO();
     

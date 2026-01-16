@@ -41,12 +41,7 @@ public interface PresupuestoNoClienteRepository extends JpaRepository<Presupuest
             "(:piso IS NULL OR p.direccionObraPiso = :piso) AND " +
             "(:departamento IS NULL OR p.direccionObraDepartamento = :departamento) " +
             "ORDER BY p.numeroVersion DESC")
-    java.util.List<PresupuestoNoCliente> findByDireccionObra(
-            @Param("calle") String calle,
-            @Param("altura") String altura,
-            @Param("piso") String piso,
-            @Param("departamento") String departamento
-    );
+    List<PresupuestoNoCliente> findByDireccionObra(@Param("calle") String calle, @Param("altura") String altura, @Param("piso") String piso, @Param("departamento") String departamento);
 
     /**
      * Busca presupuestos por estado

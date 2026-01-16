@@ -11,41 +11,39 @@ import org.springframework.data.domain.Pageable;
 
 public interface IProfesionalService {
 
-    public List<ProfesionalResponseDTO> obtenerTodos();
+    List<ProfesionalResponseDTO> obtenerTodos();
 
-    public List<Profesional> findAllEntities();
+    List<Profesional> findAllEntities();
 
-    public Profesional obtenerPorId(Long id);
+    Profesional obtenerPorId(Long id);
 
-    public ProfesionalResponseDTO obtenerProfesionalPorId(Long id);
+    ProfesionalResponseDTO obtenerProfesionalPorId(Long id);
 
-    public ProfesionalResponseDTO crearProfesional(ProfesionalRequestDTO requestDTO);
+    ProfesionalResponseDTO crearProfesional(ProfesionalRequestDTO requestDTO);
 
-    public ProfesionalResponseDTO actualizar(Long id, ProfesionalRequestDTO requestDTO);
+    ProfesionalResponseDTO actualizar(Long id, ProfesionalRequestDTO requestDTO);
 
-    public void eliminar(Long id);
+    void eliminar(Long id);
 
-    public List<ProfesionalResponseDTO> buscarPorTipo(String tipoProfesional);
+    List<ProfesionalResponseDTO> buscarPorTipo(String tipoProfesional);
 
-    public List<ProfesionalResponseDTO> buscarPorNombre(String nombre);
+    List<ProfesionalResponseDTO> buscarPorNombre(String nombre);
 
-    public void actualizarValorHoraTodosPorPorcentaje(double porcentaje);
+    void actualizarValorHoraTodosPorPorcentaje(double porcentaje);
 
-    public void actualizarValorHoraPorIdPorPorcentaje(Long id, double porcentaje);
+    void actualizarValorHoraPorIdPorPorcentaje(Long id, double porcentaje);
 
-    public void actualizarPorcentajeGananciaTodos(double porcentaje);
+    void actualizarPorcentajeGananciaTodos(double porcentaje);
 
-    public void actualizarPorcentajeGananciaPorId(Long id, double porcentaje);
+    void actualizarPorcentajeGananciaPorId(Long id, double porcentaje);
 
-    public List<String> obtenerTiposProfesionales();
+    Profesional findProfesionalParaAsignacion(AsignarProfesionalRequest request);
 
-    public Profesional findProfesionalParaAsignacion(AsignarProfesionalRequest request);
+    List<Profesional> buscarActivosPorTipoFlexible(String tipoProfesional);
 
-    public List<Profesional> buscarActivosPorTipoFlexible(String tipoProfesional);
+    List<Profesional> buscarPorTipoProfesionalActivos(String tipoProfesional);
 
-    public List<Profesional> buscarPorTipoProfesionalActivos(String tipoProfesional);
-
-    public Profesional findFirstActivoByTipo(String tipoProfesional);
+    Profesional findFirstActivoByTipo(String tipoProfesional);
 
     Page<Profesional> findAllWithHonorarios(Pageable pageable, Long empresaId);
 

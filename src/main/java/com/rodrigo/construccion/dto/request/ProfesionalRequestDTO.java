@@ -12,9 +12,6 @@ import jakarta.validation.constraints.Size;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
-/**
- * DTO para crear/actualizar profesionales
- */
 @Getter
 @Setter
 @NoArgsConstructor

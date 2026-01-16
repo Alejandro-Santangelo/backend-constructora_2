@@ -8,10 +8,6 @@ import com.rodrigo.construccion.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 
 import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
-// ENTIDADES LEGACY ELIMINADAS - Ahora todo va a items_calculadora_presupuesto
-// import com.rodrigo.construccion.model.entity.PresupuestoNoClienteProfesional;
-// import com.rodrigo.construccion.model.entity.PresupuestoNoClienteMaterial;
-// import com.rodrigo.construccion.model.entity.PresupuestoNoClienteJornal;
 import com.rodrigo.construccion.model.entity.JornalCalculadora;
 import com.rodrigo.construccion.model.entity.PresupuestoCostoInicial;
 import com.rodrigo.construccion.model.entity.ItemCalculadoraPresupuesto;
@@ -127,6 +123,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
     @PersistenceContext
     private EntityManager entityManager;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<PresupuestoNoCliente> buscarPorDireccionObra (String calle, String altura, String piso, String departamento) {
+        return repository.findByDireccionObra(calle, altura, piso, departamento);
+    }
 
     /**
      * Obtiene todos los presupuestos de una obra específica
@@ -1949,21 +1951,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     }
 
     @Transactional
-    public PresupuestoNoCliente actualizarPorDireccion(
-            String direccionObraCalle,
-            String direccionObraAltura,
-            String direccionObraPiso,
-            String direccionObraDepartamento,
-            Integer numeroVersion,
-            PresupuestoNoClienteRequestDTO dto) {
-
+    public PresupuestoNoCliente actualizarPorDireccion(String direccionObraCalle, String direccionObraAltura, String direccionObraPiso, String direccionObraDepartamento,
+                                                       Integer numeroVersion,
+                                                       PresupuestoNoClienteRequestDTO dto) {
         // Buscar presupuestos por dirección
-        List<PresupuestoNoCliente> presupuestos = repository.findByDireccionObra(
-                direccionObraCalle,
-                direccionObraAltura,
-                direccionObraPiso,
-                direccionObraDepartamento
-        );
+        List<PresupuestoNoCliente> presupuestos = repository.findByDireccionObra(direccionObraCalle, direccionObraAltura, direccionObraPiso, direccionObraDepartamento);
 
         if (presupuestos.isEmpty()) {
             throw new IllegalArgumentException("No se encontró ningún presupuesto con la dirección especificada");

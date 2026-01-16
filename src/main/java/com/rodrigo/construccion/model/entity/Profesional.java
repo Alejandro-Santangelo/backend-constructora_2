@@ -32,8 +32,6 @@ import lombok.Setter;
 import com.rodrigo.construccion.enums.TipoProfesional;
 
 /**
- * Entidad Profesional
- * 
  * Representa los profesionales que trabajan en las obras.
  * Para otros tipos de empresa podría representar:
  * - Mueblería: Diseñadores, Carpinteros, etc.
@@ -126,17 +124,6 @@ public class Profesional {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
 
-    // Relaciones
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "empresa_id", nullable = true)
-    private Empresa empresa;
-
-    @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<ProfesionalObra> obrasAsignadas = new ArrayList<>();
-
-    @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Honorario> honorarios = new ArrayList<>();
-
     @Column(name = "cuit", length = 20, nullable = true)
     private String cuit;
 
@@ -148,6 +135,17 @@ public class Profesional {
     @Size(max = 100, message = "El rol personalizado no puede exceder 100 caracteres")
     @Column(name = "rol_personalizado", length = 100, nullable = true)
     private String rolPersonalizado;
+
+    // Relaciones
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "empresa_id", nullable = true)
+    private Empresa empresa;
+
+    @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<ProfesionalObra> obrasAsignadas = new ArrayList<>();
+
+    @OneToMany(mappedBy = "profesional", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Honorario> honorarios = new ArrayList<>();
 
     // Métodos de conveniencia
     public void addObraAsignada(ProfesionalObra profesionalObra) {
@@ -174,7 +172,7 @@ public class Profesional {
      * Método de conveniencia para actualizar el porcentaje y el importe de
      * ganancia.
      * Encapsula la lógica de cálculo en la propia entidad.
-     * 
+     *
      * @param nuevoPorcentaje El nuevo porcentaje de ganancia como BigDecimal.
      */
     public void actualizarGanancia(BigDecimal nuevoPorcentaje) {
