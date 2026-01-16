@@ -20,58 +20,70 @@ import java.util.List;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class StockMaterialService {
+public class StockMaterialService implements IStockMaterialService{
 
     private final StockMaterialRepository stockMaterialRepository;
 
     /* Obtener todo el stock */
+    @Override
     public List<StockMaterial> obtenerTodoStock() {
         return stockMaterialRepository.findAll();
     }
 
     /* Obtener stock con paginación */
+    @Override
     public Page<StockMaterial> obtenerStockPaginado(Pageable pageable) {
         return stockMaterialRepository.findAll(pageable);
     }
 
     /* Obtener stock por ID */
+    @Override
     public StockMaterial obtenerPorId(Long id) {
         return stockMaterialRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Stock no encontrado con ID: " + id));
     }
 
     /* Buscar stock por ubicación */
+    @Override
     public List<StockMaterial> buscarPorUbicacion(Long empresaId, String ubicacion) {
         return stockMaterialRepository.findByEmpresaIdAndUbicacionContaining(empresaId, ubicacion);
     }
 
     /* Obtener stock con cantidad baja */
+    @Override
     public List<StockMaterial> obtenerStockBajo(Long empresaId) {
         return stockMaterialRepository.findStockBajoByEmpresaId(empresaId);
     }
 
     /* Obtener stock agotado */
+    @Override
     public List<StockMaterial> obtenerStockAgotado(Long empresaId) {
         return stockMaterialRepository.findStockMenorA(empresaId, 1.0);
     }
 
     /* Obtener stock próximo a vencer */
+    @Override
     public List<StockMaterial> obtenerStockProximoAVencer(Long empresaId, int diasAntelacion) {
-        return stockMaterialRepository.findStockProximoAVencer(empresaId, diasAntelacion);
+        // Calcular la fecha límite sumando los días de antelación a la fecha actual
+        LocalDate fechaLimite = LocalDate.now().plusDays(diasAntelacion);
+        return stockMaterialRepository.findStockProximoAVencer(empresaId, fechaLimite);
     }
 
     /* Obtener stock por material y empresa */
+    @Override
     public List<StockMaterial> obtenerPorMaterial(Long materialId, Long empresaId) {
         return stockMaterialRepository.findByMaterialIdAndEmpresaId(materialId, empresaId);
     }
 
     /* Crear nuevo registro de stock */
+    @Override
     @Transactional
     public StockMaterial crear(StockMaterial stock) {
         return stockMaterialRepository.save(stock);
     }
 
     /* Actualizar stock existente */
+    @Override
     @Transactional
     public StockMaterial actualizar(Long id, StockMaterial stockActualizado) {
         obtenerPorId(id);
@@ -80,6 +92,7 @@ public class StockMaterialService {
     }
 
     /* Ajustar cantidad de stock */
+    @Override
     @Transactional
     public StockMaterial ajustarCantidad(Long id, Double nuevaCantidad, String motivo) {
         // Validar que la nueva cantidad sea válida
@@ -126,6 +139,7 @@ public class StockMaterialService {
     }
 
     /* Eliminar stock */
+    @Override
     @Transactional
     public void eliminar(Long id) {
         if (!stockMaterialRepository.existsById(id)) {
@@ -135,6 +149,7 @@ public class StockMaterialService {
     }
 
     /* Obtener estadísticas completas de stock */
+    @Override
     @Transactional(readOnly = true)
     public StockEstadisticasResponse obtenerEstadisticas(Long empresaId) {
         List<StockMaterial> todoStock = stockMaterialRepository.findByEmpresaId(empresaId);
@@ -195,16 +210,19 @@ public class StockMaterialService {
     }
 
     /* Obtener ubicaciones disponibles (simplificado) */
+    @Override
     public List<String> obtenerUbicaciones() {
         return List.of("Almacén Principal", "Almacén Secundario", "Obra", "Depósito");
     }
 
     /* Obtener estados disponibles */
+    @Override
     public List<String> obtenerEstados() {
         return List.of("ACTIVO", "INACTIVO", "VENCIDO", "BLOQUEADO");
     }
 
     /* Obtener cantidad disponible de un material específico - usado en PresupuestoNoClienteService */
+    @Override
     @Transactional(readOnly = true)
     public Double obtenerCantidadDisponible(Long materialId, Long empresaId, String ubicacion) {
         // Validar parámetros obligatorios
@@ -230,6 +248,7 @@ public class StockMaterialService {
     }
 
     /* Obtener cantidad asignada de un material a obras */
+    @Override
     @Transactional(readOnly = true)
     public Double obtenerCantidadAsignada(Long materialCalculadoraId, Long empresaId) {
         // TODO: Consultar ObraMaterial para obtener la suma de cantidades asignadas

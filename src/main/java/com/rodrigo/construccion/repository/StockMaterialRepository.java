@@ -40,11 +40,11 @@ public interface StockMaterialRepository extends JpaRepository<StockMaterial, Lo
     @Query("SELECT sm FROM StockMaterial sm " +
            "WHERE sm.empresa.id = :empresaId " +
            "AND sm.fechaVencimiento IS NOT NULL " +
-           "AND sm.fechaVencimiento <= CURRENT_DATE + :diasAntelacion " +
+           "AND sm.fechaVencimiento <= :fechaLimite " +
            "AND sm.estado = 'ACTIVO' " +
            "ORDER BY sm.fechaVencimiento ASC")
-    List<StockMaterial> findStockProximoAVencer(@Param("empresaId") Long empresaId, @Param("diasAntelacion") int diasAntelacion);
-    
+    List<StockMaterial> findStockProximoAVencer(@Param("empresaId") Long empresaId, @Param("fechaLimite") java.time.LocalDate fechaLimite);
+
     /* Stock por ubicación específica */
     @Query("SELECT sm FROM StockMaterial sm " +
            "WHERE sm.empresa.id = :empresaId " +
