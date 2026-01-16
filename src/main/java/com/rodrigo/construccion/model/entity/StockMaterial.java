@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
@@ -14,11 +15,6 @@ import org.hibernate.annotations.Filter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Entidad StockMaterial
- *
- * Representa el stock actual de materiales por ubicación.
- */
 @Entity
 @Getter
 @Setter
@@ -39,11 +35,6 @@ public class StockMaterial {
 
     @Column(name = "fecha_actualizacion")
     private LocalDateTime fechaActualizacion;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_material", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonBackReference("material-stocks")
-    private Material material;
 
     @Column(name = "ubicacion", length = 200)
     private String ubicacion;
@@ -86,6 +77,11 @@ public class StockMaterial {
     @UpdateTimestamp
     @Column(name = "fecha_ultima_actualizacion")
     private LocalDateTime fechaUltimaActualizacion;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "id_material", nullable = false)
+    @JsonBackReference("material-stocks")
+    private Material material;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_empresa", nullable = false)
