@@ -11,9 +11,6 @@ import lombok.Setter;
 import java.time.LocalDate;
 import java.time.LocalTime;
 
-/**
- * DTO Request para registrar check-in (entrada) de asistencia
- */
 @Getter
 @Setter
 @NoArgsConstructor

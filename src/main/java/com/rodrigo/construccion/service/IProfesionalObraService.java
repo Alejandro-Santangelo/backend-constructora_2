@@ -18,7 +18,7 @@ public interface IProfesionalObraService {
     public void actualizarSaldoDisponible(Long profesionalObraId, BigDecimal nuevoSaldo);
 
     public List<AsignacionProfesionalResponse> obtenerTodasComoDTO();
-    
+
     public List<AsignacionProfesionalResponse> obtenerTodasPorEmpresa(Long empresaId);
 
     public ProfesionalObra obtenerPorId(Long id);
@@ -32,13 +32,13 @@ public interface IProfesionalObraService {
     public List<AsignacionProfesionalResponse> obtenerAsignacionesPorTipo(String tipoProfesional, Long empresaId);
 
     public List<DisponibilidadProfesionalResponse> obtenerDisponibilidadPorTipo(String tipoProfesional,
-            Long empresaId);
+                                                                                Long empresaId);
 
     public ListaProfesionalesResponse obtenerDisponibilidadProfesionalesPorTipo(String tipoProfesional,
-            Long empresaId);
+                                                                                Long empresaId);
 
     public AsignacionProfesionalResponse actualizarAsignacionComoDTO(Long asignacionId,
-            ActualizarAsignacionRequest request, Long empresaId);
+                                                                     ActualizarAsignacionRequest request, Long empresaId);
 
     public AsignacionProfesionalResponse desactivarAsignacion(Long asignacionId, Long empresaId, Long obraId);
 

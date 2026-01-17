@@ -17,16 +17,9 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
-/**
- * Entidad AsistenciaObra
- * 
+/*
  * Control de presencia con geolocalización para calcular horas trabajadas.
  * Constraint: Solo puede haber 1 registro por profesional por día.
- * 
- * Flujo:
- * 1. Check-in: Registrar hora_entrada, latitud_entrada, longitud_entrada
- * 2. Check-out: Registrar hora_salida, latitud_salida, longitud_salida
- * 3. AUTO: Calcular horas_trabajadas = horaSalida - horaEntrada (en decimal)
  */
 @Entity
 @Table(name = "asistencia_obra", 
