@@ -1,5 +1,7 @@
 package com.rodrigo.construccion.model.entity;
 
+import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.rodrigo.construccion.enums.RolEnObra;
 
 import jakarta.persistence.*;
@@ -21,7 +23,6 @@ import java.util.List;
 
 /**
  * Entidad ProfesionalObra
- * <p>
  * Representa profesionales asignados a obras (tabla separada y dedicada).
  * Para asignaciones a rubros específicos ver AsignacionProfesionalObra.
  */
@@ -93,21 +94,21 @@ public class ProfesionalObra {
     // Relaciones
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "profesional_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonBackReference
+    @JsonBackReference
     private Profesional profesional;
 
     // Relación con Obra usando el campo obra_id (FK en base de datos)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "obra_id", nullable = false)
-    @com.fasterxml.jackson.annotation.JsonBackReference
+    @JsonBackReference
     private Obra obra;
 
     @OneToMany(mappedBy = "asignacion", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<Jornal> jornales = new ArrayList<>();
 
     @OneToMany(mappedBy = "profesionalObra", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<PagoProfesionalObra> pagos = new ArrayList<>();
 
     // Métodos de conveniencia
