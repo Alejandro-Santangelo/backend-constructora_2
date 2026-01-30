@@ -1,6 +1,7 @@
 package com.rodrigo.construccion.model.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.rodrigo.construccion.enums.EstadoObra;
 import jakarta.persistence.*;
@@ -18,15 +19,6 @@ import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
-/**
- * Entidad Obra
- * <p>
- * Representa los proyectos/obras de construcción.
- * Para otros tipos de empresa podría representar:
- * - Mueblería: Proyectos de diseño/fabricación
- * - Seguros: Pólizas
- * - Etc.
- */
 @Entity
 @Table(name = "obras", indexes = {
         @Index(name = "idx_obras_cliente", columnList = "id_cliente"),
@@ -115,7 +107,7 @@ public class Obra {
 
     // Relación con presupuestos no cliente
     @OneToMany(mappedBy = "obra", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<PresupuestoNoCliente> presupuestosNoCliente = new ArrayList<>();
 
     @JsonManagedReference("obra-costos")
@@ -127,7 +119,7 @@ public class Obra {
     private List<Honorario> honorarios = new ArrayList<>();
 
     @OneToMany(mappedBy = "obra", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<CobroObra> cobros = new ArrayList<>();
 
     @JsonManagedReference("obra-pedidospago")
@@ -135,11 +127,11 @@ public class Obra {
     private List<PedidoPago> pedidosPago = new ArrayList<>();
 
     @OneToMany(mappedBy = "obra", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<ProfesionalObra> profesionalesAsignados = new ArrayList<>();
 
     @OneToMany(mappedBy = "obra", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
-    @com.fasterxml.jackson.annotation.JsonIgnore
+    @JsonIgnore
     private List<ObraMaterial> materialesAsignados = new ArrayList<>();
 
     // ========== CAMPOS CALCULADOS (NO PERSISTIDOS) ==========

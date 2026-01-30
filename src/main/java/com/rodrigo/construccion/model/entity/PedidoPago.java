@@ -14,26 +14,21 @@ import org.hibernate.annotations.Filter;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
-/**
- * Entidad PedidoPago
- *
- * Representa los pedidos de pago realizados para proveedores.
- */
+/* Representa los pedidos de pago realizados para proveedores. */
 @Entity
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "pedido_pago", indexes = {
-    @Index(name = "idx_pedidos_proveedor", columnList = "id_proveedor"),
-    @Index(name = "idx_pedidos_obra", columnList = "id_obra"),
-    @Index(name = "idx_pedidos_estado", columnList = "estado"),
-    @Index(name = "idx_pedidos_fecha", columnList = "fecha_pedido"),
-    @Index(name = "idx_pedidos_empresa", columnList = "id_empresa")
+        @Index(name = "idx_pedidos_proveedor", columnList = "id_proveedor"),
+        @Index(name = "idx_pedidos_obra", columnList = "id_obra"),
+        @Index(name = "idx_pedidos_estado", columnList = "estado"),
+        @Index(name = "idx_pedidos_fecha", columnList = "fecha_pedido"),
+        @Index(name = "idx_pedidos_empresa", columnList = "id_empresa")
 })
 @Filter(name = "empresaFilter", condition = "id_empresa = :empresaId")
 public class PedidoPago {
-
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id_pedido_pago")
@@ -133,7 +128,7 @@ public class PedidoPago {
     public Long getEmpresaId() {
         return empresa != null ? empresa.getId() : null;
     }
-    
+
     // Estados del pedido
     public static final String ESTADO_BORRADOR = "BORRADOR";
     public static final String ESTADO_PENDIENTE = "PENDIENTE";

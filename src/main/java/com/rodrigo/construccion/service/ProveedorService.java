@@ -23,7 +23,7 @@ import java.util.List;
 @Service
 @RequiredArgsConstructor
 @Transactional
-public class ProveedorService {
+public class ProveedorService implements IProveedorService {
 
     private final ProveedorRepository proveedorRepository;
     private final IEmpresaService empresaService;
@@ -63,15 +63,18 @@ public class ProveedorService {
     @Transactional(readOnly = true)
     public ProveedorResponseDTO obtenerPorIdYEmpresaDTO(Long id, Long empresaId) {
         Proveedor proveedorEncontrado = proveedorRepository.findByIdAndEmpresa_Id(id, empresaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Proveedor no encontrado con ID: " + id + " para la empresa: " + empresaId));
         return proveedorMapper.toResponseDTO(proveedorEncontrado);
     }
 
     /* Obtener proveedor por ID y empresa usado solamente en este archivo */
+    @Override
     @Transactional(readOnly = true)
-    private Proveedor obtenerPorIdYEmpresa(Long id, Long empresaId) {
+    public Proveedor obtenerPorIdYEmpresa(Long id, Long empresaId) {
         return proveedorRepository.findByIdAndEmpresa_Id(id, empresaId)
-                .orElseThrow(() -> new ResourceNotFoundException("Proveedor no encontrado"));
+                .orElseThrow(() -> new ResourceNotFoundException(
+                    "Proveedor no encontrado con ID: " + id + " para la empresa: " + empresaId));
     }
 
     /* Actualizar proveedor */
