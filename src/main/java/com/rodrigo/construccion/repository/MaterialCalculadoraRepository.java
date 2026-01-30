@@ -10,20 +10,13 @@ import com.rodrigo.construccion.model.entity.MaterialCalculadora;
 
 import java.util.List;
 
-/**
- * Repositorio para entidad MaterialCalculadora.
- */
 @Repository
 public interface MaterialCalculadoraRepository extends JpaRepository<MaterialCalculadora, Long> {
 
-    /**
-     * Buscar materiales por item de calculadora.
-     */
+    /* Buscar materiales por item de calculadora. */
     List<MaterialCalculadora> findByItemCalculadoraId(Long itemCalculadoraId);
 
-    /**
-     * Eliminar todos los materiales de un item de calculadora específico.
-     */
+    /* Eliminar todos los materiales de un item de calculadora específico. */
     @Modifying
     @Query("DELETE FROM MaterialCalculadora m WHERE m.itemCalculadora.id = :itemCalculadoraId")
     void deleteByItemCalculadoraId(@Param("itemCalculadoraId") Long itemCalculadoraId);

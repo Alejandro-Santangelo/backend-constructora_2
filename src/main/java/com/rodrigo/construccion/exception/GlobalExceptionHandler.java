@@ -47,6 +47,22 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Manejo de errores de lógica de negocio (BusinessException)
+     */
+    @ExceptionHandler(BusinessException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessException(BusinessException ex, WebRequest request) {
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Error de Negocio")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
      * Manejo de errores de negocio (RuntimeException)
      */
     @ExceptionHandler(RuntimeException.class)

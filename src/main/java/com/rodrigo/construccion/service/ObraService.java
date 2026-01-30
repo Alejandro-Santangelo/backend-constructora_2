@@ -1,7 +1,6 @@
 package com.rodrigo.construccion.service;
 
 import com.rodrigo.construccion.dto.mapper.ObraMapper;
-import com.rodrigo.construccion.dto.mapper.ProfesionalMapper;
 import com.rodrigo.construccion.dto.request.ClienteRequestDTO;
 import com.rodrigo.construccion.dto.request.ProfesionalFormDTO;
 import com.rodrigo.construccion.dto.request.ProfesionalRequestDTO;
@@ -14,8 +13,6 @@ import com.rodrigo.construccion.repository.*;
 
 import lombok.RequiredArgsConstructor;
 
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,7 +22,6 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-/* Servicio simplificado para gestión de obras */
 @Service
 @RequiredArgsConstructor
 public class ObraService implements IObraService {
@@ -58,6 +54,11 @@ public class ObraService implements IObraService {
     public Obra findById(Long id) {
         return obraRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Obra no encontrada con ID: " + id));
+    }
+
+    @Override
+    public Obra buscarPorIdOpcional(Long id) {
+        return obraRepository.findById(id).orElse(null);
     }
 
     /* Obtener obras por cliente */
@@ -342,8 +343,7 @@ public class ObraService implements IObraService {
     }
 
     /**
-     * Devuelve una lista con todos los roles disponibles definidos en el enum
-     * RolEnObra.
+     * Devuelve una lista con todos los roles disponibles definidos en el enum RolEnObra.
      * Ideal para poblar dropdowns en el frontend.
      */
     @Override
@@ -351,11 +351,6 @@ public class ObraService implements IObraService {
         return Arrays.stream(EstadoObra.values())
                 .map(EstadoObra::getDisplayName)
                 .collect(Collectors.toList());
-    }
-
-    /* Buscar obras por nombre (simplificado) - NO USADA  */
-    public Page<Obra> buscarPorNombre(String nombre, Pageable pageable) {
-        return obraRepository.findAll(pageable);
     }
 
     /* Obtener todos los profesionales asignados a una obra */

@@ -10,41 +10,43 @@ import com.rodrigo.construccion.model.entity.Obra;
 
 public interface IObraService {
 
-    public ObraSimpleDTO obtenerPorId(Long id);
+    ObraSimpleDTO obtenerPorId(Long id);
 
-    public Obra encontrarObraPorIdYEmpresa(Long id, Long idEmpresa);
+    Obra encontrarObraPorIdYEmpresa(Long id, Long idEmpresa);
 
-    public Obra findById(Long id);
+    Obra findById(Long id);
 
-    public List<ObraResponseDTO> obtenerPorCliente(Long clienteId);
+    Obra buscarPorIdOpcional(Long id);
 
-    public List<ObraSimpleDTO> obtenerPorEstado(EstadoObra estado);
+    List<ObraResponseDTO> obtenerPorCliente(Long clienteId);
 
-    public List<ObraSimpleDTO> obtenerActivas();
+    List<ObraSimpleDTO> obtenerPorEstado(EstadoObra estado);
 
-    public List<ObraResponseDTO> obtenerPorEmpresa(Long empresaId);
+    List<ObraSimpleDTO> obtenerActivas();
 
-    public List<ObraResponseDTO> obtenerTodas();
+    List<ObraResponseDTO> obtenerPorEmpresa(Long empresaId);
 
-    public List<ProfesionalResponseDTO> obtenerProfesionalesAsignados(Long obraId);
+    List<ObraResponseDTO> obtenerTodas();
 
-    public ObraResponseDTO crear(ObraRequestDTO obraRequestDto, Long clienteId);
+    List<ProfesionalResponseDTO> obtenerProfesionalesAsignados(Long obraId);
 
-    public ObraResponseDTO actualizar(Long id, ObraRequestDTO obraActualizada);
+    ObraResponseDTO crear(ObraRequestDTO obraRequestDto, Long clienteId);
 
-    public void eliminarEnCascada(Long id, Long empresaId);
+    ObraResponseDTO actualizar(Long id, ObraRequestDTO obraActualizada);
 
-    public ObraResponseDTO cambiarEstado(Long id, EstadoObra nuevoEstado);
+    void eliminarEnCascada(Long id, Long empresaId);
 
-    public EstadisticasObraDTO obtenerEstadisticas();
+    ObraResponseDTO cambiarEstado(Long id, EstadoObra nuevoEstado);
 
-    public List<ProfesionalResponseDTO> actualizarPorcentajeGananciaTodosAsignados(Long obraId, double porcentaje);
+    EstadisticasObraDTO obtenerEstadisticas();
 
-    public ProfesionalResponseDTO actualizarPorcentajeGananciaProfesionalAsignado(Long obraId, Long profesionalId,
-            double porcentaje);
+    List<ProfesionalResponseDTO> actualizarPorcentajeGananciaTodosAsignados(Long obraId, double porcentaje);
 
-    public List<String> obtenerEstadosObra();
+    ProfesionalResponseDTO actualizarPorcentajeGananciaProfesionalAsignado(Long obraId, Long profesionalId,
+                                                                           double porcentaje);
 
-    public boolean existeObra(Long empresaId, Long obraId);
+    List<String> obtenerEstadosObra();
+
+    boolean existeObra(Long empresaId, Long obraId);
 
 }
