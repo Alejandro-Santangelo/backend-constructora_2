@@ -106,6 +106,23 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Manejo de errores de estado inválido de Pedido de Pago
+     */
+    @ExceptionHandler(PedidoPagoEstadoInvalidoException.class)
+    public ResponseEntity<ErrorResponse> handlePedidoPagoEstadoInvalido(PedidoPagoEstadoInvalidoException ex, WebRequest request) {
+
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error("Estado de Pedido Inválido")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    /**
      * Manejo de errores de seguridad (permisos, etc.)
      */
     @ExceptionHandler(SecurityException.class)

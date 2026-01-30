@@ -4,6 +4,7 @@ import com.rodrigo.construccion.dto.mapper.PedidoPagoMapper;
 import com.rodrigo.construccion.dto.request.PedidoPagoRequestDTO;
 import com.rodrigo.construccion.dto.response.EstadisticasPedidoPagoDTO;
 import com.rodrigo.construccion.dto.response.PedidoPagoResponseDTO;
+import com.rodrigo.construccion.exception.PedidoPagoEstadoInvalidoException;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.Empresa;
 import com.rodrigo.construccion.model.entity.Obra;
@@ -100,7 +101,7 @@ public class PedidoPagoService implements IPedidoPagoService {
 
         // 2. Validar que el pedido puede ser modificado (lógica de negocio original)
         if (!pedido.puedeSerModificado()) {
-            throw new RuntimeException("No se puede modificar un pedido en estado: " + pedido.getEstado());
+            throw new PedidoPagoEstadoInvalidoException("No se puede modificar un pedido en estado: " + pedido.getEstado());
         }
 
         // 3. Actualizar campos disponibles (lógica de negocio original mantenida)
@@ -148,7 +149,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (!pedido.esBorrador()) {
-            throw new RuntimeException("Solo se pueden eliminar pedidos en estado BORRADOR");
+            throw new PedidoPagoEstadoInvalidoException("Solo se pueden eliminar pedidos en estado BORRADOR");
         }
 
         pedidoPagoRepository.deleteById(id);
@@ -185,7 +186,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (!pedido.esBorrador()) {
-            throw new RuntimeException("Solo se pueden enviar pedidos en estado BORRADOR");
+            throw new PedidoPagoEstadoInvalidoException("Solo se pueden enviar pedidos en estado BORRADOR");
         }
 
         pedido.setEstado(PedidoPago.ESTADO_PENDIENTE);
@@ -201,7 +202,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (!pedido.estaPendiente()) {
-            throw new RuntimeException("Solo se pueden aprobar pedidos en estado PENDIENTE");
+            throw new PedidoPagoEstadoInvalidoException("Solo se pueden aprobar pedidos en estado PENDIENTE");
         }
 
         pedido.setEstado(PedidoPago.ESTADO_APROBADO);
@@ -219,7 +220,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (!pedido.estaAprobado()) {
-            throw new RuntimeException("Solo se pueden autorizar pedidos en estado APROBADO");
+            throw new PedidoPagoEstadoInvalidoException("Solo se pueden autorizar pedidos en estado APROBADO");
         }
 
         pedido.setEstado(PedidoPago.ESTADO_AUTORIZADO);
@@ -237,7 +238,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (!pedido.estaAutorizado()) {
-            throw new RuntimeException("Solo se pueden pagar pedidos en estado AUTORIZADO");
+            throw new PedidoPagoEstadoInvalidoException("Solo se pueden pagar pedidos en estado AUTORIZADO");
         }
 
         pedido.setEstado(PedidoPago.ESTADO_PAGADO);
@@ -258,7 +259,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (pedido.estaPagado() || pedido.estaCancelado() || pedido.estaRechazado()) {
-            throw new RuntimeException("No se puede rechazar un pedido en estado: " + pedido.getEstado());
+            throw new PedidoPagoEstadoInvalidoException("No se puede rechazar un pedido en estado: " + pedido.getEstado());
         }
 
         pedido.setEstado(PedidoPago.ESTADO_RECHAZADO);
@@ -275,7 +276,7 @@ public class PedidoPagoService implements IPedidoPagoService {
                         "Pedido de pago no encontrado con ID: " + id + " para la empresa: " + empresaId));
 
         if (pedido.estaPagado()) {
-            throw new RuntimeException("No se puede cancelar un pedido ya pagado");
+            throw new PedidoPagoEstadoInvalidoException("No se puede cancelar un pedido ya pagado.");
         }
 
         pedido.setEstado(PedidoPago.ESTADO_CANCELADO);
