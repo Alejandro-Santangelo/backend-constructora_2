@@ -5,7 +5,9 @@
 #   .\backup-bd-construccion-app.ps1
 #     explorer .\db-backups
 
-
+# detener proceso puerto 8080
+#  netstat -ano | findstr :8080
+#  taskkill /F /PID 5656
 # ============================================
 
 param(
