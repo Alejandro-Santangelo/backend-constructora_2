@@ -19,7 +19,6 @@
     <java.version>17</java.version>
     <mapstruct.version>1.5.5.Final</mapstruct.version>
     <springdoc.version>2.2.0</springdoc.version>
-    <lombok.version>1.18.30</lombok.version>
     </properties>
     
     <dependencies>
@@ -99,11 +98,10 @@
             <scope>runtime</scope>
         </dependency>
         
-        <!-- Lombok -->
+        <!-- Lombok - versión gestionada por Spring Boot Parent -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
-            <version>${lombok.version}</version>
             <optional>true</optional>
         </dependency>
         
@@ -213,7 +211,7 @@
                         <path>
                             <groupId>org.projectlombok</groupId>
                             <artifactId>lombok</artifactId>
-                            <version>${lombok.version}</version>
+                            <version>1.18.30</version>
                         </path>
                         <!-- Binding entre Lombok y MapStruct -->
                         <path>
