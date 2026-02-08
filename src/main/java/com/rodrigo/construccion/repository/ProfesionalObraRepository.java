@@ -150,9 +150,41 @@ public interface ProfesionalObraRepository extends JpaRepository<ProfesionalObra
     );
     
     /**
-     * Buscar todas las asignaciones de una empresa (multi-tenant)
+     * Buscar todas las asignaciones de una empresa (multi-tenant) - CON EAGER LOADING
+     * Utiliza LEFT JOIN FETCH para cargar Profesional y Obra eagerly
+     * Necesario para que el mapper pueda acceder a obra.id, obra.nombre, etc.
      */
-    List<ProfesionalObra> findByEmpresaId(Long empresaId);
+    @Query("SELECT DISTINCT po FROM ProfesionalObra po " +
+           "LEFT JOIN FETCH po.profesional " +
+           "LEFT JOIN FETCH po.obra " +
+           "WHERE po.empresaId = :empresaId")
+    List<ProfesionalObra> findByEmpresaId(@Param("empresaId") Long empresaId);
+    
+    /**
+     * Obtener TODAS las asignaciones con relaciones eager loaded
+     * Necesario para que el mapper pueda acceder a obra.id, obra.nombre, etc.
+     */
+    @Query("SELECT DISTINCT po FROM ProfesionalObra po " +
+           "LEFT JOIN FETCH po.profesional " +
+           "LEFT JOIN FETCH po.obra " +
+           "ORDER BY po.id DESC")
+    List<ProfesionalObra> findAllWithRelations();
+    
+    /**
+     * Buscar asignaciones por tipo de profesional con eager loading de relaciones
+     * Incluye variaciones de género de forma flexible
+     */
+    @Query("SELECT DISTINCT po FROM ProfesionalObra po " +
+           "LEFT JOIN FETCH po.profesional p " +
+           "LEFT JOIN FETCH po.obra " +
+           "WHERE po.empresaId = :empresaId " +
+           "AND LOWER(po.estado) = 'activo' " +
+           "AND (LOWER(p.tipoProfesional) LIKE LOWER(CONCAT('%', :terminoBase, '%')) OR " +
+           "LOWER(p.tipoProfesional) LIKE LOWER(CONCAT('%', :terminoAlterno, '%')))")
+    List<ProfesionalObra> buscarPorTipoFlexibleWithRelations(
+            @Param("terminoBase") String terminoBase,
+            @Param("terminoAlterno") String terminoAlterno,
+            @Param("empresaId") Long empresaId);
     
     /**
      * Buscar relación profesional-obra por IDs (para pagos semanales)

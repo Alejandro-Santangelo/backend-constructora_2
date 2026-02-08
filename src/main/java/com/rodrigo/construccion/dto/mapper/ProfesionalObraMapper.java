@@ -13,13 +13,13 @@ import java.util.List;
 public interface ProfesionalObraMapper {
 
     @Mapping(source = "id", target = "idAsignacion")
+    @Mapping(source = "id", target = "profesionalObraId")
     @Mapping(source = "profesional.id", target = "profesionalId")
     @Mapping(source = "profesional.nombre", target = "nombreProfesional")
     @Mapping(source = "profesional.tipoProfesional", target = "tipoProfesional")
-    @Mapping(target = "profesionalObraId", ignore = true)
-    @Mapping(target = "obraId", ignore = true)
-    @Mapping(target = "nombreObra", ignore = true)
-    @Mapping(target = "estadoObra", ignore = true)
+    @Mapping(source = "obra.id", target = "obraId")
+    @Mapping(source = "obra.nombre", target = "nombreObra")
+    @Mapping(source = "obra.estado", target = "estadoObra")
     @Mapping(source = "direccionObraCompleta", target = "direccionObra")
     @Mapping(expression = "java(profesionalObra.getFechaCreacion() != null ? profesionalObra.getFechaCreacion().toLocalDate() : null)", target = "fechaCreacion")
     AsignacionProfesionalResponse toResponseDTO(ProfesionalObra profesionalObra);

@@ -51,10 +51,11 @@ public class ProfesionalObraService implements IProfesionalObraService {
 
     /**
      * Obtener todas las asignaciones como DTOs - USADO EN CONTROLLER
+     * Utiliza findAllWithRelations() para cargar eagerly las relaciones de Profesional y Obra
      */
     @Override
     public List<AsignacionProfesionalResponse> obtenerTodasComoDTO() {
-        List<ProfesionalObra> asignaciones = profesionalObraRepository.findAll();
+        List<ProfesionalObra> asignaciones = profesionalObraRepository.findAllWithRelations();
         return asignaciones.stream()
                 .map(profesionalObraMapper::toResponseDTO)
                 .collect(Collectors.toList());
