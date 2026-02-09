@@ -152,6 +152,48 @@ public class TrabajoExtraController {
         return ResponseEntity.noContent().build();
     }
 
+    @DeleteMapping("/profesionales/{profesionalId}")
+    @Operation(summary = "Eliminar profesional de asignación", 
+               description = "Elimina un profesional específico de una asignación de trabajo extra. " +
+                             "Requiere empresaId en el header.")
+    public ResponseEntity<Void> eliminarProfesional(
+            @Parameter(description = "ID de la empresa (obligatorio)", required = true)
+            @RequestHeader("empresaId") Long empresaId,
+            @Parameter(description = "ID del profesional a eliminar", required = true)
+            @PathVariable Long profesionalId) {
+        
+        trabajoExtraService.eliminarProfesional(empresaId, profesionalId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/materiales/{materialId}")
+    @Operation(summary = "Eliminar material de asignación", 
+               description = "Elimina un material específico de una asignación de trabajo extra. " +
+                             "Requiere empresaId en el header.")
+    public ResponseEntity<Void> eliminarMaterial(
+            @Parameter(description = "ID de la empresa (obligatorio)", required = true)
+            @RequestHeader("empresaId") Long empresaId,
+            @Parameter(description = "ID del material a eliminar", required = true)
+            @PathVariable Long materialId) {
+        
+        trabajoExtraService.eliminarMaterial(empresaId, materialId);
+        return ResponseEntity.noContent().build();
+    }
+
+    @DeleteMapping("/gastos-generales/{gastoId}")
+    @Operation(summary = "Eliminar gasto general de asignación", 
+               description = "Elimina un gasto general específico de una asignación de trabajo extra. " +
+                             "Requiere empresaId en el header.")
+    public ResponseEntity<Void> eliminarGastoGeneral(
+            @Parameter(description = "ID de la empresa (obligatorio)", required = true)
+            @RequestHeader("empresaId") Long empresaId,
+            @Parameter(description = "ID del gasto general a eliminar", required = true)
+            @PathVariable Long gastoId) {
+        
+        trabajoExtraService.eliminarGastoGeneral(empresaId, gastoId);
+        return ResponseEntity.noContent().build();
+    }
+
     @PostMapping(value = "/{id}/pdf", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     @Operation(summary = "Subir PDF de trabajo extra", 
                description = "Sube un archivo PDF generado para un trabajo extra. " +

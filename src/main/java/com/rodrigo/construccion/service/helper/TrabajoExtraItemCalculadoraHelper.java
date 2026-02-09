@@ -4,6 +4,7 @@ import com.rodrigo.construccion.dto.request.*;
 import com.rodrigo.construccion.dto.response.*;
 import com.rodrigo.construccion.model.entity.*;
 import com.rodrigo.construccion.repository.*;
+import jakarta.persistence.EntityManager;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -29,6 +30,7 @@ public class TrabajoExtraItemCalculadoraHelper {
     private final TrabajoExtraMaterialCalculadoraRepository materialRepository;
     private final TrabajoExtraProfesionalCalculadoraRepository profesionalRepository;
     private final TrabajoExtraGastoGeneralRepository gastoRepository;
+    private final EntityManager entityManager;
 
     /**
      * Guardar items calculadora para un trabajo extra.
@@ -49,9 +51,37 @@ public class TrabajoExtraItemCalculadoraHelper {
             item.getProfesionales() != null ? item.getProfesionales().size() : 0,
             item.getGastosGenerales() != null ? item.getGastosGenerales().size() : 0));
 
-        // Primero eliminamos items existentes
-        itemRepository.deleteByTrabajoExtraId(trabajoExtraId);
-        log.info("🗑️ Eliminados items existentes del trabajo extra {}", trabajoExtraId);
+        // ============================================================================
+        // ELIMINACIÓN CORRECTA: Primero eliminar entidades hijas, luego items
+        // ============================================================================
+        log.info("🗑️ Eliminando items existentes y sus relaciones del trabajo extra {}", trabajoExtraId);
+        
+        // Obtener todos los items existentes
+        List<TrabajoExtraItemCalculadora> itemsExistentes = itemRepository.findByTrabajoExtraId(trabajoExtraId);
+        
+        if (!itemsExistentes.isEmpty()) {
+            log.info("  📋 Encontrados {} items existentes a eliminar", itemsExistentes.size());
+            
+            // Eliminar las entidades hijas de cada item (profesionales, materiales, gastos, jornales)
+            for (TrabajoExtraItemCalculadora item : itemsExistentes) {
+                log.debug("  🗑️ Eliminando relaciones del item {} - {}", item.getId(), item.getTipoProfesional());
+                profesionalRepository.deleteByItemCalculadoraId(item.getId());
+                materialRepository.deleteByItemCalculadoraId(item.getId());
+                gastoRepository.deleteByItemCalculadoraId(item.getId());
+                jornalRepository.deleteByItemCalculadoraId(item.getId());
+            }
+            
+            // Hacer flush para asegurar que las eliminaciones se ejecuten antes de eliminar los items
+            entityManager.flush();
+            log.debug("  ✅ Flush ejecutado - relaciones hijas eliminadas de la BD");
+            
+            // Ahora sí eliminar los items principales
+            itemRepository.deleteByTrabajoExtraId(trabajoExtraId);
+            entityManager.flush();
+            log.info("✅ Items existentes y relaciones eliminados correctamente");
+        } else {
+            log.info("  ℹ️ No hay items existentes - trabajo extra nuevo");
+        }
 
         for (TrabajoExtraItemCalculadoraDTO itemDTO : itemsDTO) {
             log.info("💾 Guardando item: {} (esRubroVacio: {}, esModoManual: {})", 
@@ -93,27 +123,36 @@ public class TrabajoExtraItemCalculadoraHelper {
             item.setTrabajoExtra(trabajoExtra);
 
             TrabajoExtraItemCalculadora itemGuardado = itemRepository.save(item);
+            log.info("  ✅ Item guardado con ID: {}", itemGuardado.getId());
 
             // Guardar jornales
             if (itemDTO.getJornales() != null && !itemDTO.getJornales().isEmpty()) {
+                log.debug("    💼 Guardando {} jornales", itemDTO.getJornales().size());
                 guardarJornales(itemGuardado, empresaId, itemDTO.getJornales());
             }
 
             // Guardar materiales
             if (itemDTO.getMaterialesLista() != null && !itemDTO.getMaterialesLista().isEmpty()) {
+                log.debug("    🧱 Guardando {} materiales", itemDTO.getMaterialesLista().size());
                 guardarMateriales(itemGuardado, empresaId, itemDTO.getMaterialesLista());
             }
 
             // Guardar profesionales
             if (itemDTO.getProfesionales() != null && !itemDTO.getProfesionales().isEmpty()) {
+                log.debug("    👷 Guardando {} profesionales", itemDTO.getProfesionales().size());
                 guardarProfesionales(itemGuardado, empresaId, itemDTO.getProfesionales());
             }
 
             // Guardar gastos generales
             if (itemDTO.getGastosGenerales() != null && !itemDTO.getGastosGenerales().isEmpty()) {
+                log.debug("    💰 Guardando {} gastos generales", itemDTO.getGastosGenerales().size());
                 guardarGastosGenerales(itemGuardado, empresaId, itemDTO.getGastosGenerales());
             }
         }
+        
+        // Flush final para asegurar que todas las operaciones se persistan
+        entityManager.flush();
+        log.info("✅ Todos los items y sus relaciones han sido guardados exitosamente");
     }
 
     /**
@@ -210,6 +249,7 @@ public class TrabajoExtraItemCalculadoraHelper {
 
     private void guardarJornales(TrabajoExtraItemCalculadora item, Long empresaId, 
                                  List<TrabajoExtraJornalCalculadoraDTO> jornalesDTO) {
+        log.debug("      💼 Guardando {} jornales para item {}", jornalesDTO.size(), item.getId());
         for (TrabajoExtraJornalCalculadoraDTO jornalDTO : jornalesDTO) {
             TrabajoExtraJornalCalculadora jornal = new TrabajoExtraJornalCalculadora();
             jornal.setItemCalculadora(item);
@@ -222,12 +262,15 @@ public class TrabajoExtraItemCalculadoraHelper {
             jornal.setIncluirEnCalculoDias(jornalDTO.getIncluirEnCalculoDias());
             jornal.setFrontendId(jornalDTO.getFrontendId());
             jornal.setObservaciones(jornalDTO.getObservaciones());
-            jornalRepository.save(jornal);
+            TrabajoExtraJornalCalculadora guardado = jornalRepository.save(jornal);
+            log.trace("        ✓ Jornal guardado ID: {} - {}", guardado.getId(), guardado.getRol());
         }
+        log.debug("      ✅ {} jornales guardados", jornalesDTO.size());
     }
 
     private void guardarMateriales(TrabajoExtraItemCalculadora item, Long empresaId,
                                    List<TrabajoExtraMaterialCalculadoraDTO> materialesDTO) {
+        log.debug("      🧱 Guardando {} materiales para item {}", materialesDTO.size(), item.getId());
         for (TrabajoExtraMaterialCalculadoraDTO materialDTO : materialesDTO) {
             TrabajoExtraMaterialCalculadora material = new TrabajoExtraMaterialCalculadora();
             material.setItemCalculadora(item);
@@ -259,12 +302,15 @@ public class TrabajoExtraItemCalculadoraHelper {
             material.setSubtotal(materialDTO.getSubtotal());
             material.setFrontendId(materialDTO.getFrontendId());
             material.setObservaciones(materialDTO.getObservaciones());
-            materialRepository.save(material);
+            TrabajoExtraMaterialCalculadora guardado = materialRepository.save(material);
+            log.trace("        ✓ Material guardado ID: {} - {}", guardado.getId(), guardado.getNombre());
         }
+        log.debug("      ✅ {} materiales guardados", materialesDTO.size());
     }
 
     private void guardarProfesionales(TrabajoExtraItemCalculadora item, Long empresaId,
                                      List<TrabajoExtraProfesionalCalculadoraDTO> profesionalesDTO) {
+        log.debug("      👷 Guardando {} profesionales para item {}", profesionalesDTO.size(), item.getId());
         for (TrabajoExtraProfesionalCalculadoraDTO profesionalDTO : profesionalesDTO) {
             TrabajoExtraProfesionalCalculadora profesional = new TrabajoExtraProfesionalCalculadora();
             profesional.setItemCalculadora(item);
@@ -278,12 +324,15 @@ public class TrabajoExtraItemCalculadoraHelper {
             profesional.setIncluirEnCalculoDias(profesionalDTO.getIncluirEnCalculoDias());
             profesional.setFrontendId(profesionalDTO.getFrontendId());
             profesional.setObservaciones(profesionalDTO.getObservaciones());
-            profesionalRepository.save(profesional);
+            TrabajoExtraProfesionalCalculadora guardado = profesionalRepository.save(profesional);
+            log.trace("        ✓ Profesional guardado ID: {} - {}", guardado.getId(), guardado.getRol());
         }
+        log.debug("      ✅ {} profesionales guardados", profesionalesDTO.size());
     }
 
     private void guardarGastosGenerales(TrabajoExtraItemCalculadora item, Long empresaId,
                                        List<TrabajoExtraGastoGeneralDTO> gastosDTO) {
+        log.debug("      💰 Guardando {} gastos generales para item {}", gastosDTO.size(), item.getId());
         int ordenCounter = 1;
         for (TrabajoExtraGastoGeneralDTO gastoDTO : gastosDTO) {
             TrabajoExtraGastoGeneral gasto = new TrabajoExtraGastoGeneral();
@@ -306,8 +355,10 @@ public class TrabajoExtraItemCalculadoraHelper {
             
             gasto.setFrontendId(gastoDTO.getFrontendId());
             gasto.setObservaciones(gastoDTO.getObservaciones());
-            gastoRepository.save(gasto);
+            TrabajoExtraGastoGeneral guardado = gastoRepository.save(gasto);
+            log.trace("        ✓ Gasto general guardado ID: {} - {}", guardado.getId(), guardado.getDescripcion());
         }
+        log.debug("      ✅ {} gastos generales guardados", gastosDTO.size());
     }
 
     // ============================================================================
@@ -518,6 +569,94 @@ public class TrabajoExtraItemCalculadoraHelper {
         } else {
             return valor;
         }
+    }
+
+    // ============================================================================
+    // MÉTODOS PARA ELIMINAR ASIGNACIONES INDIVIDUALES
+    // ============================================================================
+
+    /**
+     * Elimina un profesional específico de una asignación de trabajo extra
+     */
+    @Transactional
+    public void eliminarProfesional(Long empresaId, Long profesionalId) {
+        log.info("🗑️ Buscando profesional {} en BD...", profesionalId);
+        
+        TrabajoExtraProfesionalCalculadora profesional = profesionalRepository.findById(profesionalId)
+                .orElseThrow(() -> {
+                    log.error("❌ Profesional {} no encontrado", profesionalId);
+                    return new RuntimeException("Profesional no encontrado con ID: " + profesionalId);
+                });
+        
+        // Validar que pertenezca a la empresa
+        if (!profesional.getEmpresaId().equals(empresaId)) {
+            log.error("❌ Profesional {} no pertenece a empresaId {}", profesionalId, empresaId);
+            throw new RuntimeException("Profesional no pertenece a la empresa");
+        }
+        
+        log.info("✅ Eliminando profesional {} (rol: {}, nombreCompleto: {})", 
+            profesionalId, profesional.getRol(), profesional.getNombreCompleto());
+        
+        profesionalRepository.deleteById(profesionalId);
+        entityManager.flush();
+        
+        log.info("✅ Profesional {} eliminado y persistido en BD", profesionalId);
+    }
+
+    /**
+     * Elimina un material específico de una asignación de trabajo extra
+     */
+    @Transactional
+    public void eliminarMaterial(Long empresaId, Long materialId) {
+        log.info("🗑️ Buscando material {} en BD...", materialId);
+        
+        TrabajoExtraMaterialCalculadora material = materialRepository.findById(materialId)
+                .orElseThrow(() -> {
+                    log.error("❌ Material {} no encontrado", materialId);
+                    return new RuntimeException("Material no encontrado con ID: " + materialId);
+                });
+        
+        // Validar que pertenezca a la empresa
+        if (!material.getEmpresaId().equals(empresaId)) {
+            log.error("❌ Material {} no pertenece a empresaId {}", materialId, empresaId);
+            throw new RuntimeException("Material no pertenece a la empresa");
+        }
+        
+        log.info("✅ Eliminando material {} (nombre: {}, cantidad: {})", 
+            materialId, material.getNombre(), material.getCantidad());
+        
+        materialRepository.deleteById(materialId);
+        entityManager.flush();
+        
+        log.info("✅ Material {} eliminado y persistido en BD", materialId);
+    }
+
+    /**
+     * Elimina un gasto general específico de una asignación de trabajo extra
+     */
+    @Transactional
+    public void eliminarGastoGeneral(Long empresaId, Long gastoId) {
+        log.info("🗑️ Buscando gasto general {} en BD...", gastoId);
+        
+        TrabajoExtraGastoGeneral gasto = gastoRepository.findById(gastoId)
+                .orElseThrow(() -> {
+                    log.error("❌ Gasto general {} no encontrado", gastoId);
+                    return new RuntimeException("Gasto general no encontrado con ID: " + gastoId);
+                });
+        
+        // Validar que pertenezca a la empresa
+        if (!gasto.getEmpresaId().equals(empresaId)) {
+            log.error("❌ Gasto general {} no pertenece a empresaId {}", gastoId, empresaId);
+            throw new RuntimeException("Gasto general no pertenece a la empresa");
+        }
+        
+        log.info("✅ Eliminando gasto general {} (descripcion: {}, subtotal: {})", 
+            gastoId, gasto.getDescripcion(), gasto.getSubtotal());
+        
+        gastoRepository.deleteById(gastoId);
+        entityManager.flush();
+        
+        log.info("✅ Gasto general {} eliminado y persistido en BD", gastoId);
     }
 
     // ============================================================================

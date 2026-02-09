@@ -559,6 +559,36 @@ public class TrabajoExtraService implements ITrabajoExtraService {
         log.info("Trabajo extra {} eliminado exitosamente", id);
     }
 
+    @Override
+    @Transactional
+    public void eliminarProfesional(Long empresaId, Long profesionalId) {
+        log.info("🗑️ Eliminando profesional {} de asignación trabajo extra (empresaId: {})", profesionalId, empresaId);
+        
+        itemCalculadoraHelper.eliminarProfesional(empresaId, profesionalId);
+        
+        log.info("✅ Profesional {} eliminado exitosamente", profesionalId);
+    }
+
+    @Override
+    @Transactional
+    public void eliminarMaterial(Long empresaId, Long materialId) {
+        log.info("🗑️ Eliminando material {} de asignación trabajo extra (empresaId: {})", materialId, empresaId);
+        
+        itemCalculadoraHelper.eliminarMaterial(empresaId, materialId);
+        
+        log.info("✅ Material {} eliminado exitosamente", materialId);
+    }
+
+    @Override
+    @Transactional
+    public void eliminarGastoGeneral(Long empresaId, Long gastoId) {
+        log.info("🗑️ Eliminando gasto general {} de asignación trabajo extra (empresaId: {})", gastoId, empresaId);
+        
+        itemCalculadoraHelper.eliminarGastoGeneral(empresaId, gastoId);
+        
+        log.info("✅ Gasto general {} eliminado exitosamente", gastoId);
+    }
+
     // ==================== MÉTODOS PRIVADOS ====================
 
     private void guardarDias(Long trabajoExtraId, List<LocalDate> dias) {

@@ -43,6 +43,21 @@ public interface ITrabajoExtraService {
     void eliminar(Long empresaId, Long id);
 
     /**
+     * Eliminar un profesional específico de una asignación
+     */
+    void eliminarProfesional(Long empresaId, Long profesionalId);
+
+    /**
+     * Eliminar un material específico de una asignación
+     */
+    void eliminarMaterial(Long empresaId, Long materialId);
+
+    /**
+     * Eliminar un gasto general específico de una asignación
+     */
+    void eliminarGastoGeneral(Long empresaId, Long gastoId);
+
+    /**
      * Guardar PDF de trabajo extra
      */
     TrabajoExtraPdfResponseDTO guardarPdf(Long empresaId, Long trabajoExtraId, MultipartFile archivo, String generadoPor);
