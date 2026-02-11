@@ -42,7 +42,8 @@ public class TrabajoExtroProfesional {
     @Column(name = "tipo", nullable = false, length = 50)
     private TipoProfesionalTrabajoExtra tipo;
 
-    @Column(name = "importe", nullable = false, precision = 15, scale = 2)
+    @Builder.Default
+    @Column(name = "importe", nullable = false, precision = 15, scale=  2)
     private java.math.BigDecimal importe = java.math.BigDecimal.ZERO;
 
     @Enumerated(EnumType.STRING)

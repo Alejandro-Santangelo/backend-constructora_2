@@ -21,7 +21,7 @@ public class TrabajoExtraProfesionalDTO {
     private Long profesionalId;
 
     @NotBlank(message = "El nombre del profesional es obligatorio")
-    @Schema(description = "Nombre del profesional", example = "Juan Pérez", required = true)
+    @Schema(description = "Nombre del profesional", example = "Juan Pérez", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
     @Schema(description = "Especialidad del profesional", example = "Electricista")
@@ -29,7 +29,7 @@ public class TrabajoExtraProfesionalDTO {
 
     @NotNull(message = "El tipo de profesional es obligatorio")
     @Schema(description = "Tipo de profesional: ASIGNADO_OBRA, LISTADO_GENERAL, MANUAL", 
-            example = "ASIGNADO_OBRA", required = true)
+            example = "ASIGNADO_OBRA", requiredMode = Schema.RequiredMode.REQUIRED)
     private TipoProfesionalTrabajoExtra tipo;
 
     @Schema(description = "Importe/costo por día del profesional", example = "100000")

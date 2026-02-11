@@ -16,15 +16,15 @@ public class JornalDTO {
     @Schema(description = "ID del jornal (null al crear)", example = "1")
     private Long id;
 
-    @Schema(description = "Rol del jornal", example = "Albañil", required = true)
+    @Schema(description = "Rol del jornal", example = "Albañil", requiredMode = Schema.RequiredMode.REQUIRED)
     @NotBlank(message = "El rol es obligatorio")
     private String rol;
 
-    @Schema(description = "Cantidad de jornales", example = "10.5", required = true)
+    @Schema(description = "Cantidad de jornales", example = "10.5", requiredMode = Schema.RequiredMode.REQUIRED)
     @PositiveOrZero(message = "La cantidad debe ser positiva o cero")
     private BigDecimal cantidad;
 
-    @Schema(description = "Valor unitario por jornal", example = "25000.00", required = true)
+    @Schema(description = "Valor unitario por jornal", example = "25000.00", requiredMode = Schema.RequiredMode.REQUIRED)
     @PositiveOrZero(message = "El valor unitario debe ser positivo o cero")
     private BigDecimal valorUnitario;
 

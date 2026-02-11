@@ -21,10 +21,10 @@ public class ProfesionalRequestDTO {
     @Schema(description = "ID del profesional (se genera automáticamente)", example = "0", hidden = true)
     private Long id;
     
-    @Schema(description = "ID de la empresa", example = "123", required = true)
+    @Schema(description = "ID de la empresa", example = "123", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long empresaId;
 
-    @Schema(description = "Costo del jornal (Diario)", example = "5000.00", required = true)
+    @Schema(description = "Costo del jornal (Diario)", example = "5000.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal costoJornal;
 
     // --- CAMPOS FALTANTES ---
@@ -61,7 +61,7 @@ public class ProfesionalRequestDTO {
 
     @NotBlank(message = "El tipo de profesional es obligatorio")
     @Size(max = 50, message = "El tipo de profesional no puede exceder 50 caracteres")
-    @Schema(description = "Tipo de profesional", example = "Arquitecto", required = true, allowableValues = {
+    @Schema(description = "Tipo de profesional", example = "Arquitecto", requiredMode = Schema.RequiredMode.REQUIRED, allowableValues = {
             "Arquitecto", "Ingeniero", "Maestro Mayor", "Albañil", "Electricista", "Plomero", "Pintor", "Carpintero" })
     private String tipoProfesional;
 

@@ -23,16 +23,16 @@ public class ProfesionalFormDTO {
             example = "166 o manual_1733456789123")
     private String id;
 
-    @Schema(description = "Nombre del profesional", example = "Gabi Nieto", required = true)
+    @Schema(description = "Nombre del profesional", example = "Gabi Nieto", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
-    @Schema(description = "Tipo de profesional", example = "Albañileria", required = true)
+    @Schema(description = "Tipo de profesional", example = "Albañileria", requiredMode = Schema.RequiredMode.REQUIRED)
     private String tipoProfesional;
 
-    @Schema(description = "Valor por hora", example = "5000.00", required = true)
+    @Schema(description = "Valor por hora", example = "5000.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal valorHora;
 
     @Schema(description = "Indica si es un profesional ingresado manualmente (true) o existente del sistema (false)", 
-            example = "false", required = true)
+            example = "false", requiredMode = Schema.RequiredMode.REQUIRED)
     private Boolean esManual;
 }

@@ -22,12 +22,12 @@ import java.math.BigDecimal;
 public class RegistrarGastoRequest {
 
     @NotNull(message = "El ID del profesional obra es obligatorio")
-    @Schema(description = "ID de la asignación del profesional a la obra", example = "1", required = true)
+    @Schema(description = "ID de la asignación del profesional a la obra", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long profesionalObraId;
 
     @NotNull(message = "El monto es obligatorio")
     @PositiveOrZero(message = "El monto debe ser mayor o igual a cero")
-    @Schema(description = "Monto del gasto", example = "5000.00", required = true)
+    @Schema(description = "Monto del gasto", example = "5000.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal monto;
 
     @Size(max = 500, message = "La descripción no puede exceder 500 caracteres")
@@ -39,6 +39,6 @@ public class RegistrarGastoRequest {
     private String fotoTicket;
 
     @NotNull(message = "El ID de empresa es obligatorio")
-    @Schema(description = "ID de la empresa", example = "1", required = true)
+    @Schema(description = "ID de la empresa", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long empresaId;
 }

@@ -9,8 +9,6 @@ import org.hibernate.Interceptor;
 import org.hibernate.type.Type;
 import org.springframework.stereotype.Component;
 
-import java.io.Serializable;
-
 /**
  * Interceptor de Hibernate que setea automáticamente la empresa
  * en entidades que tienen relación con Empresa antes de guardarlas

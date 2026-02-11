@@ -22,12 +22,12 @@ import java.util.List;
 public class TrabajoExtraTareaDTO {
 
     @NotBlank(message = "La descripción de la tarea es obligatoria")
-    @Schema(description = "Descripción de la tarea", example = "Instalar cableado en planta baja", required = true)
+    @Schema(description = "Descripción de la tarea", example = "Instalar cableado en planta baja", requiredMode = Schema.RequiredMode.REQUIRED)
     private String descripcion;
 
     @NotNull(message = "El estado de la tarea es obligatorio")
     @Schema(description = "Estado de la tarea: TERMINADA, A_TERMINAR, POSTERGADA, SUSPENDIDA", 
-            example = "TERMINADA", required = true)
+            example = "TERMINADA", requiredMode = Schema.RequiredMode.REQUIRED)
     private EstadoTareaTrabajoExtra estado;
 
     @Schema(description = "Importe de la tarea", example = "15000.00")

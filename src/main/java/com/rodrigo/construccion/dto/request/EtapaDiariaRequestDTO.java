@@ -20,16 +20,16 @@ import java.util.List;
 public class EtapaDiariaRequestDTO {
 
     @NotNull(message = "El ID de la obra es obligatorio")
-    @Schema(description = "ID de la obra", example = "1", required = true)
+    @Schema(description = "ID de la obra", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long obraId;
 
     @NotNull(message = "La fecha es obligatoria")
-    @Schema(description = "Fecha de la etapa", example = "2025-12-03", required = true)
+    @Schema(description = "Fecha de la etapa", example = "2025-12-03", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate fecha;
 
     @NotNull(message = "El estado es obligatorio")
     @Schema(description = "Estado de la etapa: TERMINADA, EN_PROCESO, SUSPENDIDA, MODIFICADA, CANCELADA", 
-            example = "TERMINADA", required = true)
+            example = "TERMINADA", requiredMode = Schema.RequiredMode.REQUIRED)
     private EstadoEtapaDiaria estado;
 
     @Schema(description = "Descripción de la etapa", example = "Completado el revoque de planta baja")

@@ -19,7 +19,7 @@ public class MaterialCalculadoraDTO {
     @Schema(description = "ID único del material en el frontend", example = "1730882345679")
     private Long id;
 
-    @Schema(description = "Nombre del material", example = "Pintura látex blanca", required = true)
+    @Schema(description = "Nombre del material", example = "Pintura látex blanca", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
     @Schema(description = "Indica si es un item global del presupuesto híbrido", example = "false")
@@ -31,7 +31,7 @@ public class MaterialCalculadoraDTO {
     @Schema(description = "Observaciones sobre el material", example = "Marca Alba o similar, color blanco mate")
     private String observaciones;
 
-    @Schema(description = "Unidad de medida", example = "litros", required = true)
+    @Schema(description = "Unidad de medida", example = "litros", requiredMode = Schema.RequiredMode.REQUIRED)
     private String unidad;
 
     @Schema(description = "Cantidad necesaria", example = "3.5")

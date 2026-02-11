@@ -16,22 +16,22 @@ public class PresupuestoNoClienteMaterialDTO {
     @Schema(description = "ID del material (solo para actualización)", example = "1")
     private Long id;
 
-    @Schema(description = "Nombre del material", example = "Cemento Portland", required = true)
+    @Schema(description = "Nombre del material", example = "Cemento Portland", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombreMaterial;
 
     @Schema(description = "Categoría del material", example = "Materiales de construcción")
     private String categoria;
 
-    @Schema(description = "Cantidad", example = "50", required = true)
+    @Schema(description = "Cantidad", example = "50", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal cantidad;
 
-    @Schema(description = "Unidad de medida", example = "Bolsas", required = true)
+    @Schema(description = "Unidad de medida", example = "Bolsas", requiredMode = Schema.RequiredMode.REQUIRED)
     private String unidadMedida;
 
-    @Schema(description = "Precio unitario", example = "12500.00", required = true)
+    @Schema(description = "Precio unitario", example = "12500.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal precioUnitario;
 
-    @Schema(description = "Subtotal (cantidad * precio unitario)", example = "625000.00", required = true)
+    @Schema(description = "Subtotal (cantidad * precio unitario)", example = "625000.00", requiredMode = Schema.RequiredMode.REQUIRED)
     private BigDecimal subtotal;
 
     @Schema(description = "Observaciones adicionales", example = "Marca Loma Negra")

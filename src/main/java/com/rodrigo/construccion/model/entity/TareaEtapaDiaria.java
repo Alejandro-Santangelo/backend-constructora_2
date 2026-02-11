@@ -47,6 +47,7 @@ public class TareaEtapaDiaria {
     @Column(name = "hora_fin")
     private java.time.LocalTime horaFin;
 
+    @Builder.Default
     @Column(name = "prioridad", length = 20)
     private String prioridad = "MEDIA"; // BAJA, MEDIA, ALTA, URGENTE
 

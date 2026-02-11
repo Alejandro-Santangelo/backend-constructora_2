@@ -16,7 +16,7 @@ public class PresupuestoNoClienteProfesionalDTO {
     @Schema(description = "ID del profesional (solo para actualización)", example = "1")
     private Long id;
 
-    @Schema(description = "Tipo de profesional", example = "Maestro Mayor de Obras", required = true)
+    @Schema(description = "Tipo de profesional", example = "Maestro Mayor de Obras", requiredMode = Schema.RequiredMode.REQUIRED)
     private String tipoProfesional;
 
     @Schema(description = "Importe por hora", example = "5000.00")

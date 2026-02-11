@@ -18,7 +18,7 @@ public class ProveedorRequestDTO {
 
     @NotBlank(message = "El nombre del proveedor es obligatorio")
     @Size(min = 2, max = 200, message = "El nombre debe tener entre 2 y 200 caracteres")
-    @Schema(description = "Nombre del proveedor", example = "Constructora ABC S.A.", required = true)
+    @Schema(description = "Nombre del proveedor", example = "Constructora ABC S.A.", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
     @Size(max = 20, message = "El RUT no puede exceder 20 caracteres")

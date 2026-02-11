@@ -2,7 +2,6 @@ package com.rodrigo.construccion.dto.request;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 import java.util.List;
@@ -22,11 +21,11 @@ public class TareaEtapaDiariaDTO {
     private Long id;
 
     @NotBlank(message = "La descripción es obligatoria")
-    @Schema(description = "Descripción de la tarea", example = "Colocación de cerámicos", required = true)
+    @Schema(description = "Descripción de la tarea", example = "Colocación de cerámicos", requiredMode = Schema.RequiredMode.REQUIRED)
     private String descripcion;
 
     @NotBlank(message = "El estado es obligatorio")
-    @Schema(description = "Estado: PENDIENTE, EN_PROCESO, COMPLETADA", example = "PENDIENTE", required = true)
+    @Schema(description = "Estado: PENDIENTE, EN_PROCESO, COMPLETADA", example = "PENDIENTE", requiredMode = Schema.RequiredMode.REQUIRED)
     private String estado;
 
     @Schema(description = "IDs de profesionales asignados a esta tarea", example = "[1, 2, 3]")

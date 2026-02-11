@@ -19,28 +19,28 @@ import java.time.LocalTime;
 public class CheckInRequest {
 
     @NotNull(message = "El ID del profesional obra es obligatorio")
-    @Schema(description = "ID de la asignación del profesional a la obra", example = "1", required = true)
+    @Schema(description = "ID de la asignación del profesional a la obra", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long profesionalObraId;
 
     @NotNull(message = "La fecha es obligatoria")
     @JsonFormat(pattern = "yyyy-MM-dd")
-    @Schema(description = "Fecha de la asistencia", example = "2025-10-22", required = true)
+    @Schema(description = "Fecha de la asistencia", example = "2025-10-22", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalDate fecha;
 
     @NotNull(message = "La hora de entrada es obligatoria")
     @JsonFormat(pattern = "HH:mm:ss")
-    @Schema(description = "Hora de entrada", example = "08:00:00", required = true)
+    @Schema(description = "Hora de entrada", example = "08:00:00", requiredMode = Schema.RequiredMode.REQUIRED)
     private LocalTime horaEntrada;
 
     @NotNull(message = "La latitud de entrada es obligatoria")
-    @Schema(description = "Latitud de ubicación de entrada", example = "-34.603722", required = true)
+    @Schema(description = "Latitud de ubicación de entrada", example = "-34.603722", requiredMode = Schema.RequiredMode.REQUIRED)
     private Double latitudEntrada;
 
     @NotNull(message = "La longitud de entrada es obligatoria")
-    @Schema(description = "Longitud de ubicación de entrada", example = "-58.381592", required = true)
+    @Schema(description = "Longitud de ubicación de entrada", example = "-58.381592", requiredMode = Schema.RequiredMode.REQUIRED)
     private Double longitudEntrada;
 
     @NotNull(message = "El ID de empresa es obligatorio")
-    @Schema(description = "ID de la empresa", example = "1", required = true)
+    @Schema(description = "ID de la empresa", example = "1", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long empresaId;
 }

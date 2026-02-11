@@ -22,7 +22,7 @@ public class ProfesionalCalculadoraDTO {
     @Schema(description = "ID de la asignación profesional-obra (se asigna al aprobar el presupuesto)", example = "789")
     private Long profesionalObraId;
 
-    @Schema(description = "Tipo de profesional", example = "Oficial Pintor", required = true)  
+    @Schema(description = "Tipo de profesional", example = "Oficial Pintor", requiredMode = Schema.RequiredMode.REQUIRED)  
     private String tipo;
 
     @Schema(description = "Nombre del profesional", example = "Juan Pérez")
@@ -40,7 +40,7 @@ public class ProfesionalCalculadoraDTO {
     @Schema(description = "Teléfono del profesional", example = "+54911234567")
     private String telefono;
 
-    @Schema(description = "Unidad de medida", example = "jornales", required = true)
+    @Schema(description = "Unidad de medida", example = "jornales", requiredMode = Schema.RequiredMode.REQUIRED)
     private String unidad;
 
     @Schema(description = "Cantidad de jornales", example = "2.0")

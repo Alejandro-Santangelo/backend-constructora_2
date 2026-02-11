@@ -4,8 +4,6 @@ import com.rodrigo.construccion.dto.request.MaterialRequestDTO;
 import com.rodrigo.construccion.dto.response.MaterialEstadisticaResponseDTO;
 import com.rodrigo.construccion.model.entity.Material;
 import com.rodrigo.construccion.service.IMaterialService;
-import com.rodrigo.construccion.service.MaterialService;
-import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;

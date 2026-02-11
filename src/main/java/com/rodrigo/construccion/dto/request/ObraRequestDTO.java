@@ -31,11 +31,11 @@ public class ObraRequestDTO {
     private String direccionObraBarrio;
 
     @NotBlank(message = "La calle es obligatoria")
-    @Schema(description = "Calle de la obra", example = "Av. Libertador", required = true)
+    @Schema(description = "Calle de la obra", example = "Av. Libertador", requiredMode = Schema.RequiredMode.REQUIRED)
     private String direccionObraCalle;
 
     @NotNull(message = "La altura es obligatoria")
-    @Schema(description = "Número/Altura de la obra", example = "1234", required = true)
+    @Schema(description = "Número/Altura de la obra", example = "1234", requiredMode = Schema.RequiredMode.REQUIRED)
     private String direccionObraAltura;
 
     @Schema(description = "Torre o edificio (opcional)", example = "Torre A")

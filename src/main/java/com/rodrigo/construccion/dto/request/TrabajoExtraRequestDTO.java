@@ -22,11 +22,11 @@ import java.util.List;
 public class TrabajoExtraRequestDTO {
 
     @NotNull(message = "El ID de la obra es obligatorio")
-    @Schema(description = "ID de la obra padre", example = "70", required = true)
+    @Schema(description = "ID de la obra padre", example = "70", requiredMode = Schema.RequiredMode.REQUIRED)
     private Long obraId;
 
     @NotBlank(message = "El nombre es obligatorio")
-    @Schema(description = "Nombre descriptivo del trabajo extra", example = "Trabajo Extra - Instalación adicional", required = true)
+    @Schema(description = "Nombre descriptivo del trabajo extra", example = "Trabajo Extra - Instalación adicional", requiredMode = Schema.RequiredMode.REQUIRED)
     private String nombre;
 
     @Schema(description = "Observaciones del trabajo extra", example = "Trabajo urgente solicitado por el cliente")
