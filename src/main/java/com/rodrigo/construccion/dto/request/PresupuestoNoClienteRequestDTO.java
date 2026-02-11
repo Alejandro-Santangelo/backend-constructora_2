@@ -23,6 +23,9 @@ public class PresupuestoNoClienteRequestDTO {
     @Schema(description = "ID de la obra asociada al presupuesto", example = "1")
     private Long idObra;
     
+    @Schema(description = "Indica si el presupuesto es para un trabajo extra", example = "false")
+    private Boolean esPresupuestoTrabajoExtra = false;
+    
     @Schema(description = "Numero de presupuesto (opcional). Si se provee, se crea una nueva version para ese numero")
     private Long numeroPresupuesto;
 

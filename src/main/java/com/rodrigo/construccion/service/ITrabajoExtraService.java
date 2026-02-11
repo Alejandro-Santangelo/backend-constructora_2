@@ -38,6 +38,11 @@ public interface ITrabajoExtraService {
     TrabajoExtraResponseDTO actualizarParcial(Long empresaId, Long id, TrabajoExtraRequestDTO request);
 
     /**
+     * Cambiar únicamente el estado de un trabajo extra
+     */
+    TrabajoExtraResponseDTO cambiarEstado(Long empresaId, Long id, String nuevoEstado);
+
+    /**
      * Eliminar un trabajo extra
      */
     void eliminar(Long empresaId, Long id);

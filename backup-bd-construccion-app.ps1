@@ -4,6 +4,8 @@
 
 #   .\backup-bd-construccion-app.ps1
 #     explorer .\db-backups
+# Si algo sale mal, restaura con:
+# psql -h localhost -p 5432 -U postgres -d construccion_app_v3 -f ".\db-backups\backup_construccion_app_v3_2026-02-11_12-58-23.sql"
 
 # detener proceso puerto 8080
 #  netstat -ano | findstr :8080

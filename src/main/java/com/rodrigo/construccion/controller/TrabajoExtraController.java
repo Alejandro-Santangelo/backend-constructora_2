@@ -1,6 +1,7 @@
 package com.rodrigo.construccion.controller;
 
 import com.rodrigo.construccion.dto.request.TrabajoExtraRequestDTO;
+import com.rodrigo.construccion.dto.request.TrabajoExtraEstadoUpdateDTO;
 import com.rodrigo.construccion.dto.response.TrabajoExtraResponseDTO;
 import com.rodrigo.construccion.dto.response.TrabajoExtraPdfResponseDTO;
 import com.rodrigo.construccion.service.ITrabajoExtraService;
@@ -135,6 +136,22 @@ public class TrabajoExtraController {
         }
         
         TrabajoExtraResponseDTO trabajoActualizado = trabajoExtraService.actualizarParcial(empresaId, id, request);
+        return ResponseEntity.ok(trabajoActualizado);
+    }
+
+    @PatchMapping("/{id}/estado")
+    @Operation(summary = "Cambiar estado de trabajo extra", 
+               description = "Cambia únicamente el estado de un trabajo extra (ej: de A_ENVIAR a ENVIADO). " +
+                             "Este endpoint está optimizado para actualizaciones rápidas de estado desde el frontend.")
+    public ResponseEntity<TrabajoExtraResponseDTO> cambiarEstado(
+            @Parameter(description = "ID de la empresa (obligatorio)", required = true)
+            @RequestHeader("empresaId") Long empresaId,
+            @Parameter(description = "ID del trabajo extra", required = true)
+            @PathVariable Long id,
+            @Parameter(description = "Nuevo estado del trabajo extra", required = true)
+            @Valid @RequestBody TrabajoExtraEstadoUpdateDTO estadoRequest) {
+        
+        TrabajoExtraResponseDTO trabajoActualizado = trabajoExtraService.cambiarEstado(empresaId, id, estadoRequest.getEstado());
         return ResponseEntity.ok(trabajoActualizado);
     }
 

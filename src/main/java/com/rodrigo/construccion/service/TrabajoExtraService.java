@@ -546,6 +546,26 @@ public class TrabajoExtraService implements ITrabajoExtraService {
 
     @Override
     @Transactional
+    public TrabajoExtraResponseDTO cambiarEstado(Long empresaId, Long id, String nuevoEstado) {
+        log.info("🔄 Cambiando estado del trabajo extra {} a '{}' (empresaId: {})", id, nuevoEstado, empresaId);
+        
+        // Validar que existe y pertenece a la empresa
+        TrabajoExtra trabajoExtra = trabajoExtraRepository.findByIdAndEmpresaId(id, empresaId)
+            .orElseThrow(() -> new RuntimeException(
+                "Trabajo extra no encontrado con ID: " + id + " o no pertenece a la empresa"));
+        
+        String estadoAnterior = trabajoExtra.getEstado();
+        trabajoExtra.setEstado(nuevoEstado);
+        
+        TrabajoExtra actualizado = trabajoExtraRepository.save(trabajoExtra);
+        
+        log.info("✅ Estado del trabajo extra {} cambiado de '{}' a '{}'", id, estadoAnterior, nuevoEstado);
+        
+        return mapearEntityAResponse(actualizado);
+    }
+
+    @Override
+    @Transactional
     public void eliminar(Long empresaId, Long id) {
         log.info("Eliminando trabajo extra {} para empresa {}", id, empresaId);
         

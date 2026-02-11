@@ -24,6 +24,12 @@ public class ObraResponseDTO {
     @Schema(description = "ID único de la obra", example = "1")
     private Long id;
 
+    @Schema(description = "Indica si la obra es un trabajo extra", example = "false")
+    private Boolean esObraTrabajoExtra;
+
+    @Schema(description = "ID de la obra principal (si es trabajo extra)", example = "100")
+    private Long obraOrigenId;
+
     @Schema(description = "Nombre de la obra", example = "Casa Familiar García")
     private String nombre;
 

@@ -217,6 +217,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setFechaEmision(ahora);
         pnc.setFechaCreacion(dto.getFechaCreacion() != null ? dto.getFechaCreacion() : ahora);
         pnc.setNombreObra(dto.getNombreObra());
+        pnc.setEsPresupuestoTrabajoExtra(dto.getEsPresupuestoTrabajoExtra() != null ? dto.getEsPresupuestoTrabajoExtra() : false);
 
         // Empresa
         if (dto.getIdEmpresa() == null) {
@@ -247,10 +248,15 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             log.info("⚠️ idCliente es NULL - el presupuesto NO tendrá cliente vinculado hasta que se apruebe");
         }
 
-        // Obra (asociación nueva)
+        // Obra (asociación nueva) - IMPORTANTE para trabajos extra
         if (dto.getIdObra() != null) {
-            Obra obra = obraRepository.findById(dto.getIdObra()).orElseThrow(() -> new IllegalArgumentException("Obra no encontrada"));
+            log.info("🏗️ Asociando presupuesto a obra ID: {}", dto.getIdObra());
+            Obra obra = obraRepository.findById(dto.getIdObra())
+                    .orElseThrow(() -> new IllegalArgumentException("Obra no encontrada con ID: " + dto.getIdObra()));
             pnc.setObra(obra);
+            log.info("✅ Presupuesto vinculado a obra ID: {} ({})", obra.getId(), obra.getNombre());
+        } else {
+            log.info("⚠️ idObra es NULL - el presupuesto NO tendrá obra vinculada");
         }
 
         // campos nulleables
@@ -467,6 +473,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("💾 INICIANDO GUARDADO - Presupuesto ID: {}", pnc.getId());
         PresupuestoNoCliente guardado = repository.save(pnc);
         log.info("✅ PRESUPUESTO GUARDADO - ID: {}, Total: {}", guardado.getId(), guardado.getTotalPresupuesto());
+        log.info("🔍 Obra vinculada: {}", guardado.getObra() != null ? "ID " + guardado.getObra().getId() : "NULL");
+        log.info("🔍 esPresupuestoTrabajoExtra: {}", guardado.getEsPresupuestoTrabajoExtra());
 
         // Procesar items de calculadora si vienen en el DTO
         procesarItemsCalculadora(guardado, dto.getItemsCalculadora());
@@ -766,6 +774,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // ========== TIPO DE PRESUPUESTO ==========
         nuevaVersion.setTipoPresupuesto(presupuestoConDatosActualizados.getTipoPresupuesto());
+        
+        // ========== COPIAR CAMPO ES TRABAJO EXTRA (CRÍTICO) ==========
+        nuevaVersion.setEsPresupuestoTrabajoExtra(presupuestoConDatosActualizados.getEsPresupuestoTrabajoExtra());
+        log.info("🔗 Campo esPresupuestoTrabajoExtra copiado: {}", nuevaVersion.getEsPresupuestoTrabajoExtra());
 
         // ========== ESTADO SEGÚN TIPO DE PRESUPUESTO ==========
         // Si es TRABAJOS_SEMANALES, mantener APROBADO; si es TRADICIONAL, resetear a A_ENVIAR
@@ -1022,6 +1034,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                     actualizado.getMayoresCostosConfiguracionPresupuestoActivo(),
                     actualizado.getMayoresCostosConfiguracionPresupuestoTipo(),
                     actualizado.getMayoresCostosConfiguracionPresupuestoValor());
+            
+            log.info("🔍 DEBUG DESPUÉS DE GUARDAR UPDATE - esPresupuestoTrabajoExtra: {}", actualizado.getEsPresupuestoTrabajoExtra());
+            log.info("🔍 DEBUG DESPUÉS DE GUARDAR UPDATE - obra vinculada: {}", actualizado.getObra() != null ? actualizado.getObra().getId() + " (nombre: '" + actualizado.getObra().getNombre() + "')" : "null");
 
             // PASO 3: Procesar items de calculadora si vienen en el DTO
             log.info("📋 Procesando items de calculadora...");
@@ -1099,6 +1114,21 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         pnc.setNombreSolicitante(dto.getNombreSolicitante());
         pnc.setDireccionParticular(dto.getDireccionParticular());
+        
+        // CRÍTICO: Preservar esPresupuestoTrabajoExtra ANTES de cualquier otra operación
+        Boolean valorActualEsTrabajoExtra = pnc.getEsPresupuestoTrabajoExtra();
+        Boolean valorDtoEsTrabajoExtra = dto.getEsPresupuestoTrabajoExtra();
+        
+        log.info("🔍 MAPEO - esPresupuestoTrabajoExtra → Entity actual: {}, DTO recibido: {}", 
+                valorActualEsTrabajoExtra, valorDtoEsTrabajoExtra);
+        
+        if (dto.getEsPresupuestoTrabajoExtra() != null) {
+            pnc.setEsPresupuestoTrabajoExtra(dto.getEsPresupuestoTrabajoExtra());
+            log.info("✅ esPresupuestoTrabajoExtra actualizado desde DTO: {}", dto.getEsPresupuestoTrabajoExtra());
+        } else {
+            // PRESERVAR valor existente - NO sobrescribir con null o false
+            log.info("⚠️ DTO no trae esPresupuestoTrabajoExtra - PRESERVANDO valor actual: {}", valorActualEsTrabajoExtra);
+        }
 
         pnc.setDireccionObraCalle(dto.getDireccionObraCalle());
         pnc.setDireccionObraAltura(dto.getDireccionObraAltura());
@@ -1107,16 +1137,26 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setDireccionObraBarrio(dto.getDireccionObraBarrio());
         pnc.setDireccionObraTorre(dto.getDireccionObraTorre());
 
-        // Mapear nombreObra
+        // Mapear nombreObra (DESPUÉS de setear/preservar esPresupuestoTrabajoExtra)
         if (dto.getNombreObra() != null) {
             pnc.setNombreObra(dto.getNombreObra());
 
+            log.info("🔍 VALIDACIÓN NOMBRE - Obra asociada: {}, esPresupuestoTrabajoExtra: {}", 
+                    pnc.getObra() != null ? pnc.getObra().getId() : "null",
+                    pnc.getEsPresupuestoTrabajoExtra());
+
             // Si el presupuesto tiene obra asociada, actualizar también el nombre de la obra
-            if (pnc.getObra() != null) {
-                log.info("🔗 Actualizando nombre en obra asociada ID: {}", pnc.getObra().getId());
+            // IMPORTANTE: NO actualizar si es presupuesto trabajo extra (la obra asociada es la obra PADRE)
+            if (pnc.getObra() != null && Boolean.TRUE.equals(pnc.getEsPresupuestoTrabajoExtra())) {
+                // ES TRABAJO EXTRA → NO TOCAR LA OBRA PADRE
+                log.warn("🚫 PRESUPUESTO TRABAJO EXTRA {} - NO SE MODIFICA OBRA PADRE {} (nombre presupuesto: '{}', nombre obra padre se mantiene: '{}')",
+                        pnc.getId(), pnc.getObra().getId(), dto.getNombreObra(), pnc.getObra().getNombre());
+            } else if (pnc.getObra() != null) {
+                // NO ES TRABAJO EXTRA → SÍ ACTUALIZAR LA OBRA NORMAL
+                log.info("🔗 Presupuesto NORMAL - Actualizando nombre en obra asociada ID: {}", pnc.getObra().getId());
                 pnc.getObra().setNombre(dto.getNombreObra());
                 obraRepository.save(pnc.getObra());
-                log.info("✅ Nombre de obra actualizado en tabla obras");
+                log.info("✅ Nombre de obra actualizado en tabla obras: '{}'", dto.getNombreObra());
             }
         }
 
@@ -2439,6 +2479,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
             // DEBUG: Verificar después de guardar
             log.info("🔍 DEBUG - Obra guardada con ID: {}", obra.getId());
+            log.info("🔍 DEBUG - esObraTrabajoExtra: {}", obra.getEsObraTrabajoExtra());
+            log.info("🔍 DEBUG - obraOrigenId: {}", obra.getObraOrigenId());
             log.info("🔍 DEBUG - Estado de obra DESPUÉS de guardar: {}", obra.getEstado());
             log.info("🔍 DEBUG - presupuestoNoClienteId DESPUÉS de guardar: {}", obra.getPresupuestoNoClienteId());
             log.info("🔍 DEBUG - EmpresaId DESPUÉS de guardar: {}", obra.getEmpresaId());
@@ -2744,35 +2786,40 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("   🔒 Versión: {} (SIN CAMBIO)", actualizado.getNumeroVersion());
         log.info("   🔒 Estado: {} (SIN CAMBIO)", actualizado.getEstado());
 
-        // 7. SINCRONIZAR con obra asociada (si existe)
+        // 7. SINCRONIZAR con obra asociada (si existe y NO es trabajo extra)
         if (actualizado.getObra() != null) {
-            try {
-                Obra obra = actualizado.getObra();
-                log.info("🔄 Sincronizando fechas con obra ID: {}", obra.getId());
+            // IMPORTANTE: NO sincronizar si es presupuesto trabajo extra (la obra asociada es la obra PADRE)
+            if (Boolean.TRUE.equals(actualizado.getEsPresupuestoTrabajoExtra())) {
+                log.info("⚠️ Presupuesto trabajo extra - NO se sincronizan fechas con obra padre ID: {}", actualizado.getObra().getId());
+            } else {
+                try {
+                    Obra obra = actualizado.getObra();
+                    log.info("🔄 Sincronizando fechas con obra ID: {}", obra.getId());
 
-                // Actualizar fecha de inicio
-                obra.setFechaInicio(actualizado.getFechaProbableInicio());
+                    // Actualizar fecha de inicio
+                    obra.setFechaInicio(actualizado.getFechaProbableInicio());
 
-                // Calcular y actualizar fecha de fin
-                if (actualizado.getFechaProbableInicio() != null &&
-                        actualizado.getTiempoEstimadoTerminacion() != null) {
-                    LocalDate fechaFin = calcularFechaFin(
-                            actualizado.getFechaProbableInicio(),
-                            actualizado.getTiempoEstimadoTerminacion()
-                    );
-                    obra.setFechaFin(fechaFin);
-                    log.info("   🏗️ Obra actualizada - Fecha inicio: {}, Fecha fin: {}",
-                            obra.getFechaInicio(), obra.getFechaFin());
-                } else {
-                    obra.setFechaFin(null);
+                    // Calcular y actualizar fecha de fin
+                    if (actualizado.getFechaProbableInicio() != null &&
+                            actualizado.getTiempoEstimadoTerminacion() != null) {
+                        LocalDate fechaFin = calcularFechaFin(
+                                actualizado.getFechaProbableInicio(),
+                                actualizado.getTiempoEstimadoTerminacion()
+                        );
+                        obra.setFechaFin(fechaFin);
+                        log.info("   🏗️ Obra actualizada - Fecha inicio: {}, Fecha fin: {}",
+                                obra.getFechaInicio(), obra.getFechaFin());
+                    } else {
+                        obra.setFechaFin(null);
+                    }
+
+                    obraRepository.save(obra);
+                    log.info("✅ Obra sincronizada correctamente");
+
+                } catch (Exception e) {
+                    log.error("❌ Error al sincronizar fechas con obra: {}", e.getMessage());
+                    // No lanzar excepción - presupuesto ya está actualizado
                 }
-
-                obraRepository.save(obra);
-                log.info("✅ Obra sincronizada correctamente");
-
-            } catch (Exception e) {
-                log.error("❌ Error al sincronizar fechas con obra: {}", e.getMessage());
-                // No lanzar excepción - presupuesto ya está actualizado
             }
         } else {
             log.info("ℹ️ No hay obra asociada para sincronizar");
@@ -2968,6 +3015,13 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
      */
     private void sincronizarDatosClienteConObra(PresupuestoNoCliente presupuesto) {
         if (presupuesto.getObra() == null) {
+            return;
+        }
+
+        // IMPORTANTE: NO sincronizar si es presupuesto trabajo extra (la obra asociada es la obra PADRE)
+        if (Boolean.TRUE.equals(presupuesto.getEsPresupuestoTrabajoExtra())) {
+            log.info("⚠️ Presupuesto trabajo extra {} - NO se sincronizan datos con obra padre {}",
+                    presupuesto.getId(), presupuesto.getObra().getId());
             return;
         }
 
@@ -4258,6 +4312,13 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             return;
         }
 
+        // IMPORTANTE: NO sincronizar si es presupuesto trabajo extra (la obra asociada es la obra PADRE)
+        if (Boolean.TRUE.equals(presupuesto.getEsPresupuestoTrabajoExtra())) {
+            log.info("⚠️ Presupuesto trabajo extra {} - NO se sincroniza con obra padre {}",
+                    presupuesto.getId(), presupuesto.getObra().getId());
+            return;
+        }
+
         // Buscar la obra
         Optional<Obra> obraOpt = obraRepository.findById(presupuesto.getObra().getId());
 
@@ -4302,7 +4363,16 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // 1. Nombre de la obra
         obra.setNombre(presupuesto.getNombreObra());
 
-        // 2. Dirección completa (7 campos)
+        // 2. Sincronizar si es trabajo extra y guardar referencia a obra origen
+        obra.setEsObraTrabajoExtra(presupuesto.getEsPresupuestoTrabajoExtra() != null ? presupuesto.getEsPresupuestoTrabajoExtra() : false);
+        
+        // Si es trabajo extra, guardar la referencia a la obra principal
+        if (Boolean.TRUE.equals(presupuesto.getEsPresupuestoTrabajoExtra()) && presupuesto.getObra() != null) {
+            obra.setObraOrigenId(presupuesto.getObra().getId());
+            log.info("🔗 Trabajo Extra: Vinculando obra nueva a obra origen ID: {}", presupuesto.getObra().getId());
+        }
+
+        // 3. Dirección completa (7 campos)
         obra.setDireccionObraCalle(presupuesto.getDireccionObraCalle());
         obra.setDireccionObraAltura(presupuesto.getDireccionObraAltura());
         obra.setDireccionObraPiso(presupuesto.getDireccionObraPiso());
@@ -4310,10 +4380,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         obra.setDireccionObraBarrio(presupuesto.getDireccionObraBarrio());
         obra.setDireccionObraTorre(presupuesto.getDireccionObraTorre());
 
-        // 3. Fechas
+        // 4. Fechas
         obra.setFechaInicio(presupuesto.getFechaProbableInicio());
 
-        // 4. Calcular fecha fin (fechaInicio + tiempoEstimadoTerminacion días hábiles)
+        // 5. Calcular fecha fin (fechaInicio + tiempoEstimadoTerminacion días hábiles)
         if (presupuesto.getFechaProbableInicio() != null && presupuesto.getTiempoEstimadoTerminacion() != null) {
             LocalDate fechaFin = calcularFechaFin(
                     presupuesto.getFechaProbableInicio(),
@@ -4324,7 +4394,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             obra.setFechaFin(null);
         }
 
-        // 5. Presupuesto estimado
+        // 6. Presupuesto estimado
         BigDecimal montoTotal = null;
 
         // Intentar obtener de totalGeneral (Double)
@@ -4348,10 +4418,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         obra.setPresupuestoEstimado(montoTotal);
 
-        // 6. Estado (lógica especial)
+        // 7. Estado (lógica especial)
         sincronizarEstado(presupuesto, obra);
 
-        // 7. Referencia al presupuesto
+        // 8. Referencia al presupuesto
         obra.setPresupuestoNoClienteId(presupuesto.getId());
 
         log.debug("   - nombre: {}", obra.getNombre());

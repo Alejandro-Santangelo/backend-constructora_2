@@ -47,6 +47,9 @@ public class PresupuestoNoCliente {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(name = "es_presupuesto_trabajo_extra")
+    private Boolean esPresupuestoTrabajoExtra = false;
+
     @Column(nullable = false)
     @JsonFormat(pattern = "yyyy-MM-dd")
     private LocalDate fechaEmision;
