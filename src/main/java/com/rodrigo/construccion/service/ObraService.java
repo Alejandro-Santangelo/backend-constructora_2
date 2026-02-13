@@ -66,7 +66,8 @@ public class ObraService implements IObraService {
     public List<ObraResponseDTO> obtenerPorCliente(Long clienteId) {
         clienteService.obtenerPorId(clienteId);
         List<Obra> obrasEncontradasPorCliente = obraRepository.findByCliente_Id(clienteId);
-        return obraMapper.toResponseDTOList(obrasEncontradasPorCliente);
+        List<ObraResponseDTO> dtos = obraMapper.toResponseDTOList(obrasEncontradasPorCliente);
+        return enriquecerConPresupuestos(dtos);
     }
 
     /* Obtener obras activas (simplificado) */
@@ -87,14 +88,16 @@ public class ObraService implements IObraService {
     public List<ObraResponseDTO> obtenerPorEmpresa(Long empresaId) {
         empresaService.findEmpresaById(empresaId);
         List<Obra> obrasPorEmpresa = obraRepository.findByEmpresaId(empresaId);
-        return obraMapper.toResponseDTOList(obrasPorEmpresa);
+        List<ObraResponseDTO> dtos = obraMapper.toResponseDTOList(obrasPorEmpresa);
+        return enriquecerConPresupuestos(dtos);
     }
 
     /* Obtener todas las obras */
     @Override
     public List<ObraResponseDTO> obtenerTodas() {
         List<Obra> obras = obraRepository.findAll();
-        return obraMapper.toResponseDTOList(obras);
+        List<ObraResponseDTO> dtos = obraMapper.toResponseDTOList(obras);
+        return enriquecerConPresupuestos(dtos);
     }
 
     /* Crear nueva obra con cliente específico */
@@ -421,6 +424,45 @@ public class ObraService implements IObraService {
     @Override
     public boolean existeObra(Long empresaId, Long obraId) {
         return obraRepository.existsByIdAndEmpresaId(obraId, empresaId);
+    }
+
+    /**
+     * Enriquece los DTOs de obras con información del presupuesto no cliente que las originó.
+     * Este método carga el presupuesto asociado para obras creadas desde presupuestos.
+     * 
+     * @param dtos Lista de ObraResponseDTO a enriquecer
+     * @return Lista de ObraResponseDTO enriquecida con presupuestoNoCliente
+     */
+    private List<ObraResponseDTO> enriquecerConPresupuestos(List<ObraResponseDTO> dtos) {
+        if (dtos == null || dtos.isEmpty()) {
+            return dtos;
+        }
+
+        for (ObraResponseDTO dto : dtos) {
+            if (dto.getPresupuestoNoClienteId() != null) {
+                presupuestoNoClienteRepository.findById(dto.getPresupuestoNoClienteId())
+                        .ifPresent(presupuesto -> {
+                            // Crear DTO simple para evitar referencias circulares
+                            PresupuestoNoClienteSimpleDTO presupuestoDTO = new PresupuestoNoClienteSimpleDTO();
+                            presupuestoDTO.setId(presupuesto.getId());
+                            presupuestoDTO.setEsPresupuestoTrabajoExtra(presupuesto.getEsPresupuestoTrabajoExtra());
+                            presupuestoDTO.setObraId(presupuesto.getObra() != null ? presupuesto.getObra().getId() : null);
+                            presupuestoDTO.setNombreObra(presupuesto.getNombreObra());
+                            presupuestoDTO.setEstado(presupuesto.getEstado());
+                            presupuestoDTO.setFechaEmision(presupuesto.getFechaEmision());
+                            presupuestoDTO.setFechaProbableInicio(presupuesto.getFechaProbableInicio());
+                            presupuestoDTO.setTotalPresupuesto(presupuesto.getTotalPresupuesto());
+                            presupuestoDTO.setTotalHonorariosCalculado(presupuesto.getTotalHonorariosCalculado());
+                            presupuestoDTO.setTotalPresupuestoConHonorarios(presupuesto.getTotalPresupuestoConHonorarios());
+                            presupuestoDTO.setNombreSolicitante(presupuesto.getNombreSolicitante());
+                            presupuestoDTO.setObservaciones(presupuesto.getObservaciones());
+                            
+                            dto.setPresupuestoNoCliente(presupuestoDTO);
+                        });
+            }
+        }
+
+        return dtos;
     }
 
 }

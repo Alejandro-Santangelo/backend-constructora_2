@@ -14,4 +14,8 @@ public class AprobarPresupuestoResponse {
     private boolean obraCreada;
     private boolean clienteReutilizado;
     private Long clienteId;
+    
+    // Campos adicionales para trabajos extra
+    private Long obraPadreId;
+    private String nombreSubObra;
 }

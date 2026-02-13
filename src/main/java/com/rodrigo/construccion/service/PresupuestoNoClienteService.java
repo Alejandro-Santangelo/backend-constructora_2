@@ -2295,10 +2295,25 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                 throw new IllegalArgumentException("El presupuesto ya está aprobado");
             }
 
-            // 3. Si el presupuesto YA tiene obra → Solo aprobar, NO crear nueva
-            if (presupuesto.getObra() != null) {
-                log.warn("⚠️ Presupuesto {} YA tiene obra asociada (ID: {}). Solo se aprobará sin crear nueva obra.",
-                        id, presupuesto.getObra().getId());
+            // 3. Detectar si es un trabajo extra
+            boolean esTrabajoExtra = presupuesto.getEsPresupuestoTrabajoExtra() != null 
+                    && presupuesto.getEsPresupuestoTrabajoExtra();
+            boolean tieneObraPadre = presupuesto.getObra() != null;
+
+            log.info("📊 Tipo de presupuesto - esTrabajoExtra: {}, tieneObraPadre: {}", 
+                    esTrabajoExtra, tieneObraPadre);
+
+            // ========== CASO 1: TRABAJO EXTRA - Crear sub-obra vinculada a obra padre ==========
+            if (esTrabajoExtra && tieneObraPadre) {
+                log.info("🔨 CASO 1: Trabajo Extra - Creando sub-obra vinculada a obra padre ID: {}", 
+                        presupuesto.getObra().getId());
+                return procesarTrabajoExtra(presupuesto);
+            }
+
+            // ========== CASO 2: Presupuesto normal con obra ya asignada - Solo aprobar ==========
+            if (tieneObraPadre && !esTrabajoExtra) {
+                log.info("✅ CASO 2: Presupuesto normal con obra - Solo aprobar (ID obra: {})", 
+                        presupuesto.getObra().getId());
 
                 PresupuestoNoCliente aprobado = aprobar(id);
 
@@ -2546,6 +2561,137 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             log.error("❌ ERROR INESPERADO en aprobarYCrearObra - presupuestoId: {}", id, e);
             throw new RuntimeException("Error al aprobar presupuesto y crear obra: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * Procesa un trabajo extra creando una sub-obra vinculada a la obra padre.
+     * 
+     * FLUJO:
+     * 1. Valida que el presupuesto tenga nombreObra (requerido para nombrar la sub-obra)
+     * 2. Obtiene la obra padre desde presupuesto.obra
+     * 3. Hereda el cliente de la obra padre
+     * 4. Crea una nueva obra (sub-obra) vinculada mediante obra_origen_id
+     * 5. Actualiza el presupuesto para que apunte a la nueva sub-obra (en lugar del padre)
+     * 6. Crea las asignaciones profesional-obra para la nueva sub-obra
+     * 
+     * @param presupuesto El presupuesto de trabajo extra a procesar
+     * @return AprobarPresupuestoResponse con datos de la sub-obra creada
+     */
+    private com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse procesarTrabajoExtra(
+            PresupuestoNoCliente presupuesto) {
+        
+        log.info("🔨 INICIANDO procesamiento de Trabajo Extra - Presupuesto ID: {}", presupuesto.getId());
+        
+        // 1. VALIDAR que tenga nombreObra (requerido para crear la sub-obra)
+        if (presupuesto.getNombreObra() == null || presupuesto.getNombreObra().trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "El trabajo extra requiere un nombre de obra para crear la sub-obra. " +
+                "Por favor proporcione el campo 'nombreObra'."
+            );
+        }
+        
+        // 2. Obtener obra padre
+        Obra obraPadre = presupuesto.getObra();
+        Long obraPadreId = obraPadre.getId();
+        
+        log.info("📋 Obra Padre encontrada - ID: {}, Nombre: '{}'", obraPadreId, obraPadre.getNombre());
+        
+        // 3. Heredar cliente de la obra padre
+        Cliente cliente = obraPadre.getCliente();
+        if (cliente == null) {
+            throw new IllegalArgumentException(
+                "La obra padre (ID: " + obraPadreId + ") no tiene cliente asignado. " +
+                "No se puede crear el trabajo extra."
+            );
+        }
+        
+        log.info("👤 Cliente heredado de obra padre - ID: {}, Nombre: {}", 
+                cliente.getId(), 
+                cliente.getNombre() != null ? cliente.getNombre() : cliente.getNombreSolicitante());
+        
+        // 4. Crear nueva sub-obra
+        log.info("✨ Creando sub-obra para trabajo extra...");
+        
+        Obra subObra = new Obra();
+        subObra.setNombre(presupuesto.getNombreObra()); // "Cabaña 1", "Cabaña 2", etc.
+        subObra.setObraOrigenId(obraPadreId); // 🔗 VINCULAR CON OBRA PADRE (CRÍTICO)
+        subObra.setPresupuestoEstimado(presupuesto.getTotalPresupuestoConHonorarios()); // Total final
+        subObra.setCliente(cliente); // Heredar cliente del padre
+        subObra.setEmpresaId(presupuesto.getEmpresa().getId());
+        subObra.setEstado(com.rodrigo.construccion.enums.EstadoObra.APROBADO);
+        subObra.setFechaInicio(presupuesto.getFechaProbableInicio() != null 
+                ? presupuesto.getFechaProbableInicio() 
+                : LocalDate.now());
+        
+        // Marcar como obra de trabajo extra
+        subObra.setEsObraTrabajoExtra(true);
+        
+        // Copiar datos del presupuesto a la sub-obra
+        sincronizarPresupuestoAObra(presupuesto, subObra);
+        
+        // Agregar observación indicando el origen
+        String obsOriginal = presupuesto.getObservaciones() != null ? presupuesto.getObservaciones() : "";
+        String obsExtra = String.format(
+            "\n[Sub-obra creada desde trabajo extra - Presupuesto ID: %d - Obra Padre: '%s' (ID: %d)]",
+            presupuesto.getId(),
+            obraPadre.getNombre(),
+            obraPadreId
+        );
+        subObra.setObservaciones(obsOriginal + obsExtra);
+        
+        // Guardar sub-obra
+        subObra = obraRepository.save(subObra);
+        
+        log.info("✅ Sub-obra creada exitosamente - ID: {}, Nombre: '{}', ObraPadreId: {}", 
+                subObra.getId(), subObra.getNombre(), subObra.getObraOrigenId());
+        
+        // 5. Actualizar presupuesto: cambiar obra_id del padre a la sub-obra
+        log.info("🔄 Actualizando presupuesto: cambiando obra_id de {} (padre) a {} (sub-obra)", 
+                obraPadreId, subObra.getId());
+        
+        presupuesto.setObra(subObra); // CRÍTICO: apuntar a la sub-obra recién creada
+        presupuesto.setCliente(cliente); // Asegurar vínculo con cliente
+        presupuesto.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
+        presupuesto.calcularCamposCalculados();
+        presupuesto = repository.save(presupuesto);
+        
+        log.info("✅ Presupuesto actualizado - Estado: APROBADO, Obra: {} (sub-obra)", subObra.getId());
+        
+        // Actualizar obra con el ID del presupuesto (relación bidireccional)
+        subObra.setPresupuestoNoClienteId(presupuesto.getId());
+        subObra = obraRepository.save(subObra);
+        log.info("🔗 Sub-obra actualizada con presupuestoNoClienteId: {}", presupuesto.getId());
+        
+        // 6. Crear asignaciones profesional-obra para la SUB-OBRA
+        log.info("👷 Creando asignaciones profesionales para la sub-obra...");
+        crearAsignacionesProfesionalesObra(presupuesto, subObra);
+        
+        // 7. Enriquecer profesionales con obraId
+        log.info("🔗 Enriqueciendo profesionales con profesionalObraId...");
+        enriquecerProfesionalesConObraId(presupuesto);
+        
+        // 8. Construir respuesta
+        com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse response =
+                new com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse();
+        response.setObraId(subObra.getId());
+        response.setObraCreada(true);
+        response.setObraPadreId(obraPadreId); // Incluir ID de obra padre
+        response.setNombreSubObra(subObra.getNombre()); // Incluir nombre de sub-obra
+        response.setClienteId(cliente.getId());
+        response.setClienteReutilizado(true); // El cliente se heredó del padre
+        response.setPresupuestosActualizados(1);
+        response.setMensaje(String.format(
+                "Trabajo Extra aprobado exitosamente. Sub-obra '%s' (ID: %d) creada y vinculada a obra padre '%s' (ID: %d)",
+                subObra.getNombre(),
+                subObra.getId(),
+                obraPadre.getNombre(),
+                obraPadreId
+        ));
+        
+        log.info("🎉 Trabajo Extra procesado exitosamente - Sub-obra: {} | Padre: {} | Cliente: {}", 
+                subObra.getId(), obraPadreId, cliente.getId());
+        
+        return response;
     }
 
     /**
@@ -3322,6 +3468,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             profesional.setFrontendId(dto.getId());
             profesional.setTipo(dto.getTipo());
             profesional.setNombre(dto.getNombre());
+            profesional.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             profesional.setDescripcion(dto.getDescripcion());
             profesional.setObservaciones(dto.getObservaciones());
             profesional.setTelefono(dto.getTelefono());
@@ -3380,6 +3527,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
             material.setFrontendId(dto.getId());
             material.setNombre(dto.getNombre());
+            material.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             material.setDescripcion(dto.getDescripcion());
             material.setObservaciones(dto.getObservaciones());
             material.setUnidad(dto.getUnidad());
@@ -3505,6 +3653,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
             gasto.setDescripcion(dto.getDescripcion());
             gasto.setObservaciones(dto.getObservaciones());
+            gasto.setEsGlobal(dto.getEsGlobal() != null ? dto.getEsGlobal() : false);
             gasto.setCantidad(dto.getCantidad() != null ? dto.getCantidad() : BigDecimal.ONE);
             gasto.setPrecioUnitario(dto.getPrecioUnitario() != null ? dto.getPrecioUnitario() : BigDecimal.ZERO);
             gasto.setSubtotal(dto.getSubtotal() != null ? dto.getSubtotal() : BigDecimal.ZERO);

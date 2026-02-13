@@ -1,6 +1,7 @@
 package com.rodrigo.construccion.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rodrigo.construccion.enums.EstadoObra;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -25,9 +26,11 @@ public class ObraResponseDTO {
     private Long id;
 
     @Schema(description = "Indica si la obra es un trabajo extra", example = "false")
+    @JsonProperty("esTrabajoExtra") // Alias para el frontend
     private Boolean esObraTrabajoExtra;
 
-    @Schema(description = "ID de la obra principal (si es trabajo extra)", example = "100")
+    @Schema(description = "ID de la obra principal/padre (si es trabajo extra)", example = "100")
+    @JsonProperty("obraPadreId") // Alias para el frontend, valor real: obraOrigenId
     private Long obraOrigenId;
 
     @Schema(description = "Nombre de la obra", example = "Casa Familiar García")
@@ -81,6 +84,9 @@ public class ObraResponseDTO {
 
     @Schema(description = "Información del cliente")
     private ClienteResponseDTO cliente;
+
+    @Schema(description = "Presupuesto no cliente que originó la obra (si aplica)")
+    private PresupuestoNoClienteSimpleDTO presupuestoNoCliente;
 
     @Schema(description = "Presupuestos asociados a la obra")
     private List<PresupuestoResponseDTO> presupuestos;
