@@ -260,7 +260,7 @@ public class TrabajoExtra {
     // Mayores Costos por categoría - Materiales
     @Column(name = "mayores_costos_materiales_activo")
     @Builder.Default
-    private Boolean mayoresCostosMaterialesActivo = false;
+    private Boolean mayoresCostosMaterialesActivo = true;
 
     @Column(name = "mayores_costos_materiales_valor", precision = 15, scale = 2)
     private BigDecimal mayoresCostosMaterialesValor;
@@ -271,7 +271,7 @@ public class TrabajoExtra {
     // Mayores Costos por categoría - Profesionales
     @Column(name = "mayores_costos_profesionales_activo")
     @Builder.Default
-    private Boolean mayoresCostosProfesionalesActivo = false;
+    private Boolean mayoresCostosProfesionalesActivo = true;
 
     @Column(name = "mayores_costos_profesionales_valor", precision = 15, scale = 2)
     private BigDecimal mayoresCostosProfesionalesValor;
@@ -282,7 +282,7 @@ public class TrabajoExtra {
     // Mayores Costos por categoría - Otros Costos
     @Column(name = "mayores_costos_otros_costos_activo")
     @Builder.Default
-    private Boolean mayoresCostosOtrosCostosActivo = false;
+    private Boolean mayoresCostosOtrosCostosActivo = true;
 
     @Column(name = "mayores_costos_otros_costos_valor", precision = 15, scale = 2)
     private BigDecimal mayoresCostosOtrosCostosValor;
@@ -293,7 +293,7 @@ public class TrabajoExtra {
     // Mayores Costos por categoría - Honorarios
     @Column(name = "mayores_costos_honorarios_activo")
     @Builder.Default
-    private Boolean mayoresCostosHonorariosActivo = false;
+    private Boolean mayoresCostosHonorariosActivo = true;
 
     @Column(name = "mayores_costos_honorarios_valor", precision = 15, scale = 2)
     private BigDecimal mayoresCostosHonorariosValor;
@@ -304,7 +304,7 @@ public class TrabajoExtra {
     // Mayores Costos configuración presupuesto
     @Column(name = "mayores_costos_configuracion_presupuesto_activo")
     @Builder.Default
-    private Boolean mayoresCostosConfiguracionPresupuestoActivo = false;
+    private Boolean mayoresCostosConfiguracionPresupuestoActivo = true;
 
     @Column(name = "mayores_costos_configuracion_presupuesto_valor", precision = 15, scale = 2)
     private BigDecimal mayoresCostosConfiguracionPresupuestoValor;
