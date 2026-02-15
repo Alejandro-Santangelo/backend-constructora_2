@@ -92,6 +92,15 @@ public class ObraService implements IObraService {
         return enriquecerConPresupuestos(dtos);
     }
 
+    /* Obtener SOLO obras manuales por empresa (sin presupuesto previo) */
+    @Override
+    public List<ObraResponseDTO> obtenerObrasManualesPorEmpresa(Long empresaId) {
+        empresaService.findEmpresaById(empresaId);
+        List<Obra> obrasManuales = obraRepository.findObrasManualesByEmpresaId(empresaId);
+        List<ObraResponseDTO> dtos = obraMapper.toResponseDTOList(obrasManuales);
+        return enriquecerConPresupuestos(dtos);
+    }
+
     /* Obtener todas las obras */
     @Override
     public List<ObraResponseDTO> obtenerTodas() {
@@ -143,6 +152,14 @@ public class ObraService implements IObraService {
             obra.setNombre(generarNombreObra(obraRequestDto));
         }
 
+        // LÓGICA 4: Marcar como obra manual si NO tiene presupuesto asociado
+        // Las obras manuales son creadas directamente sin presupuesto previo
+        if (obra.getPresupuestoNoClienteId() == null) {
+            obra.setEsObraManual(true);
+        } else {
+            obra.setEsObraManual(false);
+        }
+
         // Si no se proporciona una fecha de inicio, se asigna la fecha actual
         if (obra.getFechaInicio() == null) {
             obra.setFechaInicio(LocalDate.now());
@@ -151,7 +168,7 @@ public class ObraService implements IObraService {
         // Guardar la obra primero
         Obra obraGuardada = obraRepository.save(obra);
 
-        // LÓGICA 4: Asignar profesionales si hay en el formulario
+        // LÓGICA 5: Asignar profesionales si hay en el formulario
         if (obraRequestDto.getProfesionalesAsignadosForm() != null && !obraRequestDto.getProfesionalesAsignadosForm().isEmpty()) {
             asignarProfesionalesDesdeFormulario(obraGuardada, obraRequestDto.getProfesionalesAsignadosForm());
         }

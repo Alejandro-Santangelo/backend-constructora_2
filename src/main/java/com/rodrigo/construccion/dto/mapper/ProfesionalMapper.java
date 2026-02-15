@@ -57,6 +57,7 @@ public interface ProfesionalMapper {
     @Mapping(target = "importeGanancia", source = "importeGanancia")
     @Mapping(target = "cuit", source = "cuit")
     @Mapping(target = "rolPersonalizado", source = "rolPersonalizado")
+    @Mapping(target = "categoria", source = "categoria")
     @Mapping(target = "horas", source = "horas")
     @Mapping(target = "dias", source = "dias")
     @Mapping(target = "semanas", source = "semanas")

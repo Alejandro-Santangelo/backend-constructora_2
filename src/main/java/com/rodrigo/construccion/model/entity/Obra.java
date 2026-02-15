@@ -42,6 +42,9 @@ public class Obra {
     @Column(name = "obra_origen_id")
     private Long obraOrigenId;
 
+    @Column(name = "es_obra_manual")
+    private Boolean esObraManual = false;
+
     @Column(name = "nombre", nullable = false, length = 200)
     private String nombre;
 

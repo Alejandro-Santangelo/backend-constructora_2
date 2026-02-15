@@ -26,6 +26,10 @@ public interface ObraRepository extends JpaRepository<Obra, Long> {
   @Query("SELECT o FROM Obra o JOIN o.cliente.empresas e WHERE e.id = :empresaId")
   List<Obra> findByEmpresaId(@Param("empresaId") Long empresaId);
 
+  /* Buscar obras MANUALES por empresa (sin presupuesto previo) */
+  @Query("SELECT o FROM Obra o JOIN o.cliente.empresas e WHERE e.id = :empresaId AND o.esObraManual = true")
+  List<Obra> findObrasManualesByEmpresaId(@Param("empresaId") Long empresaId);
+
   /* Buscar obra por ID y empresa */
   @Query("SELECT o FROM Obra o JOIN o.cliente.empresas e WHERE o.id = :id AND e.id = :empresaId")
   Optional<Obra> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);

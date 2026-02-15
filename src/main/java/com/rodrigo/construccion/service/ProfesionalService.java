@@ -3,6 +3,7 @@ package com.rodrigo.construccion.service;
 import com.rodrigo.construccion.config.TenantContext;
 import com.rodrigo.construccion.dto.mapper.ProfesionalMapper;
 import com.rodrigo.construccion.dto.request.ProfesionalRequestDTO;
+import com.rodrigo.construccion.enums.CategoriaProfesional;
 import com.rodrigo.construccion.enums.TipoProfesional;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
 import com.rodrigo.construccion.model.entity.Empresa;
@@ -65,7 +66,30 @@ public class ProfesionalService implements IProfesionalService {
             profesional.setValorHoraDefault(BigDecimal.ZERO);
         }
 
+        // Validar y setear categoría (EMPLEADO por default)
+        validarYSetearCategoria(profesional, requestDTO.getCategoria());
+
         return profesionalMapper.toResponseDTO(profesionalRepository.save(profesional));
+    }
+
+    /**
+     * Valida y establece la categoría del profesional.
+     * Si no se proporciona, defaultea a EMPLEADO.
+     */
+    private void validarYSetearCategoria(Profesional profesional, String categoriaString) {
+        if (categoriaString != null && !categoriaString.trim().isEmpty()) {
+            // Validar que sea una categoría válida
+            if (!CategoriaProfesional.esValida(categoriaString)) {
+                throw new IllegalArgumentException(
+                    "Categoría inválida: " + categoriaString + 
+                    ". Valores permitidos: EMPLEADO, INDEPENDIENTE, CONTRATISTA"
+                );
+            }
+            profesional.setCategoria(categoriaString.trim().toUpperCase());
+        } else {
+            // Default a EMPLEADO
+            profesional.setCategoria(CategoriaProfesional.EMPLEADO.getValor());
+        }
     }
 
     /* Actualizar profesional existente desde DTO */
@@ -91,6 +115,11 @@ public class ProfesionalService implements IProfesionalService {
 
                     if (requestDTO.getCuit() != null) {
                         profesional.setCuit(requestDTO.getCuit());
+                    }
+
+                    // Validar y actualizar categoría si viene en el request
+                    if (requestDTO.getCategoria() != null) {
+                        validarYSetearCategoria(profesional, requestDTO.getCategoria());
                     }
 
                     Profesional profesionalGuardado = profesionalRepository.save(profesional);
@@ -303,6 +332,41 @@ public class ProfesionalService implements IProfesionalService {
     public List<ProfesionalResponseDTO> buscarPorNombre(String nombre) {
         List<Profesional> profesionalesEncontrados = profesionalRepository.findByNombreContaining(nombre);
         return profesionalMapper.toResponseDTOList(profesionalesEncontrados);
+    }
+
+    /* Buscar profesionales por categoría (solo activos) */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfesionalResponseDTO> buscarPorCategoria(String categoria) {
+        // Validar que la categoría sea válida
+        if (!CategoriaProfesional.esValida(categoria)) {
+            throw new IllegalArgumentException(
+                "Categoría inválida: " + categoria + 
+                ". Valores permitidos: EMPLEADO, INDEPENDIENTE, CONTRATISTA"
+            );
+        }
+        
+        List<Profesional> profesionales = profesionalRepository.findByCategoriaAndActivoTrue(categoria.toUpperCase());
+        return profesionalMapper.toResponseDTOList(profesionales);
+    }
+
+    /* Buscar profesionales por categoría y empresaId (solo activos) */
+    @Override
+    @Transactional(readOnly = true)
+    public List<ProfesionalResponseDTO> buscarPorCategoriaYEmpresaId(String categoria, Long empresaId) {
+        // Validar que la categoría sea válida
+        if (!CategoriaProfesional.esValida(categoria)) {
+            throw new IllegalArgumentException(
+                "Categoría inválida: " + categoria + 
+                ". Valores permitidos: EMPLEADO, INDEPENDIENTE, CONTRATISTA"
+            );
+        }
+        
+        List<Profesional> profesionales = profesionalRepository.findByCategoriaAndEmpresaIdAndActivoTrue(
+            categoria.toUpperCase(), 
+            empresaId
+        );
+        return profesionalMapper.toResponseDTOList(profesionales);
     }
 
 }

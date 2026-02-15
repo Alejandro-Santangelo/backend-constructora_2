@@ -29,6 +29,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import com.rodrigo.construccion.enums.CategoriaProfesional;
 import com.rodrigo.construccion.enums.TipoProfesional;
 
 /**
@@ -119,6 +120,15 @@ public class Profesional {
 
     @Column(name = "activo")
     private Boolean activo = true;
+
+    /**
+     * Categoría del profesional según su relación con la empresa.
+     * - EMPLEADO: Personal permanente de la empresa (default)
+     * - INDEPENDIENTE: Profesionales autónomos/freelancers creados ad-hoc
+     * - CONTRATISTA: Empresas contratistas o cooperativas
+     */
+    @Column(name = "categoria", length = 20, nullable = false)
+    private String categoria = CategoriaProfesional.EMPLEADO.getValor();
 
     @CreationTimestamp
     @Column(name = "fecha_creacion", updatable = false)

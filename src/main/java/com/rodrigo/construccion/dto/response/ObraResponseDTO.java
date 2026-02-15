@@ -33,6 +33,9 @@ public class ObraResponseDTO {
     @JsonProperty("obraPadreId") // Alias para el frontend, valor real: obraOrigenId
     private Long obraOrigenId;
 
+    @Schema(description = "Indica si la obra fue creada manualmente (sin presupuesto previo)", example = "true")
+    private Boolean esObraManual;
+
     @Schema(description = "Nombre de la obra", example = "Casa Familiar García")
     private String nombre;
 

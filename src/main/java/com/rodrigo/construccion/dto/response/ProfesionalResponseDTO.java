@@ -47,6 +47,9 @@ public class ProfesionalResponseDTO {
     @Schema(description = "Estado del profesional", example = "true")
     private Boolean activo;
 
+    @Schema(description = "Categoría del profesional: EMPLEADO, INDEPENDIENTE, CONTRATISTA", example = "INDEPENDIENTE")
+    private String categoria;
+
     @Schema(description = "Fecha de creación", example = "2024-01-15T10:30:00")
     private LocalDateTime fechaCreacion;
 

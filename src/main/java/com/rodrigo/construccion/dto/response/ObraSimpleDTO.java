@@ -10,6 +10,7 @@ public class ObraSimpleDTO {
     public Long id;
     public Boolean esObraTrabajoExtra;
     public Long obraOrigenId;
+    public Boolean esObraManual;
     public String nombre;
     
     // DIRECCIÓN EN 6 CAMPOS SEPARADOS (igual que PresupuestoNoCliente)

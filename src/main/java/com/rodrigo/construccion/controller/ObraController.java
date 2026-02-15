@@ -89,9 +89,19 @@ public class ObraController {
     @Operation(summary = "Obtener todas las obras de una empresa")
     @GetMapping("/empresa/{empresaId}")
     public ResponseEntity<List<ObraResponseDTO>> obtenerObrasPorEmpresa(
-            @Parameter(description = "ID de la empresa") @PathVariable Long empresaId) {
-        List<ObraResponseDTO> obrasPorEmpresaDto = obraService.obtenerPorEmpresa(empresaId);
-        return ResponseEntity.ok(obrasPorEmpresaDto);
+            @Parameter(description = "ID de la empresa") @PathVariable Long empresaId,
+            @Parameter(description = "Filtrar solo obras manuales (sin presupuesto previo)") 
+            @RequestParam(required = false, defaultValue = "false") Boolean soloManuales) {
+        
+        List<ObraResponseDTO> obras;
+        
+        if (Boolean.TRUE.equals(soloManuales)) {
+            obras = obraService.obtenerObrasManualesPorEmpresa(empresaId);
+        } else {
+            obras = obraService.obtenerPorEmpresa(empresaId);
+        }
+        
+        return ResponseEntity.ok(obras);
     }
 
     @Operation(summary = "Obtener todas las obras")

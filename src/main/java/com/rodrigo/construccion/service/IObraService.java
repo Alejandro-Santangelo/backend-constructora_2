@@ -26,6 +26,8 @@ public interface IObraService {
 
     List<ObraResponseDTO> obtenerPorEmpresa(Long empresaId);
 
+    List<ObraResponseDTO> obtenerObrasManualesPorEmpresa(Long empresaId);
+
     List<ObraResponseDTO> obtenerTodas();
 
     List<ProfesionalResponseDTO> obtenerProfesionalesAsignados(Long obraId);

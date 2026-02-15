@@ -45,4 +45,20 @@ public interface ProfesionalRepository extends JpaRepository<Profesional, Long> 
                     "JOIN h.obra.cliente.empresas e WHERE e.id = :empresaId")
     Page<Profesional> findProfesionalesWithHonorarios(Pageable pageable, @Param("empresaId") Long empresaId);
 
+    /* Buscar profesionales por categoría */
+    List<Profesional> findByCategoria(String categoria);
+
+    /* Buscar profesionales por categoría y activos */
+    List<Profesional> findByCategoriaAndActivoTrue(String categoria);
+
+    /* Buscar profesionales por categoría, empresaId y activos */
+    @Query("SELECT p FROM Profesional p WHERE " +
+           "p.categoria = :categoria AND " +
+           "p.empresa.id = :empresaId AND " +
+           "p.activo = true")
+    List<Profesional> findByCategoriaAndEmpresaIdAndActivoTrue(
+        @Param("categoria") String categoria, 
+        @Param("empresaId") Long empresaId
+    );
+
 }

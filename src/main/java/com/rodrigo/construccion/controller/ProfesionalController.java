@@ -46,6 +46,22 @@ public class ProfesionalController {
         return ResponseEntity.ok(profesionalService.buscarPorTipo(tipoProfesional));
     }
 
+    @GetMapping("/por-categoria")
+    public ResponseEntity<List<ProfesionalResponseDTO>> buscarPorCategoria(
+            @Parameter(description = "Categoría del profesional: EMPLEADO, INDEPENDIENTE, CONTRATISTA", 
+                      example = "INDEPENDIENTE", 
+                      required = true)
+            @RequestParam String categoria,
+            @Parameter(description = "ID de la empresa para filtrar (opcional)", example = "1")
+            @RequestParam(required = false) Long empresaId) {
+        
+        if (empresaId != null) {
+            return ResponseEntity.ok(profesionalService.buscarPorCategoriaYEmpresaId(categoria, empresaId));
+        } else {
+            return ResponseEntity.ok(profesionalService.buscarPorCategoria(categoria));
+        }
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ProfesionalResponseDTO> actualizarProfesional(@PathVariable Long id,
                                                                         @Valid @RequestBody ProfesionalRequestDTO requestDTO) {

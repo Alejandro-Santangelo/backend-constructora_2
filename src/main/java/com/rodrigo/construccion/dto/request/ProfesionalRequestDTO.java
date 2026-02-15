@@ -84,6 +84,9 @@ public class ProfesionalRequestDTO {
     @Schema(description = "Estado del profesional", example = "true")
     private Boolean activo;
 
+    @Schema(description = "Categoría del profesional: EMPLEADO (default), INDEPENDIENTE, CONTRATISTA", example = "INDEPENDIENTE", allowableValues = {"EMPLEADO", "INDEPENDIENTE", "CONTRATISTA"})
+    private String categoria;
+
     @Schema(description = "Fecha de creación (se genera automáticamente)", hidden = true)
     private LocalDateTime fechaCreacion;
 

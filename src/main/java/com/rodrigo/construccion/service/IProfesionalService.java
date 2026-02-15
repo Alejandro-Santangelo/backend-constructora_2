@@ -47,4 +47,8 @@ public interface IProfesionalService {
 
     Page<Profesional> findAllWithHonorarios(Pageable pageable, Long empresaId);
 
+    List<ProfesionalResponseDTO> buscarPorCategoria(String categoria);
+
+    List<ProfesionalResponseDTO> buscarPorCategoriaYEmpresaId(String categoria, Long empresaId);
+
 }
