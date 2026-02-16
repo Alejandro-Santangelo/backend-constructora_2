@@ -1,6 +1,7 @@
 package com.rodrigo.construccion.dto.response;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.rodrigo.construccion.enums.OrigenFondos;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -67,4 +68,7 @@ public class ObraOtroCostoResponseDTO {
 
     @Schema(description = "Indica si es una asignación global (true) que aplica a toda la obra o específica (false)", example = "true")
     private Boolean esGlobal;
+
+    @Schema(description = "Origen de los fondos cuando presupuesto=0 (RETIRO_DIRECTO o PRESUPUESTO_MATERIALES). Opcional.", example = "RETIRO_DIRECTO")
+    private OrigenFondos origenFondos;
 }

@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.model.entity;
 
+import com.rodrigo.construccion.enums.OrigenFondos;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -77,4 +78,14 @@ public class ObraOtroCosto {
 
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;
+
+    /**
+     * Indica el origen de los fondos cuando el presupuesto es 0.
+     * Permite rastrear si los fondos provienen de un retiro directo del socio
+     * o del presupuesto de materiales.
+     * Opcional (puede ser null).
+     */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "origen_fondos", length = 30)
+    private OrigenFondos origenFondos;
 }

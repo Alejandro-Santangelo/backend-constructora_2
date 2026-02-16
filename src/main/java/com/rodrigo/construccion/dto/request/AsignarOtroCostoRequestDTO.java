@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.dto.request;
 
+import com.rodrigo.construccion.enums.OrigenFondos;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
@@ -54,4 +55,7 @@ public class AsignarOtroCostoRequestDTO {
 
     @Schema(description = "Observaciones adicionales sobre la asignación", example = "Volquetes [Gasto Semanal Global]")
     private String observaciones;
+
+    @Schema(description = "Origen de los fondos cuando presupuesto=0 (RETIRO_DIRECTO o PRESUPUESTO_MATERIALES). Opcional.", example = "RETIRO_DIRECTO")
+    private OrigenFondos origenFondos;
 }

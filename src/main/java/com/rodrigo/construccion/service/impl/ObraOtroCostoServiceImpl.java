@@ -71,8 +71,9 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
         obraOtroCosto.setEsSemanal(esSemanal);
         obraOtroCosto.setEsManual(esManual);
         obraOtroCosto.setEsGlobal(request.getEsGlobal() != null ? request.getEsGlobal() : false);
+        obraOtroCosto.setOrigenFondos(request.getOrigenFondos());
         
-        log.info("📝 Entidad antes de guardar - Semana: {}, ObraId: {}, EsSemanal: {}, EsManual: {}, EsGlobal: {}", 
+        log.info("📝 Entidad antes de guardar - Semana: {}, ObraId: {}, EsSemanal: {}, EsManual: {}, EsGlobal: {}",
                 obraOtroCosto.getSemana(), obraOtroCosto.getObraId(), obraOtroCosto.getEsSemanal(), 
                 obraOtroCosto.getEsManual(), obraOtroCosto.getEsGlobal());
 
@@ -151,6 +152,7 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
         asignacion.setEsGlobal(request.getEsGlobal() != null ? request.getEsGlobal() : false);
         asignacion.setPresupuestoOtroCostoId(request.getPresupuestoOtroCostoId());
         asignacion.setGastoGeneralId(request.getGastoGeneralId());
+        asignacion.setOrigenFondos(request.getOrigenFondos());
 
         ObraOtroCosto updated = obraOtroCostoRepository.save(asignacion);
 
@@ -223,6 +225,7 @@ public class ObraOtroCostoServiceImpl implements IObraOtroCostoService {
                 .esSemanal(entity.getEsSemanal())
                 .esManual(entity.getEsManual())
                 .esGlobal(entity.getEsGlobal())
+                .origenFondos(entity.getOrigenFondos())
                 .build();
     }
 }
