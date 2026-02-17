@@ -1,0 +1,450 @@
+INFORME TÉCNICO: SISTEMA UNIFICADO DE ENTIDADES FINANCIERAS
+Backend Spring Boot — construccion_app_v3
+Fecha: 2026-02-17
+========================================================================
+
+RESUMEN
+------------------------------------------------------------------------
+Se implementó un sistema de registro unificado (tabla "entidades_financieras")
+que actúa como puente polimórfico entre las 4 entidades del sistema y los
+cobros / estadísticas financieras, sin modificar ninguna tabla existente.
+
+El problema que resuelve: el frontend intentaba cargar presupuestos para TODAS
+las entidades, causando errores 404 en obras independientes y trabajos
+adicionales que no tienen presupuesto vinculado.
+
+BASE URL DE TODOS LOS ENDPOINTS NUEVOS
+------------------------------------------------------------------------
+/api/v1/entidades-financieras
+
+
+TIPOS DE ENTIDAD
+------------------------------------------------------------------------
+El campo "tipoEntidad" puede tomar exactamente estos 4 valores string:
+
+  OBRA_PRINCIPAL     → Obra creada desde un presupuesto aprobado
+                       (tiene presupuesto_no_cliente_id)
+  OBRA_INDEPENDIENTE → Obra creada manualmente sin presupuesto previo
+                       (presupuesto_no_cliente_id es null)
+  TRABAJO_EXTRA      → TrabajoExtra registrado en una obra
+  TRABAJO_ADICIONAL  → TrabajoAdicional asociado a una obra o trabajo extra
+
+Regla de clasificación en backend:
+  - Si Obra.presupuestoNoClienteId != null  → OBRA_PRINCIPAL
+  - Si Obra.presupuestoNoClienteId == null  → OBRA_INDEPENDIENTE
+  Esta lógica es automática; el frontend NO necesita calcularla.
+
+
+========================================================================
+ENDPOINT 1: SINCRONIZAR ENTIDAD FINANCIERA
+========================================================================
+
+Método : POST
+URL     : /api/v1/entidades-financieras/sincronizar
+Función : Registra o actualiza una entidad en el sistema unificado.
+          Idempotente — se puede llamar múltiples veces sin efectos negativos.
+          El backend lo llama automáticamente al crear obras,
+          trabajos extra y trabajos adicionales.
+          El frontend SOLO necesita llamarlo si crea entidades de forma
+          directa (bypass del backend) o para forzar una re-sincronización.
+
+REQUEST BODY (application/json):
+{
+  "empresaId":              1,            (Long, obligatorio)
+  "tipoEntidad":            "OBRA_PRINCIPAL",  (String enum, obligatorio)
+  "entidadId":              10,           (Long, ID de la entidad original, obligatorio)
+  "presupuestoNoClienteId": 5,            (Long, solo para OBRA_PRINCIPAL y TRABAJO_EXTRA, puede ser null)
+  "nombreDisplay":          "Calle Falsa 123"  (String, nombre para mostrar en listas)
+}
+
+tipoEntidad acepta: OBRA_PRINCIPAL | OBRA_INDEPENDIENTE | TRABAJO_EXTRA | TRABAJO_ADICIONAL
+
+RESPONSE 200 OK:
+{
+  "id":                     1,            (Long — este es el entidadFinancieraId que se usa en todos los demás endpoints)
+  "empresaId":              1,
+  "tipoEntidad":            "OBRA_PRINCIPAL",
+  "entidadId":              10,           (ID de la entidad original en su tabla)
+  "presupuestoNoClienteId": 5,            (null para OBRA_INDEPENDIENTE y TRABAJO_ADICIONAL)
+  "nombreDisplay":          "Calle Falsa 123",
+  "activo":                 true,
+  "fechaCreacion":          "2026-02-17T10:30:00",
+  "fechaActualizacion":     "2026-02-17T10:30:00"
+}
+
+EJEMPLOS DE USO:
+// Obra principal (con presupuesto):
+POST /sincronizar
+{ "empresaId": 1, "tipoEntidad": "OBRA_PRINCIPAL", "entidadId": 10, "presupuestoNoClienteId": 5, "nombreDisplay": "Obra Rivadavia 400" }
+
+// Obra independiente (sin presupuesto):
+POST /sincronizar
+{ "empresaId": 1, "tipoEntidad": "OBRA_INDEPENDIENTE", "entidadId": 20, "nombreDisplay": "Obra Manual Centro" }
+
+// Trabajo adicional:
+POST /sincronizar
+{ "empresaId": 1, "tipoEntidad": "TRABAJO_ADICIONAL", "entidadId": 3, "nombreDisplay": "Instalación eléctrica extra" }
+
+
+========================================================================
+ENDPOINT 2: REGISTRAR COBRO
+========================================================================
+
+Método : POST
+URL     : /api/v1/entidades-financieras/cobros
+Función : Registra un cobro contra CUALQUIER tipo de entidad financiera.
+          Usar para cobros de obras independientes y trabajos adicionales
+          (que no tienen el sistema de cobros anterior).
+HTTP    : 201 Created en éxito
+
+REQUEST BODY (application/json):
+{
+  "entidadFinancieraId": 1,              (Long, obligatorio — el "id" retornado por /sincronizar)
+  "empresaId":           1,              (Long, obligatorio — validación de pertenencia)
+  "monto":               10000.00,       (Decimal > 0, obligatorio)
+  "fechaCobro":          "2026-02-17",   (Date "yyyy-MM-dd", obligatorio)
+  "metodoPago":          "TRANSFERENCIA",(String opcional: TRANSFERENCIA, EFECTIVO, CHEQUE, etc.)
+  "referencia":          "REF-001",      (String opcional)
+  "notas":               "Pago inicial", (String opcional)
+  "creadoPor":           "admin"         (String opcional)
+}
+
+RESPONSE 201 Created:
+{
+  "id":                   7,
+  "entidadFinancieraId":  1,
+  "empresaId":            1,
+  "monto":                10000.00,
+  "fechaCobro":           "2026-02-17",
+  "metodoPago":           "TRANSFERENCIA",
+  "referencia":           "REF-001",
+  "notas":                "Pago inicial",
+  "creadoPor":            "admin",
+  "fechaCreacion":        "2026-02-17T10:45:00"
+}
+
+ERRORES POSIBLES:
+  404 → entidadFinancieraId no existe o no pertenece a empresaId
+  400 → monto <= 0
+  400 → entidad inactiva (activo=false)
+
+
+========================================================================
+ENDPOINT 3: OBTENER COBROS DE UNA ENTIDAD
+========================================================================
+
+Método : GET
+URL     : /api/v1/entidades-financieras/{entidadFinancieraId}/cobros?empresaId={empresaId}
+Función : Lista todos los cobros de una entidad financiera, ordenados por
+          fecha de cobro descendente.
+
+PATH PARAMS:
+  entidadFinancieraId (Long) — el ID del registro en entidades_financieras
+
+QUERY PARAMS:
+  empresaId (Long, obligatorio) — validación de seguridad
+
+RESPONSE 200 OK: Array de objetos cobro (mismo shape que el response del endpoint 2)
+[
+  { "id": 7, "entidadFinancieraId": 1, "monto": 10000.00, "fechaCobro": "2026-02-17", ... },
+  { "id": 3, "entidadFinancieraId": 1, "monto": 5000.00,  "fechaCobro": "2026-02-10", ... }
+]
+Retorna [] (array vacío) si no hay cobros. Nunca retorna 404 si la entidad existe.
+
+
+========================================================================
+ENDPOINT 4: OBTENER TOTAL COBRADO
+========================================================================
+
+Método : GET
+URL     : /api/v1/entidades-financieras/{entidadFinancieraId}/total-cobrado?empresaId={empresaId}
+
+RESPONSE 200 OK: BigDecimal (número plano, no objeto)
+  15000.00
+
+Retorna 0 si no hay cobros registrados.
+
+
+========================================================================
+ENDPOINT 5: ESTADÍSTICAS MÚLTIPLES (CRÍTICO — reemplaza useEstadisticasObrasSeleccionadas)
+========================================================================
+
+Método : POST
+URL     : /api/v1/entidades-financieras/estadisticas-multiples
+Función : Calcula estadísticas financieras para una lista mixta de entidades
+          de distintos tipos. Este es el endpoint principal que resuelve el
+          problema del frontend (evita los 404 al mezclar tipos de entidades).
+
+REQUEST BODY (application/json):
+{
+  "empresaId":              1,            (Long, obligatorio)
+  "entidadesFinancierasIds": [1, 2, 3, 4] (Array de Long, mínimo 1 elemento)
+}
+
+RESPONSE 200 OK: Array de objetos estadísticas, uno por cada ID válido:
+[
+  {
+    "entidadFinancieraId": 1,
+    "tipoEntidad":         "OBRA_PRINCIPAL",
+    "entidadId":           10,            (ID original en tabla obras)
+    "nombreDisplay":       "Obra Rivadavia 400",
+    "totalCobrado":        50000.00,      (suma de cobros en cobros_entidad)
+    "totalGastos":         35000.00,      (calculado según tipo — ver nota abajo)
+    "saldo":               15000.00,      (totalCobrado - totalGastos)
+    "presupuestoAprobado": null           (reservado para uso futuro)
+  },
+  {
+    "entidadFinancieraId": 3,
+    "tipoEntidad":         "OBRA_INDEPENDIENTE",
+    "entidadId":           20,
+    "nombreDisplay":       "Obra Manual Centro",
+    "totalCobrado":        20000.00,
+    "totalGastos":         0.00,
+    "saldo":               20000.00
+  },
+  ...
+]
+
+NOTA SOBRE totalGastos POR TIPO:
+  OBRA_PRINCIPAL / OBRA_INDEPENDIENTE → suma de cobros en estado "COBRADO"
+       del sistema antiguo (tabla cobros_obra), asociados a la obra original.
+  TRABAJO_EXTRA      → campo total_presupuesto del trabajo extra.
+  TRABAJO_ADICIONAL  → campo importe del trabajo adicional.
+
+COMPORTAMIENTO FRENTE A ERRORES:
+  - Entidades que no pertenecen a empresaId son ignoradas silenciosamente.
+  - Si un cálculo individual falla, esa entidad aparece con todos los valores en 0
+    (NO rompe el array completo ni lanza 404).
+  - Si ninguna entidad es válida, retorna [] (array vacío).
+
+
+========================================================================
+ENDPOINT 6: OBTENER ENTIDAD FINANCIERA POR ID
+========================================================================
+
+Método : GET
+URL     : /api/v1/entidades-financieras/{id}?empresaId={empresaId}
+
+RESPONSE 200 OK: Objeto EntidadFinanciera (mismo shape que /sincronizar response)
+  404 si no existe o no pertenece a la empresa.
+
+
+========================================================================
+ENDPOINT 7: LISTAR ENTIDADES DE UNA EMPRESA
+========================================================================
+
+Método : GET
+URL     : /api/v1/entidades-financieras?empresaId={empresaId}
+
+RESPONSE 200 OK: Array de objetos EntidadFinanciera (solo activos=true)
+  Retorna [] si no hay ninguna.
+
+
+========================================================================
+ENDPOINT 8: MIGRAR DATOS EXISTENTES (administrativo, ejecutar una vez)
+========================================================================
+
+Método : POST
+URL     : /api/v1/entidades-financieras/migrar?empresaId={empresaId}
+          empresaId es opcional — null migra todas las empresas
+
+RESPONSE 200 OK:
+{
+  "mensaje":          "Migración completada exitosamente",
+  "totalProcesados":  10,
+  "empresaId":        1
+}
+
+
+========================================================================
+FLUJO RECOMENDADO PARA EL FRONTEND
+========================================================================
+
+FLUJO A: Mostrar estadísticas de una selección de entidades mixtas
+--------------------------------------------------------------------------
+1. El usuario selecciona N entidades (pueden ser de distintos tipos).
+2. El frontend necesita conocer los "entidadFinancieraId" de cada una.
+   Para obtenerlos:
+   a) Si la entidad fue creada después del deploy de esta feature:
+      El backend ya la sincronizó automáticamente.
+      Llamar: GET /api/v1/entidades-financieras?empresaId=1
+      y filtrar del array por tipoEntidad + entidadId (ID original).
+   b) Alternativamente, al abrir una obra o trabajo, llamar:
+      POST /sincronizar con los datos de la entidad y usar el "id" retornado.
+3. Con la lista de entidadFinancieraIds, llamar:
+   POST /api/v1/entidades-financieras/estadisticas-multiples
+   Body: { "empresaId": 1, "entidadesFinancierasIds": [1, 2, 3, 4] }
+4. Renderizar el array de estadísticas recibido.
+
+FLUJO B: Registrar un cobro en una obra independiente o trabajo adicional
+--------------------------------------------------------------------------
+1. Obtener el entidadFinancieraId:
+   POST /sincronizar con los datos de la entidad (idempotente, seguro).
+   Guardar el "id" retornado como entidadFinancieraId.
+2. Registrar el cobro:
+   POST /api/v1/entidades-financieras/cobros
+   Body: { "entidadFinancieraId": X, "empresaId": 1, "monto": 5000, "fechaCobro": "2026-02-17", ... }
+3. Para listar los cobros existentes:
+   GET /api/v1/entidades-financieras/{entidadFinancieraId}/cobros?empresaId=1
+
+FLUJO C: Resolver el problema del hook useEstadisticasObrasSeleccionadas
+--------------------------------------------------------------------------
+ANTES (causaba 404):
+  GET /api/v1/presupuestos-no-cliente/{id}?empresaId=1
+  → 404 cuando id era una obra independiente (no tenía presupuesto)
+
+AHORA (sin errores):
+  POST /api/v1/entidades-financieras/estadisticas-multiples
+  Body: { "empresaId": 1, "entidadesFinancierasIds": [lista de IDs financieros] }
+  → Siempre retorna 200 con el array de estadísticas (vacío si nada válido)
+
+Para la migración del hook:
+  - Reemplazar la llamada a presupuestos-no-cliente por estadisticas-multiples.
+  - Los IDs que se pasan ahora son entidadFinancieraId (no el ID del presupuesto).
+  - Para obtener el mapa obraId/trabajoId → entidadFinancieraId, llamar una vez:
+    GET /api/v1/entidades-financieras?empresaId=1
+    y construir el mapa localmente.
+
+
+========================================================================
+CÓMO OBTENER EL entidadFinancieraId DADO UN obraId/trabajoId CONOCIDO
+========================================================================
+
+El frontend necesita traducir sus IDs originales a entidadFinancieraIds.
+Hay dos estrategias:
+
+ESTRATEGIA 1 (recomendada — cache local):
+  Al iniciar la app o al cargar la sección financiera, hacer una sola vez:
+  GET /api/v1/entidades-financieras?empresaId=1
+  Response: array con todos los registros activos.
+  Construir localmente un Map: { "OBRA_PRINCIPAL_10" → 1, "OBRA_INDEPENDIENTE_20" → 3, ... }
+  Clave: `${tipoEntidad}_${entidadId}`
+  Valor: entidadFinanciera.id
+
+ESTRATEGIA 2 (on-demand — más simple):
+  Antes de mostrar estadísticas de una entidad, llamar:
+  POST /sincronizar con { empresaId, tipoEntidad, entidadId, ... }
+  Retorna el objeto con el "id" (entidadFinancieraId) ya sea que exista o no.
+  Guardar ese id y usarlo en las siguientes llamadas.
+  Este endpoint es idempotente — no genera duplicados.
+
+
+========================================================================
+TABLA DE REFERENCIA RÁPIDA — MAPEO DE ENTIDADES ORIGINALES
+========================================================================
+
+Tabla original     | Columna PK       | tipoEntidad        | presupuestoNoClienteId
+-------------------+------------------+--------------------+-----------------------
+obras              | id_obra          | OBRA_PRINCIPAL      | valor (del presupuesto)
+obras              | id_obra          | OBRA_INDEPENDIENTE  | null
+trabajos_extra     | id_trabajo_extra | TRABAJO_EXTRA       | null
+trabajos_adicionales | id            | TRABAJO_ADICIONAL   | null
+
+
+========================================================================
+SEGURIDAD — AISLAMIENTO POR EMPRESA
+========================================================================
+
+TODOS los endpoints validan que empresaId en el request coincida con el
+empresaId almacenado en entidades_financieras. Si no coincide → 404.
+No hay acceso cruzado entre empresas.
+
+
+========================================================================
+ESTADO ACTUAL DE LA BASE DE DATOS
+========================================================================
+
+Tablas creadas por el backend (Flyway las aplicó):
+  - entidades_financieras (vacía — pendiente ejecutar migración de datos)
+  - cobros_entidad (vacía)
+
+Datos a migrar con el script migrar_entidades_financieras.sql:
+  - 5 obras con presupuesto  → 5 registros OBRA_PRINCIPAL
+  - 2 obras sin presupuesto  → 2 registros OBRA_INDEPENDIENTE
+  - 0 trabajos extra         → 0 registros
+  - 3 trabajos adicionales   → 3 registros TRABAJO_ADICIONAL
+  Total esperado: 10 registros en entidades_financieras
+
+IMPORTANTE: Ejecutar el script migrar_entidades_financieras.sql en la BD
+ANTES de que el frontend empiece a usar los nuevos endpoints.
+
+
+========================================================================
+SINCRONIZACIÓN AUTOMÁTICA — COMPORTAMIENTO DEL BACKEND
+========================================================================
+
+Cuando se crea una entidad nueva mediante los endpoints existentes, el backend
+la registra automáticamente en entidades_financieras:
+
+  POST /api/v1/obras         → sincroniza como OBRA_PRINCIPAL u OBRA_INDEPENDIENTE
+  POST /api/v1/trabajos-extra → sincroniza como TRABAJO_EXTRA
+  POST /api/v1/trabajos-adicionales → sincroniza como TRABAJO_ADICIONAL
+
+El frontend NO necesita llamar a /sincronizar después de crear estas entidades.
+La sincronización falla silenciosamente (no rompe la creación de la entidad
+si por algún motivo el registro en entidades_financieras falla).
+
+
+========================================================================
+SHAPES COMPLETOS DE OBJETOS (TypeScript reference)
+========================================================================
+
+interface EntidadFinanciera {
+  id: number;                          // entidadFinancieraId — usar este en todos los endpoints
+  empresaId: number;
+  tipoEntidad: 'OBRA_PRINCIPAL' | 'OBRA_INDEPENDIENTE' | 'TRABAJO_EXTRA' | 'TRABAJO_ADICIONAL';
+  entidadId: number;                   // ID original en su tabla (id_obra, id_trabajo_extra, etc.)
+  presupuestoNoClienteId: number | null;
+  nombreDisplay: string | null;
+  activo: boolean;
+  fechaCreacion: string;               // ISO 8601
+  fechaActualizacion: string;
+}
+
+interface CobroEntidad {
+  id: number;
+  entidadFinancieraId: number;
+  empresaId: number;
+  monto: number;
+  fechaCobro: string;                  // "yyyy-MM-dd"
+  metodoPago: string | null;
+  referencia: string | null;
+  notas: string | null;
+  creadoPor: string | null;
+  fechaCreacion: string;
+}
+
+interface EstadisticasEntidad {
+  entidadFinancieraId: number;
+  tipoEntidad: 'OBRA_PRINCIPAL' | 'OBRA_INDEPENDIENTE' | 'TRABAJO_EXTRA' | 'TRABAJO_ADICIONAL';
+  entidadId: number;
+  nombreDisplay: string | null;
+  totalCobrado: number;                // Decimal
+  totalGastos: number;                 // Decimal
+  saldo: number;                       // totalCobrado - totalGastos
+  presupuestoAprobado: number | null;  // null por ahora, reservado
+}
+
+interface SincronizarRequest {
+  empresaId: number;
+  tipoEntidad: 'OBRA_PRINCIPAL' | 'OBRA_INDEPENDIENTE' | 'TRABAJO_EXTRA' | 'TRABAJO_ADICIONAL';
+  entidadId: number;
+  presupuestoNoClienteId?: number | null;
+  nombreDisplay?: string;
+}
+
+interface CobroRequest {
+  entidadFinancieraId: number;
+  empresaId: number;
+  monto: number;
+  fechaCobro: string;                  // "yyyy-MM-dd"
+  metodoPago?: string;
+  referencia?: string;
+  notas?: string;
+  creadoPor?: string;
+}
+
+interface EstadisticasMultiplesRequest {
+  empresaId: number;
+  entidadesFinancierasIds: number[];
+}

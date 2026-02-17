@@ -26,6 +26,7 @@ public class TrabajoAdicionalService {
     private final TrabajoAdicionalProfesionalRepository trabajoAdicionalProfesionalRepository;
     private final ObraRepository obraRepository;
     private final ProfesionalRepository profesionalRepository;
+    private final EntidadFinancieraService entidadFinancieraService;
 
     private static final DateTimeFormatter DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
@@ -70,6 +71,9 @@ public class TrabajoAdicionalService {
             }
             trabajoAdicionalGuardado = trabajoAdicionalRepository.save(trabajoAdicionalGuardado);
         }
+
+        // SINCRONIZACIÓN: registrar en el sistema unificado de entidades financieras
+        entidadFinancieraService.sincronizarDesdeTrabajoAdicional(trabajoAdicionalGuardado);
 
         log.info("Trabajo adicional creado exitosamente con ID: {}", trabajoAdicionalGuardado.getId());
         return mapearAResponseDTO(trabajoAdicionalGuardado);

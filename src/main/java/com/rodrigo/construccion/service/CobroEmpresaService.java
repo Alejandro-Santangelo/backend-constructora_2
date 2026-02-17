@@ -32,6 +32,10 @@ public class CobroEmpresaService {
     private final CobroObraRepository cobroObraRepository;
     private final ObraRepository obraRepository;
     private final AsignacionCobroObraRepository asignacionCobroObraRepository;
+    private final TrabajoAdicionalRepository trabajoAdicionalRepository;
+    private final EntidadFinancieraRepository entidadFinancieraRepository;
+    private final CobroEntidadRepository cobroEntidadRepository;
+    private final EntidadFinancieraService entidadFinancieraService;
 
     /**
      * Crear un nuevo cobro a nivel empresa
@@ -106,8 +110,17 @@ public class CobroEmpresaService {
             new ArrayList<>();
 
         for (AsignacionObraDTO asignacionDTO : request.getAsignaciones()) {
-            AsignarCobroEmpresaResponseDTO.AsignacionCreadaDTO asignacionCreada = 
-                procesarAsignacionObra(cobroEmpresa, asignacionDTO, empresaId);
+            AsignarCobroEmpresaResponseDTO.AsignacionCreadaDTO asignacionCreada;
+            if (asignacionDTO.getTrabajoAdicionalId() != null) {
+                asignacionCreada = procesarAsignacionTrabajoAdicional(
+                    cobroEmpresa, asignacionDTO, empresaId);
+            } else if (asignacionDTO.getObraId() != null) {
+                asignacionCreada = procesarAsignacionObra(
+                    cobroEmpresa, asignacionDTO, empresaId);
+            } else {
+                throw new IllegalArgumentException(
+                    "Cada asignación debe tener obraId o trabajoAdicionalId");
+            }
             asignacionesCreadas.add(asignacionCreada);
         }
 
@@ -177,6 +190,63 @@ public class CobroEmpresaService {
                 .obraId(obra.getId())
                 .montoAsignado(asignacionDTO.getMontoAsignado())
                 .tieneDistribucionItems(tieneDistribucion)
+                .build();
+    }
+
+    /**
+     * Procesar asignación de cobro empresa a un trabajo adicional.
+     * Usa el sistema de entidades financieras (cobros_entidad).
+     */
+    private AsignarCobroEmpresaResponseDTO.AsignacionCreadaDTO procesarAsignacionTrabajoAdicional(
+            CobroEmpresa cobroEmpresa,
+            AsignacionObraDTO asignacionDTO,
+            Long empresaId) {
+
+        Long taId = asignacionDTO.getTrabajoAdicionalId();
+        log.debug("Procesando asignación para trabajo adicional {}: {}",
+                  taId, asignacionDTO.getMontoAsignado());
+
+        // Validar que el trabajo adicional existe y pertenece a la empresa
+        TrabajoAdicional ta = trabajoAdicionalRepository.findById(taId)
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "Trabajo adicional no encontrado: " + taId));
+        if (!ta.getEmpresaId().equals(empresaId)) {
+            throw new IllegalArgumentException(
+                "El trabajo adicional no pertenece a la empresa especificada");
+        }
+
+        // Obtener o crear el registro en entidades_financieras
+        EntidadFinanciera ef = entidadFinancieraRepository
+                .findByEmpresaIdAndTipoEntidadAndEntidadId(
+                    empresaId,
+                    com.rodrigo.construccion.enums.TipoEntidadFinanciera.TRABAJO_ADICIONAL,
+                    taId)
+                .orElseGet(() -> entidadFinancieraService.sincronizarDesdeTrabajoAdicional(ta));
+
+        if (ef == null) {
+            throw new IllegalStateException(
+                "No se pudo obtener/crear la entidad financiera para el trabajo adicional " + taId);
+        }
+
+        // Registrar cobro en cobros_entidad
+        CobroEntidad cobro = new CobroEntidad();
+        cobro.setEntidadFinanciera(ef);
+        cobro.setEmpresaId(empresaId);
+        cobro.setMonto(asignacionDTO.getMontoAsignado());
+        cobro.setFechaCobro(java.time.LocalDate.now());
+        cobro.setMetodoPago("ASIGNACION_EMPRESA");
+        cobro.setNotas(asignacionDTO.getDescripcion() != null
+                ? asignacionDTO.getDescripcion()
+                : "Asignación desde cobro empresa #" + cobroEmpresa.getId());
+        CobroEntidad cobroGuardado = cobroEntidadRepository.save(cobro);
+
+        log.info("Cobro entidad {} creado para trabajo adicional {}", cobroGuardado.getId(), taId);
+
+        return AsignarCobroEmpresaResponseDTO.AsignacionCreadaDTO.builder()
+                .cobroEntidadId(cobroGuardado.getId())
+                .trabajoAdicionalId(taId)
+                .montoAsignado(asignacionDTO.getMontoAsignado())
+                .tieneDistribucionItems(false)
                 .build();
     }
 

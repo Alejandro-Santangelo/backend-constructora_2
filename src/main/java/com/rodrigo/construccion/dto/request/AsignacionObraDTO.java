@@ -10,7 +10,8 @@ import lombok.Setter;
 import java.math.BigDecimal;
 
 /**
- * DTO para representar una asignación de cobro empresa a una obra específica
+ * DTO para representar una asignación de cobro empresa a una obra o trabajo adicional.
+ * Se debe proveer exactamente uno de: obraId o trabajoAdicionalId.
  */
 @Getter
 @Setter
@@ -18,8 +19,11 @@ import java.math.BigDecimal;
 @AllArgsConstructor
 public class AsignacionObraDTO {
 
-    @NotNull(message = "La obra es obligatoria")
+    // Obligatorio si se asigna a una obra
     private Long obraId;
+
+    // Obligatorio si se asigna a un trabajo adicional
+    private Long trabajoAdicionalId;
 
     @NotNull(message = "El monto asignado es obligatorio")
     @Positive(message = "El monto asignado debe ser mayor a cero")
@@ -27,6 +31,6 @@ public class AsignacionObraDTO {
 
     private String descripcion;
 
-    // Distribución por ítems (opcional)
+    // Distribución por ítems (opcional, solo para obras)
     private DistribucionItemsDTO distribucionItems;
 }

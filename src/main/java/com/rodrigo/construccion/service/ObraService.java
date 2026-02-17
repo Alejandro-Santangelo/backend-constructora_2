@@ -33,6 +33,7 @@ public class ObraService implements IObraService {
     private final IEmpresaService empresaService;
     private final ProfesionalObraRepository profesionalObraRepository;
     private final PresupuestoNoClienteRepository presupuestoNoClienteRepository;
+    private final EntidadFinancieraService entidadFinancieraService;
 
     /* Obtener obra por ID */
     @Override
@@ -167,6 +168,9 @@ public class ObraService implements IObraService {
 
         // Guardar la obra primero
         Obra obraGuardada = obraRepository.save(obra);
+
+        // SINCRONIZACIÓN: registrar en el sistema unificado de entidades financieras
+        entidadFinancieraService.sincronizarDesdeObra(obraGuardada);
 
         // LÓGICA 5: Asignar profesionales si hay en el formulario
         if (obraRequestDto.getProfesionalesAsignadosForm() != null && !obraRequestDto.getProfesionalesAsignadosForm().isEmpty()) {

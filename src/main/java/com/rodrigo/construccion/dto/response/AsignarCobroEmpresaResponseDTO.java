@@ -28,8 +28,10 @@ public class AsignarCobroEmpresaResponseDTO {
     @AllArgsConstructor
     @Builder
     public static class AsignacionCreadaDTO {
-        private Long cobroObraId;
-        private Long obraId;
+        private Long cobroObraId;          // presente si se asignó a una obra
+        private Long obraId;               // presente si se asignó a una obra
+        private Long cobroEntidadId;       // presente si se asignó a un trabajo adicional
+        private Long trabajoAdicionalId;   // presente si se asignó a un trabajo adicional
         private BigDecimal montoAsignado;
         private Boolean tieneDistribucionItems;
     }

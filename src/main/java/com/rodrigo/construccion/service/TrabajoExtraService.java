@@ -43,6 +43,7 @@ public class TrabajoExtraService implements ITrabajoExtraService {
     private final TrabajoExtraPdfRepository trabajoExtraPdfRepository;
     private final ObraRepository obraRepository;
     private final TrabajoExtraItemCalculadoraHelper itemCalculadoraHelper;
+    private final EntidadFinancieraService entidadFinancieraService;
 
     @Override
     @Transactional(readOnly = true)
@@ -240,8 +241,12 @@ public class TrabajoExtraService implements ITrabajoExtraService {
             
             trabajoExtraRepository.save(guardado);
         }
-        
-        return mapearEntityAResponse(trabajoExtraRepository.findById(guardado.getId()).orElseThrow());
+
+        // SINCRONIZACIÓN: registrar en el sistema unificado de entidades financieras
+        TrabajoExtra finalGuardado = trabajoExtraRepository.findById(guardado.getId()).orElseThrow();
+        entidadFinancieraService.sincronizarDesdeTrabajoExtra(finalGuardado);
+
+        return mapearEntityAResponse(finalGuardado);
     }
 
     @Override
