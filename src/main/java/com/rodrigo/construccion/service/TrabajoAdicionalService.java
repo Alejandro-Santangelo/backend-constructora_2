@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -50,6 +51,12 @@ public class TrabajoAdicionalService {
         TrabajoAdicional trabajoAdicional = TrabajoAdicional.builder()
                 .nombre(requestDTO.getNombre())
                 .importe(requestDTO.getImporte())
+                .importeJornales(requestDTO.getImporteJornales())
+                .importeMateriales(requestDTO.getImporteMateriales())
+                .importeHonorarios(requestDTO.getImporteHonorarios())
+                .tipoHonorarios(requestDTO.getTipoHonorarios())
+                .importeMayoresCostos(requestDTO.getImporteMayoresCostos())
+                .tipoMayoresCostos(requestDTO.getTipoMayoresCostos())
                 .diasNecesarios(requestDTO.getDiasNecesarios())
                 .fechaInicio(requestDTO.getFechaInicio())
                 .descripcion(requestDTO.getDescripcion())
@@ -61,6 +68,8 @@ public class TrabajoAdicionalService {
                 .build();
 
         // Guardar trabajo adicional primero
+        // Compatibilidad: extraer desglose si el frontend lo envió embebido en observaciones
+        extraerDesgloseDeObservaciones(trabajoAdicional);
         TrabajoAdicional trabajoAdicionalGuardado = trabajoAdicionalRepository.save(trabajoAdicional);
 
         // Agregar profesionales si existen
@@ -150,12 +159,21 @@ public class TrabajoAdicionalService {
         // Actualizar campos principales
         trabajoAdicional.setNombre(requestDTO.getNombre());
         trabajoAdicional.setImporte(requestDTO.getImporte());
+        trabajoAdicional.setImporteJornales(requestDTO.getImporteJornales());
+        trabajoAdicional.setImporteMateriales(requestDTO.getImporteMateriales());
+        trabajoAdicional.setImporteHonorarios(requestDTO.getImporteHonorarios());
+        trabajoAdicional.setTipoHonorarios(requestDTO.getTipoHonorarios());
+        trabajoAdicional.setImporteMayoresCostos(requestDTO.getImporteMayoresCostos());
+        trabajoAdicional.setTipoMayoresCostos(requestDTO.getTipoMayoresCostos());
         trabajoAdicional.setDiasNecesarios(requestDTO.getDiasNecesarios());
         trabajoAdicional.setFechaInicio(requestDTO.getFechaInicio());
         trabajoAdicional.setDescripcion(requestDTO.getDescripcion());
         trabajoAdicional.setObservaciones(requestDTO.getObservaciones());
         trabajoAdicional.setObraId(requestDTO.getObraId());
         trabajoAdicional.setTrabajoExtraId(requestDTO.getTrabajoExtraId());
+
+        // Compatibilidad: extraer desglose si el frontend lo envió embebido en observaciones
+        extraerDesgloseDeObservaciones(trabajoAdicional);
 
         // Limpiar profesionales existentes
         trabajoAdicional.clearProfesionales();
@@ -297,6 +315,12 @@ public class TrabajoAdicionalService {
                 .id(trabajoAdicional.getId())
                 .nombre(trabajoAdicional.getNombre())
                 .importe(trabajoAdicional.getImporte())
+                .importeJornales(trabajoAdicional.getImporteJornales())
+                .importeMateriales(trabajoAdicional.getImporteMateriales())
+                .importeHonorarios(trabajoAdicional.getImporteHonorarios())
+                .tipoHonorarios(trabajoAdicional.getTipoHonorarios())
+                .importeMayoresCostos(trabajoAdicional.getImporteMayoresCostos())
+                .tipoMayoresCostos(trabajoAdicional.getTipoMayoresCostos())
                 .diasNecesarios(trabajoAdicional.getDiasNecesarios())
                 .fechaInicio(trabajoAdicional.getFechaInicio())
                 .descripcion(trabajoAdicional.getDescripcion())
@@ -326,5 +350,79 @@ public class TrabajoAdicionalService {
                 .fechaAsignacion(profesional.getFechaAsignacion() != null 
                         ? profesional.getFechaAsignacion().format(DATE_TIME_FORMATTER) : null)
                 .build();
+    }
+
+    // =========================================================================
+    // HELPERS: Compatibilidad con frontend que envía desglose en observaciones
+    // =========================================================================
+
+    /**
+     * Si observaciones contiene un bloque con el desglose JSON enviado por el frontend,
+     * extrae los valores y los persiste en las columnas relacionales,
+     * limpiando el texto de observaciones.
+     * Soporta etiquetas: [DESGLOSE_TRABAJO]...[/DESGLOSE_TRABAJO]
+     *                 y: [DESGLOSE_OBRA]...[/DESGLOSE_OBRA]
+     */
+    private void extraerDesgloseDeObservaciones(TrabajoAdicional t) {
+        String obs = t.getObservaciones();
+        if (obs == null) return;
+
+        String tagInicio = null;
+        String tagFin    = null;
+        if (obs.contains("[DESGLOSE_TRABAJO]")) {
+            tagInicio = "[DESGLOSE_TRABAJO]";   tagFin = "[/DESGLOSE_TRABAJO]";
+        } else if (obs.contains("[DESGLOSE_OBRA]")) {
+            tagInicio = "[DESGLOSE_OBRA]";       tagFin = "[/DESGLOSE_OBRA]";
+        }
+        if (tagInicio == null) return;
+
+        try {
+            int inicio = obs.indexOf(tagInicio) + tagInicio.length();
+            int fin    = obs.indexOf(tagFin);
+            if (fin <= inicio) return;
+
+            String json = obs.substring(inicio, fin).trim();
+
+            if (t.getImporteJornales() == null)
+                extractBigDecimal(json, "jornales").ifPresent(t::setImporteJornales);
+            if (t.getImporteMateriales() == null)
+                extractBigDecimal(json, "materiales").ifPresent(t::setImporteMateriales);
+            if (t.getImporteHonorarios() == null)
+                extractBigDecimal(json, "honorarios").ifPresent(t::setImporteHonorarios);
+            if (t.getTipoHonorarios() == null)
+                extractString(json, "tipoHonorarios").ifPresent(t::setTipoHonorarios);
+            if (t.getImporteMayoresCostos() == null)
+                extractBigDecimal(json, "mayoresCostos").ifPresent(t::setImporteMayoresCostos);
+            if (t.getTipoMayoresCostos() == null)
+                extractString(json, "tipoMayoresCostos").ifPresent(t::setTipoMayoresCostos);
+
+            // Limpiar el bloque del campo observaciones
+            String bloque   = tagInicio + obs.substring(inicio, fin) + tagFin;
+            String obsLimpia = obs.replace(bloque, "").trim();
+            t.setObservaciones(obsLimpia.isBlank() ? null : obsLimpia);
+
+            log.info("Desglose extraído de observaciones para trabajo adicional '{}'", t.getNombre());
+        } catch (Exception e) {
+            log.warn("No se pudo extraer desglose de observaciones en trabajo adicional: {}", e.getMessage());
+        }
+    }
+
+    private java.util.Optional<BigDecimal> extractBigDecimal(String json, String key) {
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "\"" + key + "\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)");
+        java.util.regex.Matcher m = p.matcher(json);
+        if (m.find()) {
+            try { return java.util.Optional.of(new BigDecimal(m.group(1))); }
+            catch (Exception ignored) {}
+        }
+        return java.util.Optional.empty();
+    }
+
+    private java.util.Optional<String> extractString(String json, String key) {
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "\"" + key + "\"\\s*:\\s*\"([^\"]+)\"");
+        java.util.regex.Matcher m = p.matcher(json);
+        if (m.find()) return java.util.Optional.of(m.group(1));
+        return java.util.Optional.empty();
     }
 }

@@ -30,6 +30,15 @@ public class TrabajoAdicionalRequestDTO {
     @Positive(message = "El importe debe ser mayor a cero")
     private BigDecimal importe;
 
+    private BigDecimal importeJornales;
+    private BigDecimal importeMateriales;
+    private BigDecimal importeHonorarios;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoHonorarios;
+    private BigDecimal importeMayoresCostos;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoMayoresCostos;
+
     @NotNull(message = "Los días necesarios son obligatorios")
     @Positive(message = "Los días necesarios deben ser al menos 1")
     private Integer diasNecesarios;

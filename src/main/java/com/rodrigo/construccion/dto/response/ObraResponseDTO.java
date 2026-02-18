@@ -72,6 +72,24 @@ public class ObraResponseDTO {
     @Schema(description = "Presupuesto estimado inicial", example = "150000.00")
     private BigDecimal presupuestoEstimado;
 
+    @Schema(description = "Desglose jornales del presupuesto", example = "1000000.00")
+    private BigDecimal presupuestoJornales;
+
+    @Schema(description = "Desglose materiales del presupuesto", example = "800000.00")
+    private BigDecimal presupuestoMateriales;
+
+    @Schema(description = "Desglose honorarios del presupuesto (monto o porcentaje)", example = "15")
+    private BigDecimal presupuestoHonorarios;
+
+    @Schema(description = "Tipo de honorarios: fijo o porcentaje", example = "porcentaje")
+    private String tipoHonorarioPresupuesto;
+
+    @Schema(description = "Desglose mayores costos del presupuesto (monto o porcentaje)", example = "100000.00")
+    private BigDecimal presupuestoMayoresCostos;
+
+    @Schema(description = "Tipo de mayores costos: fijo o porcentaje", example = "fijo")
+    private String tipoMayoresCostosPresupuesto;
+
     @Schema(description = "ID del presupuesto sin cliente vinculado", example = "123")
     private Long presupuestoNoClienteId;
 

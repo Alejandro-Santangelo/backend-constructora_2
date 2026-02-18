@@ -57,6 +57,26 @@ public class TrabajoAdicional {
     @Column(name = "importe", precision = 15, scale = 2, nullable = false)
     private BigDecimal importe;
 
+    @Column(name = "importe_jornales", precision = 15, scale = 2)
+    private BigDecimal importeJornales;
+
+    @Column(name = "importe_materiales", precision = 15, scale = 2)
+    private BigDecimal importeMateriales;
+
+    @Column(name = "importe_honorarios", precision = 15, scale = 2)
+    private BigDecimal importeHonorarios;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorarios", length = 20)
+    private String tipoHonorarios;
+
+    @Column(name = "importe_mayores_costos", precision = 15, scale = 2)
+    private BigDecimal importeMayoresCostos;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_mayores_costos", length = 20)
+    private String tipoMayoresCostos;
+
     @NotNull(message = "Los días necesarios son obligatorios")
     @Positive(message = "Los días necesarios deben ser al menos 1")
     @Column(name = "dias_necesarios", nullable = false)

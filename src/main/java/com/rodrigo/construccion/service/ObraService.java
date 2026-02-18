@@ -12,6 +12,7 @@ import com.rodrigo.construccion.model.entity.*;
 import com.rodrigo.construccion.repository.*;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +23,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ObraService implements IObraService {
@@ -157,8 +159,20 @@ public class ObraService implements IObraService {
         // Las obras manuales son creadas directamente sin presupuesto previo
         if (obra.getPresupuestoNoClienteId() == null) {
             obra.setEsObraManual(true);
+            // Compatibilidad: extraer desglose si el frontend lo envió embebido en observaciones
+            extraerDesgloseDeObservaciones(obra);
         } else {
             obra.setEsObraManual(false);
+        }
+
+        // Campos de desglose de presupuesto: solo aplican a obras independientes
+        if (!Boolean.TRUE.equals(obra.getEsObraManual())) {
+            obra.setPresupuestoJornales(null);
+            obra.setPresupuestoMateriales(null);
+            obra.setPresupuestoHonorarios(null);
+            obra.setTipoHonorarioPresupuesto(null);
+            obra.setPresupuestoMayoresCostos(null);
+            obra.setTipoMayoresCostosPresupuesto(null);
         }
 
         // Si no se proporciona una fecha de inicio, se asigna la fecha actual
@@ -265,6 +279,21 @@ public class ObraService implements IObraService {
 
         // Usamos el mapper para actualizar la entidad existente con los datos del DTO.
         obraMapper.updateEntityFromDto(obraRequestDTO, obraExistente);
+
+        // Compatibilidad: extraer desglose si el frontend lo envió embebido en observaciones
+        if (Boolean.TRUE.equals(obraExistente.getEsObraManual())) {
+            extraerDesgloseDeObservaciones(obraExistente);
+        }
+
+        // Campos de desglose de presupuesto: solo aplican a obras independientes
+        if (!Boolean.TRUE.equals(obraExistente.getEsObraManual())) {
+            obraExistente.setPresupuestoJornales(null);
+            obraExistente.setPresupuestoMateriales(null);
+            obraExistente.setPresupuestoHonorarios(null);
+            obraExistente.setTipoHonorarioPresupuesto(null);
+            obraExistente.setPresupuestoMayoresCostos(null);
+            obraExistente.setTipoMayoresCostosPresupuesto(null);
+        }
 
         // Guardamos la entidad actualizada.
         Obra obraGuardada = obraRepository.save(obraExistente);
@@ -484,6 +513,69 @@ public class ObraService implements IObraService {
         }
 
         return dtos;
+    }
+
+    // =========================================================================
+    // HELPERS: Compatibilidad con frontend que envía desglose en observaciones
+    // =========================================================================
+
+    /**
+     * Si observaciones contiene un bloque "[DESGLOSE_OBRA]{...}[/DESGLOSE_OBRA]"
+     * enviado por versiones del frontend que aún no usan los campos relacionales,
+     * extrae los valores y los persiste en las columnas correspondientes,
+     * limpiando el texto de observaciones.
+     */
+    private void extraerDesgloseDeObservaciones(Obra obra) {
+        String obs = obra.getObservaciones();
+        if (obs == null || !obs.contains("[DESGLOSE_OBRA]")) return;
+        try {
+            int inicio = obs.indexOf("[DESGLOSE_OBRA]") + "[DESGLOSE_OBRA]".length();
+            int fin = obs.indexOf("[/DESGLOSE_OBRA]");
+            if (fin <= inicio) return;
+
+            String json = obs.substring(inicio, fin).trim();
+
+            if (obra.getPresupuestoJornales() == null)
+                extractBigDecimalFromJson(json, "jornales").ifPresent(obra::setPresupuestoJornales);
+            if (obra.getPresupuestoMateriales() == null)
+                extractBigDecimalFromJson(json, "materiales").ifPresent(obra::setPresupuestoMateriales);
+            if (obra.getPresupuestoHonorarios() == null)
+                extractBigDecimalFromJson(json, "honorarios").ifPresent(obra::setPresupuestoHonorarios);
+            if (obra.getTipoHonorarioPresupuesto() == null)
+                extractStringFromJson(json, "tipoHonorarios").ifPresent(obra::setTipoHonorarioPresupuesto);
+            if (obra.getPresupuestoMayoresCostos() == null)
+                extractBigDecimalFromJson(json, "mayoresCostos").ifPresent(obra::setPresupuestoMayoresCostos);
+            if (obra.getTipoMayoresCostosPresupuesto() == null)
+                extractStringFromJson(json, "tipoMayoresCostos").ifPresent(obra::setTipoMayoresCostosPresupuesto);
+
+            // Eliminar el bloque del texto de observaciones
+            String bloque = "[DESGLOSE_OBRA]" + obs.substring(inicio, fin) + "[/DESGLOSE_OBRA]";
+            String obsLimpia = obs.replace(bloque, "").trim();
+            obra.setObservaciones(obsLimpia.isBlank() ? null : obsLimpia);
+
+            log.info("Desglose extraído de observaciones para obra '{}'", obra.getNombre());
+        } catch (Exception e) {
+            log.warn("No se pudo extraer desglose de observaciones: {}", e.getMessage());
+        }
+    }
+
+    private java.util.Optional<BigDecimal> extractBigDecimalFromJson(String json, String key) {
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "\"" + key + "\"\\s*:\\s*([0-9]+(?:\\.[0-9]+)?)");
+        java.util.regex.Matcher m = p.matcher(json);
+        if (m.find()) {
+            try { return java.util.Optional.of(new BigDecimal(m.group(1))); }
+            catch (Exception ignored) {}
+        }
+        return java.util.Optional.empty();
+    }
+
+    private java.util.Optional<String> extractStringFromJson(String json, String key) {
+        java.util.regex.Pattern p = java.util.regex.Pattern.compile(
+                "\"" + key + "\"\\s*:\\s*\"([^\"]+)\"");
+        java.util.regex.Matcher m = p.matcher(json);
+        if (m.find()) return java.util.Optional.of(m.group(1));
+        return java.util.Optional.empty();
     }
 
 }

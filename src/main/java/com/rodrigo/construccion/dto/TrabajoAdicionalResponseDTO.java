@@ -25,6 +25,13 @@ public class TrabajoAdicionalResponseDTO {
 
     private BigDecimal importe;
 
+    private BigDecimal importeJornales;
+    private BigDecimal importeMateriales;
+    private BigDecimal importeHonorarios;
+    private String tipoHonorarios;
+    private BigDecimal importeMayoresCostos;
+    private String tipoMayoresCostos;
+
     private Integer diasNecesarios;
 
     private LocalDate fechaInicio;

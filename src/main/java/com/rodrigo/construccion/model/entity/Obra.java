@@ -79,6 +79,26 @@ public class Obra {
     @Column(name = "presupuesto_estimado", precision = 15, scale = 2)
     private BigDecimal presupuestoEstimado;
 
+    @Column(name = "presupuesto_jornales", precision = 15, scale = 2)
+    private BigDecimal presupuestoJornales;
+
+    @Column(name = "presupuesto_materiales", precision = 15, scale = 2)
+    private BigDecimal presupuestoMateriales;
+
+    @Column(name = "presupuesto_honorarios", precision = 15, scale = 2)
+    private BigDecimal presupuestoHonorarios;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorarios_presupuesto", length = 20)
+    private String tipoHonorarioPresupuesto;
+
+    @Column(name = "presupuesto_mayores_costos", precision = 15, scale = 2)
+    private BigDecimal presupuestoMayoresCostos;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_mayores_costos_presupuesto", length = 20)
+    private String tipoMayoresCostosPresupuesto;
+
     @Column(name = "presupuesto_no_cliente_id")
     private Long presupuestoNoClienteId;
 
