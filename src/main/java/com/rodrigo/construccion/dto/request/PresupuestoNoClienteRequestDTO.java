@@ -280,6 +280,55 @@ public class PresupuestoNoClienteRequestDTO {
     @Schema(description = "Explicación o justificación INTERNA de por qué se aplican mayores costos. Solo para uso interno de la empresa, NO se muestra en PDFs enviados al cliente.", example = "Se aplica mayor costo debido a...", maxLength = 2000)
     private String mayoresCostosExplicacion;
 
+    // ========== CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
+    /**
+     * Los descuentos se aplican DESPUÉS de honorarios y mayores costos.
+     * Siguiendo el mismo patrón relacional que honorarios y mayores_costos.
+     */
+    
+    @Schema(description = "Explicación/justificación de por qué se aplican descuentos. Visible para el cliente en el PDF.", example = "Descuento por cliente frecuente", maxLength = 2000)
+    private String descuentosExplicacion;
+    
+    // Descuentos sobre JORNALES
+    @Schema(description = "Si el descuento sobre jornales está activo", example = "true")
+    private Boolean descuentosJornalesActivo;
+    
+    @Schema(description = "Tipo de descuento para jornales: porcentaje o fijo", example = "porcentaje")
+    private String descuentosJornalesTipo;
+    
+    @Schema(description = "Valor del descuento para jornales", example = "10.0")
+    private Double descuentosJornalesValor;
+    
+    // Descuentos sobre MATERIALES
+    @Schema(description = "Si el descuento sobre materiales está activo", example = "false")
+    private Boolean descuentosMaterialesActivo;
+    
+    @Schema(description = "Tipo de descuento para materiales: porcentaje o fijo", example = "fijo")
+    private String descuentosMaterialesTipo;
+    
+    @Schema(description = "Valor del descuento para materiales", example = "5000.0")
+    private Double descuentosMaterialesValor;
+    
+    // Descuentos sobre HONORARIOS
+    @Schema(description = "Si el descuento sobre honorarios está activo", example = "true")
+    private Boolean descuentosHonorariosActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios", example = "5.0")
+    private Double descuentosHonorariosValor;
+    
+    // Descuentos sobre MAYORES COSTOS
+    @Schema(description = "Si el descuento sobre mayores costos está activo", example = "false")
+    private Boolean descuentosMayoresCostosActivo;
+    
+    @Schema(description = "Tipo de descuento para mayores costos: porcentaje o fijo", example = "porcentaje")
+    private String descuentosMayoresCostosTipo;
+    
+    @Schema(description = "Valor del descuento para mayores costos", example = "0.0")
+    private Double descuentosMayoresCostosValor;
+
     // ========== COSTOS INICIALES POR M² ==========
     @Schema(description = "Cálculo inicial de costos basado en metros cuadrados (opcional)")
     private com.rodrigo.construccion.dto.PresupuestoCostoInicialDTO costosIniciales;

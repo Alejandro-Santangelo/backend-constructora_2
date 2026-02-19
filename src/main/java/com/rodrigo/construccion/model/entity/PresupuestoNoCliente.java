@@ -306,6 +306,64 @@ public class PresupuestoNoCliente {
     @Column(name = "mayores_costos_explicacion", columnDefinition = "TEXT")
     private String mayoresCostosExplicacion;
 
+    // ========== CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
+    /**
+     * Los descuentos se aplican DESPUÉS de honorarios y mayores costos,
+     * restando importes del total consolidado.
+     * Modelo relacional siguiendo el patrón de honorarios/mayores_costos.
+     */
+    
+    // Explicación general de descuentos (visible en PDF para el cliente)
+    @Column(name = "descuentos_explicacion", columnDefinition = "TEXT")
+    private String descuentosExplicacion;
+    
+    // Descuentos sobre JORNALES (aplicados sobre subtotal de jornales SIN honorarios)
+    @Column(name = "descuentos_jornales_activo")
+    private Boolean descuentosJornalesActivo = false;
+    
+    @Column(name = "descuentos_jornales_tipo", length = 20)
+    private String descuentosJornalesTipo = "porcentaje";
+    
+    @Column(name = "descuentos_jornales_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosJornalesValor;
+    
+    // Descuentos sobre MATERIALES (aplicados sobre subtotal de materiales SIN honorarios)
+    @Column(name = "descuentos_materiales_activo")
+    private Boolean descuentosMaterialesActivo = false;
+    
+    @Column(name = "descuentos_materiales_tipo", length = 20)
+    private String descuentosMaterialesTipo = "porcentaje";
+    
+    @Column(name = "descuentos_materiales_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosMaterialesValor;
+    
+    // Descuentos sobre HONORARIOS (aplicados sobre total de honorarios)
+    @Column(name = "descuentos_honorarios_activo")
+    private Boolean descuentosHonorariosActivo = false;
+    
+    @Column(name = "descuentos_honorarios_tipo", length = 20)
+    private String descuentosHonorariosTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosValor;
+    
+    // Descuentos sobre MAYORES COSTOS (aplicados sobre total de mayores costos)
+    @Column(name = "descuentos_mayores_costos_activo")
+    private Boolean descuentosMayoresCostosActivo = false;
+    
+    @Column(name = "descuentos_mayores_costos_tipo", length = 20)
+    private String descuentosMayoresCostosTipo = "porcentaje";
+    
+    @Column(name = "descuentos_mayores_costos_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosMayoresCostosValor;
+
+    // Campos transient para cálculos temporales de descuentos
+    @Transient
+    private BigDecimal totalDescuentos;
+
+    @Transient
+    private BigDecimal totalSinDescuentos;
+
     // ========== CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
     /**
      * Indica si el cálculo de días hábiles es automático (true) o manual (false).
@@ -589,33 +647,279 @@ public class PresupuestoNoCliente {
     }
 
     /**
+     * Calcula el descuento individual de una categoría.
+     * 
+     * @param baseCategoria Base sobre la cual se aplica el descuento
+     * @param activo Si el descuento está activo
+     * @param tipo Tipo de descuento: "porcentaje" o "fijo"
+     * @param valor Valor del descuento
+     * @return Monto del descuento calculado
+     */
+    private BigDecimal calcularDescuentoCategoria(BigDecimal baseCategoria, Boolean activo, String tipo, BigDecimal valor) {
+        if (baseCategoria == null) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Si activo es false, no aplicar descuento
+        if (Boolean.FALSE.equals(activo)) {
+            return BigDecimal.ZERO;
+        }
+        
+        // Si valor es null o cero, no hay descuento
+        if (valor == null || valor.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO;
+        }
+        
+        if (tipo == null) {
+            tipo = "porcentaje"; // Default
+        }
+        
+        if ("fijo".equalsIgnoreCase(tipo) || "VALOR_FIJO".equalsIgnoreCase(tipo)) {
+            // Descuento fijo: no puede exceder la base
+            return valor.min(baseCategoria);
+        } else {
+            // Descuento porcentual: calcular % sobre la base
+            // El porcentaje debe estar entre 0 y 100
+            BigDecimal porcentaje = valor.min(BigDecimal.valueOf(100));
+            return baseCategoria.multiply(porcentaje).divide(BigDecimal.valueOf(100), 2, java.math.RoundingMode.HALF_UP);
+        }
+    }
+
+    /**
+     * Calcula el total de descuentos según la configuración establecida.
+     * Los descuentos se calculan sobre diferentes bases:
+     * - Jornales: sobre subtotal de jornales SIN honorarios
+     * - Materiales: sobre subtotal de materiales SIN honorarios
+     * - Honorarios: sobre total de honorarios calculados
+     * - Mayores Costos: sobre total de mayores costos calculados
+     * 
+     * @return Total de descuentos calculado
+     */
+    public BigDecimal calcularTotalDescuentos() {
+        BigDecimal descuentoTotal = BigDecimal.ZERO;
+        
+        // Obtener bases para cada categoría
+        BigDecimal totalJornales = calcularTotalJornales();
+        BigDecimal totalMaterialesBase = this.totalMateriales != null ? BigDecimal.valueOf(this.totalMateriales) : BigDecimal.ZERO;
+        BigDecimal totalHonorariosCalc = this.totalHonorariosCalculado != null ? 
+                                         this.totalHonorariosCalculado : calcularTotalHonorarios();
+        BigDecimal totalMayoresCostosCalc = this.totalMayoresCostos != null ? 
+                                            this.totalMayoresCostos : calcularTotalMayoresCostos();
+        
+        // Calcular descuento sobre JORNALES (base sin honorarios)
+        BigDecimal descuentoJornales = calcularDescuentoCategoria(
+            totalJornales, 
+            descuentosJornalesActivo, 
+            descuentosJornalesTipo, 
+            descuentosJornalesValor
+        );
+        descuentoTotal = descuentoTotal.add(descuentoJornales);
+        
+        // Calcular descuento sobre MATERIALES (base sin honorarios)
+        BigDecimal descuentoMateriales = calcularDescuentoCategoria(
+            totalMaterialesBase, 
+            descuentosMaterialesActivo, 
+            descuentosMaterialesTipo, 
+            descuentosMaterialesValor
+        );
+        descuentoTotal = descuentoTotal.add(descuentoMateriales);
+        
+        // Calcular descuento sobre HONORARIOS (total de honorarios)
+        BigDecimal descuentoHonorarios = calcularDescuentoCategoria(
+            totalHonorariosCalc, 
+            descuentosHonorariosActivo, 
+            descuentosHonorariosTipo, 
+            descuentosHonorariosValor
+        );
+        descuentoTotal = descuentoTotal.add(descuentoHonorarios);
+        
+        // Calcular descuento sobre MAYORES COSTOS (total de mayores costos)
+        BigDecimal descuentoMayoresCostos = calcularDescuentoCategoria(
+            totalMayoresCostosCalc, 
+            descuentosMayoresCostosActivo, 
+            descuentosMayoresCostosTipo, 
+            descuentosMayoresCostosValor
+        );
+        descuentoTotal = descuentoTotal.add(descuentoMayoresCostos);
+        
+        return descuentoTotal;
+    }
+
+    /**
+     * Valida que la configuración de descuentos sea correcta.
+     * Verifica que:
+     * - Los porcentajes estén entre 0 y 100
+     * - Los valores fijos no excedan la base correspondiente
+     * - El total de descuentos no exceda el subtotal sin descuentos
+     * 
+     * @return Mensaje de error si la validación falla, null si es correcta
+     */
+    public String validarDescuentos() {
+        // Si no hay ningún descuento activo, no validar
+        if (Boolean.FALSE.equals(descuentosJornalesActivo) &&
+            Boolean.FALSE.equals(descuentosMaterialesActivo) &&
+            Boolean.FALSE.equals(descuentosHonorariosActivo) &&
+            Boolean.FALSE.equals(descuentosMayoresCostosActivo)) {
+            return null;
+        }
+        
+        // Calcular bases
+        BigDecimal base = totalPresupuesto != null ? totalPresupuesto :
+                (totalGeneral != null ? BigDecimal.valueOf(totalGeneral) : BigDecimal.ZERO);
+        BigDecimal honorarios = this.totalHonorariosCalculado != null ? 
+                               this.totalHonorariosCalculado : calcularTotalHonorarios();
+        BigDecimal mayoresCostos = this.totalMayoresCostos != null ? 
+                                   this.totalMayoresCostos : calcularTotalMayoresCostos();
+        BigDecimal subtotalSinDescuentos = base.add(honorarios).add(mayoresCostos);
+        
+        // Calcular total de descuentos
+        BigDecimal totalDesc = calcularTotalDescuentos();
+        
+        // Validar que el total final no sea negativo
+        if (totalDesc.compareTo(subtotalSinDescuentos) > 0) {
+            return "El total de descuentos (" + totalDesc + ") excede el subtotal sin descuentos (" + 
+                   subtotalSinDescuentos + "). El total final no puede ser negativo.";
+        }
+        
+        // Validar cada categoría individualmente
+        String errorJornales = validarCategoria(
+            descuentosJornalesActivo, 
+            descuentosJornalesTipo, 
+            descuentosJornalesValor, 
+            "Jornales", 
+            calcularTotalJornales()
+        );
+        if (errorJornales != null) return errorJornales;
+        
+        BigDecimal totalMat = totalMateriales != null ? BigDecimal.valueOf(totalMateriales) : BigDecimal.ZERO;
+        String errorMateriales = validarCategoria(
+            descuentosMaterialesActivo, 
+            descuentosMaterialesTipo, 
+            descuentosMaterialesValor, 
+            "Materiales", 
+            totalMat
+        );
+        if (errorMateriales != null) return errorMateriales;
+        
+        String errorHonorarios = validarCategoria(
+            descuentosHonorariosActivo, 
+            descuentosHonorariosTipo, 
+            descuentosHonorariosValor, 
+            "Honorarios", 
+            honorarios
+        );
+        if (errorHonorarios != null) return errorHonorarios;
+        
+        String errorMayoresCostos = validarCategoria(
+            descuentosMayoresCostosActivo, 
+            descuentosMayoresCostosTipo, 
+            descuentosMayoresCostosValor, 
+            "Mayores Costos", 
+            mayoresCostos
+        );
+        if (errorMayoresCostos != null) return errorMayoresCostos;
+        
+        return null; // Todo OK
+    }
+
+    /**
+     * Valida una categoría individual de descuento.
+     */
+    private String validarCategoria(Boolean activo, String tipo, BigDecimal valor, String nombreCategoria, BigDecimal base) {
+        if (Boolean.FALSE.equals(activo)) {
+            return null; // Categoría desactivada, no validar
+        }
+        
+        if (valor == null) {
+            return null; // Sin valor, no hay descuento
+        }
+        
+        // Validar que el valor sea positivo
+        if (valor.compareTo(BigDecimal.ZERO) < 0) {
+            return "El valor de descuento para " + nombreCategoria + " no puede ser negativo.";
+        }
+        
+        if (tipo == null) {
+            tipo = "porcentaje";
+        }
+        
+        if ("porcentaje".equalsIgnoreCase(tipo)) {
+            // Validar que el porcentaje esté entre 0 y 100
+            if (valor.compareTo(BigDecimal.valueOf(100)) > 0) {
+                return "El porcentaje de descuento para " + nombreCategoria + " no puede exceder 100%.";
+            }
+        } else if ("fijo".equalsIgnoreCase(tipo) || "VALOR_FIJO".equalsIgnoreCase(tipo)) {
+            // Validar que el valor fijo no exceda la base
+            if (valor.compareTo(base) > 0) {
+                return "El valor fijo de descuento para " + nombreCategoria + " (" + valor + 
+                       ") excede la base de la categoría (" + base + ").";
+            }
+        }
+        
+        return null; // Válido
+    }
+
+    /**
      * Calcula y asigna todos los campos calculados.
      * Este método debe llamarse antes de serializar la entidad a JSON y antes de guardar.
      * <p>
      * Flujo de cálculo:
      * 1. Calcula honorarios (sobre BASE de cada categoría)
      * 2. Calcula mayores costos (sobre BASE de cada categoría, NO sobre base+honorarios)
-     * 3. Calcula total final (BASE + HONORARIOS + MAYORES_COSTOS)
+     * 3. Calcula subtotal sin descuentos (BASE + HONORARIOS + MAYORES_COSTOS)
+     * 4. Calcula descuentos (sobre diferentes bases según categoría)
+     * 5. Calcula total final (SUBTOTAL SIN DESCUENTOS - DESCUENTOS)
      */
     public void calcularCamposCalculados() {
         // Solo recalcular si NO existe el valor persistido
         if (this.totalPresupuestoConHonorarios != null && this.totalPresupuestoConHonorarios.compareTo(BigDecimal.ZERO) > 0) {
-            // Si ya existe el total persistido, lo usamos y no recalculamos
+            // Si ya existe el total persistido, lo usamos
+            // Pero aún así calculamos descuentos si existen
             this.totalFinal = this.totalPresupuestoConHonorarios;
+            
+            // Calcular descuentos si hay configuración
+            BigDecimal descuentos = calcularTotalDescuentos();
+            if (descuentos.compareTo(BigDecimal.ZERO) > 0) {
+                this.totalDescuentos = descuentos;
+                this.totalSinDescuentos = this.totalPresupuestoConHonorarios;
+                this.totalFinal = this.totalPresupuestoConHonorarios.subtract(descuentos);
+                this.totalPresupuestoConHonorarios = this.totalFinal; // Actualizar el total final
+            }
             return;
         }
+        
         // 1. Calcular honorarios (solo sobre base, NO sobre mayores costos)
         BigDecimal honorariosCalculados = calcularTotalHonorarios();
         this.totalHonorarios = honorariosCalculados; // Transient para JSON
         this.totalHonorariosCalculado = honorariosCalculados; // Persistido en BD
+        
         // 2. Calcular mayores costos (sobre base de cada categoría, NO sobre base+honorarios)
         this.totalMayoresCostos = calcularTotalMayoresCostos();
-        // 3. Calcular total final
+        
+        // 3. Calcular subtotal sin descuentos (BASE + HONORARIOS + MAYORES_COSTOS)
         BigDecimal base = totalPresupuesto != null ? totalPresupuesto :
                 (totalGeneral != null ? BigDecimal.valueOf(totalGeneral) : BigDecimal.ZERO);
         BigDecimal honorarios = this.totalHonorariosCalculado != null ? this.totalHonorariosCalculado : BigDecimal.ZERO;
         BigDecimal mayoresCostos = this.totalMayoresCostos != null ? this.totalMayoresCostos : BigDecimal.ZERO;
-        this.totalPresupuestoConHonorarios = base.add(honorarios).add(mayoresCostos);
+        
+        BigDecimal subtotalSinDescuentos = base.add(honorarios).add(mayoresCostos);
+        
+        // 4. Calcular descuentos
+        BigDecimal descuentos = calcularTotalDescuentos();
+        
+        // 5. Calcular total final
+        if (descuentos.compareTo(BigDecimal.ZERO) > 0) {
+            // Hay descuentos aplicados
+            this.totalDescuentos = descuentos;
+            this.totalSinDescuentos = subtotalSinDescuentos;
+            this.totalPresupuestoConHonorarios = subtotalSinDescuentos.subtract(descuentos);
+        } else {
+            // No hay descuentos
+            this.totalDescuentos = BigDecimal.ZERO;
+            this.totalSinDescuentos = null; // No mostrar en frontend si no hay descuentos
+            this.totalPresupuestoConHonorarios = subtotalSinDescuentos;
+        }
+        
         this.totalFinal = this.totalPresupuestoConHonorarios; // Transient para compatibilidad
     }
 

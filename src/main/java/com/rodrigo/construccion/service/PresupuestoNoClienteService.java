@@ -454,6 +454,45 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // Explicación/justificación INTERNA de mayores costos
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
 
+        // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
+        // Mapear explicación de descuentos
+        pnc.setDescuentosExplicacion(dto.getDescuentosExplicacion());
+        
+        // Mapear descuentos sobre JORNALES
+        pnc.setDescuentosJornalesActivo(dto.getDescuentosJornalesActivo());
+        pnc.setDescuentosJornalesTipo(dto.getDescuentosJornalesTipo());
+        if (dto.getDescuentosJornalesValor() != null) {
+            pnc.setDescuentosJornalesValor(BigDecimal.valueOf(dto.getDescuentosJornalesValor()));
+        }
+        
+        // Mapear descuentos sobre MATERIALES
+        pnc.setDescuentosMaterialesActivo(dto.getDescuentosMaterialesActivo());
+        pnc.setDescuentosMaterialesTipo(dto.getDescuentosMaterialesTipo());
+        if (dto.getDescuentosMaterialesValor() != null) {
+            pnc.setDescuentosMaterialesValor(BigDecimal.valueOf(dto.getDescuentosMaterialesValor()));
+        }
+        
+        // Mapear descuentos sobre HONORARIOS
+        pnc.setDescuentosHonorariosActivo(dto.getDescuentosHonorariosActivo());
+        pnc.setDescuentosHonorariosTipo(dto.getDescuentosHonorariosTipo());
+        if (dto.getDescuentosHonorariosValor() != null) {
+            pnc.setDescuentosHonorariosValor(BigDecimal.valueOf(dto.getDescuentosHonorariosValor()));
+        }
+        
+        // Mapear descuentos sobre MAYORES COSTOS
+        pnc.setDescuentosMayoresCostosActivo(dto.getDescuentosMayoresCostosActivo());
+        pnc.setDescuentosMayoresCostosTipo(dto.getDescuentosMayoresCostosTipo());
+        if (dto.getDescuentosMayoresCostosValor() != null) {
+            pnc.setDescuentosMayoresCostosValor(BigDecimal.valueOf(dto.getDescuentosMayoresCostosValor()));
+        }
+        
+        // Validar descuentos antes de guardar
+        String errorValidacion = pnc.validarDescuentos();
+        if (errorValidacion != null) {
+            log.error("❌ Error en validación de descuentos: {}", errorValidacion);
+            throw new IllegalArgumentException("Descuentos inválidos: " + errorValidacion);
+        }
+
         // total general: profesionales + materiales + otros costos + honorarios dirección
         pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
 
@@ -864,6 +903,23 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Explicación/justificación INTERNA de mayores costos
         nuevaVersion.setMayoresCostosExplicacion(presupuestoConDatosActualizados.getMayoresCostosExplicacion());
+
+        // ========== CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
+        nuevaVersion.setDescuentosExplicacion(presupuestoConDatosActualizados.getDescuentosExplicacion());
+        nuevaVersion.setDescuentosJornalesActivo(presupuestoConDatosActualizados.getDescuentosJornalesActivo());
+        nuevaVersion.setDescuentosJornalesTipo(presupuestoConDatosActualizados.getDescuentosJornalesTipo());
+        nuevaVersion.setDescuentosJornalesValor(presupuestoConDatosActualizados.getDescuentosJornalesValor());
+        nuevaVersion.setDescuentosMaterialesActivo(presupuestoConDatosActualizados.getDescuentosMaterialesActivo());
+        nuevaVersion.setDescuentosMaterialesTipo(presupuestoConDatosActualizados.getDescuentosMaterialesTipo());
+        nuevaVersion.setDescuentosMaterialesValor(presupuestoConDatosActualizados.getDescuentosMaterialesValor());
+        nuevaVersion.setDescuentosHonorariosActivo(presupuestoConDatosActualizados.getDescuentosHonorariosActivo());
+        nuevaVersion.setDescuentosHonorariosTipo(presupuestoConDatosActualizados.getDescuentosHonorariosTipo());
+        nuevaVersion.setDescuentosHonorariosValor(presupuestoConDatosActualizados.getDescuentosHonorariosValor());
+        nuevaVersion.setDescuentosMayoresCostosActivo(presupuestoConDatosActualizados.getDescuentosMayoresCostosActivo());
+        nuevaVersion.setDescuentosMayoresCostosTipo(presupuestoConDatosActualizados.getDescuentosMayoresCostosTipo());
+        nuevaVersion.setDescuentosMayoresCostosValor(presupuestoConDatosActualizados.getDescuentosMayoresCostosValor());
+        log.info("📊 Descuentos copiados a nueva versión: {}", 
+                 nuevaVersion.getDescuentosJornalesActivo() != null && nuevaVersion.getDescuentosJornalesActivo() ? "SI" : "NO");
 
         // ========== COPIAR COLECCIONES NORMALIZADAS ==========
         /* LEGACY CODE COMENTADO - Estas tablas ya no existen
@@ -1278,6 +1334,40 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // Explicación/justificación INTERNA de mayores costos
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
 
+        // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
+        pnc.setDescuentosExplicacion(dto.getDescuentosExplicacion());
+        
+        pnc.setDescuentosJornalesActivo(dto.getDescuentosJornalesActivo());
+        pnc.setDescuentosJornalesTipo(dto.getDescuentosJornalesTipo());
+        if (dto.getDescuentosJornalesValor() != null) {
+            pnc.setDescuentosJornalesValor(BigDecimal.valueOf(dto.getDescuentosJornalesValor()));
+        }
+        
+        pnc.setDescuentosMaterialesActivo(dto.getDescuentosMaterialesActivo());
+        pnc.setDescuentosMaterialesTipo(dto.getDescuentosMaterialesTipo());
+        if (dto.getDescuentosMaterialesValor() != null) {
+            pnc.setDescuentosMaterialesValor(BigDecimal.valueOf(dto.getDescuentosMaterialesValor()));
+        }
+        
+        pnc.setDescuentosHonorariosActivo(dto.getDescuentosHonorariosActivo());
+        pnc.setDescuentosHonorariosTipo(dto.getDescuentosHonorariosTipo());
+        if (dto.getDescuentosHonorariosValor() != null) {
+            pnc.setDescuentosHonorariosValor(BigDecimal.valueOf(dto.getDescuentosHonorariosValor()));
+        }
+        
+        pnc.setDescuentosMayoresCostosActivo(dto.getDescuentosMayoresCostosActivo());
+        pnc.setDescuentosMayoresCostosTipo(dto.getDescuentosMayoresCostosTipo());
+        if (dto.getDescuentosMayoresCostosValor() != null) {
+            pnc.setDescuentosMayoresCostosValor(BigDecimal.valueOf(dto.getDescuentosMayoresCostosValor()));
+        }
+        
+        // Validar descuentos antes de guardar
+        String errorValidacionDesc = pnc.validarDescuentos();
+        if (errorValidacionDesc != null) {
+            log.error("❌ Error en validación de descuentos: {}", errorValidacionDesc);
+            throw new IllegalArgumentException("Descuentos inválidos: " + errorValidacionDesc);
+        }
+
         // total general actualizado
         pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
 
@@ -1622,6 +1712,40 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Explicación/justificación INTERNA de mayores costos
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
+
+        // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
+        pnc.setDescuentosExplicacion(dto.getDescuentosExplicacion());
+        
+        pnc.setDescuentosJornalesActivo(dto.getDescuentosJornalesActivo());
+        pnc.setDescuentosJornalesTipo(dto.getDescuentosJornalesTipo());
+        if (dto.getDescuentosJornalesValor() != null) {
+            pnc.setDescuentosJornalesValor(BigDecimal.valueOf(dto.getDescuentosJornalesValor()));
+        }
+        
+        pnc.setDescuentosMaterialesActivo(dto.getDescuentosMaterialesActivo());
+        pnc.setDescuentosMaterialesTipo(dto.getDescuentosMaterialesTipo());
+        if (dto.getDescuentosMaterialesValor() != null) {
+            pnc.setDescuentosMaterialesValor(BigDecimal.valueOf(dto.getDescuentosMaterialesValor()));
+        }
+        
+        pnc.setDescuentosHonorariosActivo(dto.getDescuentosHonorariosActivo());
+        pnc.setDescuentosHonorariosTipo(dto.getDescuentosHonorariosTipo());
+        if (dto.getDescuentosHonorariosValor() != null) {
+            pnc.setDescuentosHonorariosValor(BigDecimal.valueOf(dto.getDescuentosHonorariosValor()));
+        }
+        
+        pnc.setDescuentosMayoresCostosActivo(dto.getDescuentosMayoresCostosActivo());
+        pnc.setDescuentosMayoresCostosTipo(dto.getDescuentosMayoresCostosTipo());
+        if (dto.getDescuentosMayoresCostosValor() != null) {
+            pnc.setDescuentosMayoresCostosValor(BigDecimal.valueOf(dto.getDescuentosMayoresCostosValor()));
+        }
+        
+        // Validar descuentos antes de guardar
+        String errorValidacionDesc = pnc.validarDescuentos();
+        if (errorValidacionDesc != null) {
+            log.error("❌ Error en validación de descuentos: {}", errorValidacionDesc);
+            throw new IllegalArgumentException("Descuentos inválidos: " + errorValidacionDesc);
+        }
 
         // total general actualizado
         pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);

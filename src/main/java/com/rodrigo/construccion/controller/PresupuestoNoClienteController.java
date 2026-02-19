@@ -108,6 +108,11 @@ public class PresupuestoNoClienteController {
             pnc.getHonorariosJornalesActivo(),
             pnc.getHonorariosJornalesTipo(),
             pnc.getHonorariosJornalesValor());
+        
+        log.info("🔍 DEBUG GET - DESCUENTOS en entidad antes de respuesta: explicacion={}, jornales(activo={}, tipo={}, valor={}), materiales(activo={}, tipo={}, valor={})",
+            pnc.getDescuentosExplicacion(),
+            pnc.getDescuentosJornalesActivo(), pnc.getDescuentosJornalesTipo(), pnc.getDescuentosJornalesValor(),
+            pnc.getDescuentosMaterialesActivo(), pnc.getDescuentosMaterialesTipo(), pnc.getDescuentosMaterialesValor());
 
         log.info("📤 Response: ID={}, itemsCalculadora={}",
             pnc.getId(),
