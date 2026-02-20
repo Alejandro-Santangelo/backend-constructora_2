@@ -78,6 +78,9 @@ public class ObraResponseDTO {
     @Schema(description = "Desglose materiales del presupuesto", example = "800000.00")
     private BigDecimal presupuestoMateriales;
 
+    @Schema(description = "Desglose gastos generales del presupuesto (nueva categoría)", example = "150000.00")
+    private BigDecimal importeGastosGeneralesObra;
+
     @Schema(description = "Desglose honorarios del presupuesto (monto o porcentaje)", example = "15")
     private BigDecimal presupuestoHonorarios;
 
@@ -89,6 +92,69 @@ public class ObraResponseDTO {
 
     @Schema(description = "Tipo de mayores costos: fijo o porcentaje", example = "fijo")
     private String tipoMayoresCostosPresupuesto;
+
+    // ========== HONORARIOS INDIVIDUALES POR CATEGORÍA (SISTEMA NUEVO) ==========
+    @Schema(description = "Honorario para jornales - puede ser fijo ($) o porcentual (%)", example = "50000.00")
+    private BigDecimal honorarioJornalesObra;
+    @Schema(description = "Tipo de honorario jornales: fijo o porcentaje", example = "fijo")
+    private String tipoHonorarioJornalesObra;
+    
+    @Schema(description = "Honorario para materiales - puede ser fijo ($) o porcentual (%)", example = "10")
+    private BigDecimal honorarioMaterialesObra;
+    @Schema(description = "Tipo de honorario materiales: fijo o porcentaje", example = "porcentaje")
+    private String tipoHonorarioMaterialesObra;
+    
+    @Schema(description = "Honorario para gastos generales - puede ser fijo ($) o porcentual (%)", example = "25000.00")
+    private BigDecimal honorarioGastosGeneralesObra;
+    @Schema(description = "Tipo de honorario gastos generales: fijo o porcentaje", example = "fijo")
+    private String tipoHonorarioGastosGeneralesObra;
+    
+    @Schema(description = "Honorario para mayores costos - puede ser fijo ($) o porcentual (%)", example = "15")
+    private BigDecimal honorarioMayoresCostosObra;
+    @Schema(description = "Tipo de honorario mayores costos: fijo o porcentaje", example = "porcentaje")
+    private String tipoHonorarioMayoresCostosObra;
+
+    // ========== DESCUENTOS SOBRE IMPORTES BASE POR CATEGORÍA ==========
+    @Schema(description = "Descuento sobre importe base de jornales - puede ser fijo ($) o porcentual (%)", example = "5")
+    private BigDecimal descuentoJornalesObra;
+    @Schema(description = "Tipo de descuento jornales: fijo o porcentaje", example = "porcentaje")
+    private String tipoDescuentoJornalesObra;
+    
+    @Schema(description = "Descuento sobre importe base de materiales - puede ser fijo ($) o porcentual (%)", example = "10000.00")
+    private BigDecimal descuentoMaterialesObra;
+    @Schema(description = "Tipo de descuento materiales: fijo o porcentaje", example = "fijo")
+    private String tipoDescuentoMaterialesObra;
+    
+    @Schema(description = "Descuento sobre importe base de gastos generales - puede ser fijo ($) o porcentual (%)", example = "3")
+    private BigDecimal descuentoGastosGeneralesObra;
+    @Schema(description = "Tipo de descuento gastos generales: fijo o porcentaje", example = "porcentaje")
+    private String tipoDescuentoGastosGeneralesObra;
+    
+    @Schema(description = "Descuento sobre importe base de mayores costos - puede ser fijo ($) o porcentual (%)", example = "5000.00")
+    private BigDecimal descuentoMayoresCostosObra;
+    @Schema(description = "Tipo de descuento mayores costos: fijo o porcentaje", example = "fijo")
+    private String tipoDescuentoMayoresCostosObra;
+
+    // ========== DESCUENTOS SOBRE HONORARIOS POR CATEGORÍA (NUEVOS) ==========
+    @Schema(description = "Descuento sobre honorario de jornales - puede ser fijo ($) o porcentual (%)", example = "2000.00")
+    private BigDecimal descuentoHonorarioJornalesObra;
+    @Schema(description = "Tipo de descuento honorario jornales: fijo o porcentaje", example = "fijo")
+    private String tipoDescuentoHonorarioJornalesObra;
+    
+    @Schema(description = "Descuento sobre honorario de materiales - puede ser fijo ($) o porcentual (%)", example = "5")
+    private BigDecimal descuentoHonorarioMaterialesObra;
+    @Schema(description = "Tipo de descuento honorario materiales: fijo o porcentaje", example = "porcentaje")
+    private String tipoDescuentoHonorarioMaterialesObra;
+    
+    @Schema(description = "Descuento sobre honorario de gastos generales - puede ser fijo ($) o porcentual (%)", example = "1000.00")
+    private BigDecimal descuentoHonorarioGastosGeneralesObra;
+    @Schema(description = "Tipo de descuento honorario gastos generales: fijo o porcentaje", example = "fijo")
+    private String tipoDescuentoHonorarioGastosGeneralesObra;
+    
+    @Schema(description = "Descuento sobre honorario de mayores costos - puede ser fijo ($) o porcentual (%)", example = "10")
+    private BigDecimal descuentoHonorarioMayoresCostosObra;
+    @Schema(description = "Tipo de descuento honorario mayores costos: fijo o porcentaje", example = "porcentaje")
+    private String tipoDescuentoHonorarioMayoresCostosObra;
 
     @Schema(description = "ID del presupuesto sin cliente vinculado", example = "123")
     private Long presupuestoNoClienteId;

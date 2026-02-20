@@ -53,10 +53,38 @@ public class TrabajoAdicionalService {
                 .importe(requestDTO.getImporte())
                 .importeJornales(requestDTO.getImporteJornales())
                 .importeMateriales(requestDTO.getImporteMateriales())
+                .importeGastosGenerales(requestDTO.getImporteGastosGenerales())
                 .importeHonorarios(requestDTO.getImporteHonorarios())
                 .tipoHonorarios(requestDTO.getTipoHonorarios())
                 .importeMayoresCostos(requestDTO.getImporteMayoresCostos())
                 .tipoMayoresCostos(requestDTO.getTipoMayoresCostos())
+                // Honorarios individuales por categoría
+                .honorarioJornales(requestDTO.getHonorarioJornales())
+                .tipoHonorarioJornales(requestDTO.getTipoHonorarioJornales())
+                .honorarioMateriales(requestDTO.getHonorarioMateriales())
+                .tipoHonorarioMateriales(requestDTO.getTipoHonorarioMateriales())
+                .honorarioGastosGenerales(requestDTO.getHonorarioGastosGenerales())
+                .tipoHonorarioGastosGenerales(requestDTO.getTipoHonorarioGastosGenerales())
+                .honorarioMayoresCostos(requestDTO.getHonorarioMayoresCostos())
+                .tipoHonorarioMayoresCostos(requestDTO.getTipoHonorarioMayoresCostos())
+                // Descuentos sobre importes base
+                .descuentoJornales(requestDTO.getDescuentoJornales())
+                .tipoDescuentoJornales(requestDTO.getTipoDescuentoJornales())
+                .descuentoMateriales(requestDTO.getDescuentoMateriales())
+                .tipoDescuentoMateriales(requestDTO.getTipoDescuentoMateriales())
+                .descuentoGastosGenerales(requestDTO.getDescuentoGastosGenerales())
+                .tipoDescuentoGastosGenerales(requestDTO.getTipoDescuentoGastosGenerales())
+                .descuentoMayoresCostos(requestDTO.getDescuentoMayoresCostos())
+                .tipoDescuentoMayoresCostos(requestDTO.getTipoDescuentoMayoresCostos())
+                // Descuentos sobre honorarios
+                .descuentoHonorarioJornales(requestDTO.getDescuentoHonorarioJornales())
+                .tipoDescuentoHonorarioJornales(requestDTO.getTipoDescuentoHonorarioJornales())
+                .descuentoHonorarioMateriales(requestDTO.getDescuentoHonorarioMateriales())
+                .tipoDescuentoHonorarioMateriales(requestDTO.getTipoDescuentoHonorarioMateriales())
+                .descuentoHonorarioGastosGenerales(requestDTO.getDescuentoHonorarioGastosGenerales())
+                .tipoDescuentoHonorarioGastosGenerales(requestDTO.getTipoDescuentoHonorarioGastosGenerales())
+                .descuentoHonorarioMayoresCostos(requestDTO.getDescuentoHonorarioMayoresCostos())
+                .tipoDescuentoHonorarioMayoresCostos(requestDTO.getTipoDescuentoHonorarioMayoresCostos())
                 .diasNecesarios(requestDTO.getDiasNecesarios())
                 .fechaInicio(requestDTO.getFechaInicio())
                 .descripcion(requestDTO.getDescripcion())
@@ -161,10 +189,38 @@ public class TrabajoAdicionalService {
         trabajoAdicional.setImporte(requestDTO.getImporte());
         trabajoAdicional.setImporteJornales(requestDTO.getImporteJornales());
         trabajoAdicional.setImporteMateriales(requestDTO.getImporteMateriales());
+        trabajoAdicional.setImporteGastosGenerales(requestDTO.getImporteGastosGenerales());
         trabajoAdicional.setImporteHonorarios(requestDTO.getImporteHonorarios());
         trabajoAdicional.setTipoHonorarios(requestDTO.getTipoHonorarios());
         trabajoAdicional.setImporteMayoresCostos(requestDTO.getImporteMayoresCostos());
         trabajoAdicional.setTipoMayoresCostos(requestDTO.getTipoMayoresCostos());
+        // Honorarios individuales
+        trabajoAdicional.setHonorarioJornales(requestDTO.getHonorarioJornales());
+        trabajoAdicional.setTipoHonorarioJornales(requestDTO.getTipoHonorarioJornales());
+        trabajoAdicional.setHonorarioMateriales(requestDTO.getHonorarioMateriales());
+        trabajoAdicional.setTipoHonorarioMateriales(requestDTO.getTipoHonorarioMateriales());
+        trabajoAdicional.setHonorarioGastosGenerales(requestDTO.getHonorarioGastosGenerales());
+        trabajoAdicional.setTipoHonorarioGastosGenerales(requestDTO.getTipoHonorarioGastosGenerales());
+        trabajoAdicional.setHonorarioMayoresCostos(requestDTO.getHonorarioMayoresCostos());
+        trabajoAdicional.setTipoHonorarioMayoresCostos(requestDTO.getTipoHonorarioMayoresCostos());
+        // Descuentos sobre importes base
+        trabajoAdicional.setDescuentoJornales(requestDTO.getDescuentoJornales());
+        trabajoAdicional.setTipoDescuentoJornales(requestDTO.getTipoDescuentoJornales());
+        trabajoAdicional.setDescuentoMateriales(requestDTO.getDescuentoMateriales());
+        trabajoAdicional.setTipoDescuentoMateriales(requestDTO.getTipoDescuentoMateriales());
+        trabajoAdicional.setDescuentoGastosGenerales(requestDTO.getDescuentoGastosGenerales());
+        trabajoAdicional.setTipoDescuentoGastosGenerales(requestDTO.getTipoDescuentoGastosGenerales());
+        trabajoAdicional.setDescuentoMayoresCostos(requestDTO.getDescuentoMayoresCostos());
+        trabajoAdicional.setTipoDescuentoMayoresCostos(requestDTO.getTipoDescuentoMayoresCostos());
+        // Descuentos sobre honorarios
+        trabajoAdicional.setDescuentoHonorarioJornales(requestDTO.getDescuentoHonorarioJornales());
+        trabajoAdicional.setTipoDescuentoHonorarioJornales(requestDTO.getTipoDescuentoHonorarioJornales());
+        trabajoAdicional.setDescuentoHonorarioMateriales(requestDTO.getDescuentoHonorarioMateriales());
+        trabajoAdicional.setTipoDescuentoHonorarioMateriales(requestDTO.getTipoDescuentoHonorarioMateriales());
+        trabajoAdicional.setDescuentoHonorarioGastosGenerales(requestDTO.getDescuentoHonorarioGastosGenerales());
+        trabajoAdicional.setTipoDescuentoHonorarioGastosGenerales(requestDTO.getTipoDescuentoHonorarioGastosGenerales());
+        trabajoAdicional.setDescuentoHonorarioMayoresCostos(requestDTO.getDescuentoHonorarioMayoresCostos());
+        trabajoAdicional.setTipoDescuentoHonorarioMayoresCostos(requestDTO.getTipoDescuentoHonorarioMayoresCostos());
         trabajoAdicional.setDiasNecesarios(requestDTO.getDiasNecesarios());
         trabajoAdicional.setFechaInicio(requestDTO.getFechaInicio());
         trabajoAdicional.setDescripcion(requestDTO.getDescripcion());
@@ -317,10 +373,38 @@ public class TrabajoAdicionalService {
                 .importe(trabajoAdicional.getImporte())
                 .importeJornales(trabajoAdicional.getImporteJornales())
                 .importeMateriales(trabajoAdicional.getImporteMateriales())
+                .importeGastosGenerales(trabajoAdicional.getImporteGastosGenerales())
                 .importeHonorarios(trabajoAdicional.getImporteHonorarios())
                 .tipoHonorarios(trabajoAdicional.getTipoHonorarios())
                 .importeMayoresCostos(trabajoAdicional.getImporteMayoresCostos())
                 .tipoMayoresCostos(trabajoAdicional.getTipoMayoresCostos())
+                // Honorarios individuales
+                .honorarioJornales(trabajoAdicional.getHonorarioJornales())
+                .tipoHonorarioJornales(trabajoAdicional.getTipoHonorarioJornales())
+                .honorarioMateriales(trabajoAdicional.getHonorarioMateriales())
+                .tipoHonorarioMateriales(trabajoAdicional.getTipoHonorarioMateriales())
+                .honorarioGastosGenerales(trabajoAdicional.getHonorarioGastosGenerales())
+                .tipoHonorarioGastosGenerales(trabajoAdicional.getTipoHonorarioGastosGenerales())
+                .honorarioMayoresCostos(trabajoAdicional.getHonorarioMayoresCostos())
+                .tipoHonorarioMayoresCostos(trabajoAdicional.getTipoHonorarioMayoresCostos())
+                // Descuentos sobre importes base
+                .descuentoJornales(trabajoAdicional.getDescuentoJornales())
+                .tipoDescuentoJornales(trabajoAdicional.getTipoDescuentoJornales())
+                .descuentoMateriales(trabajoAdicional.getDescuentoMateriales())
+                .tipoDescuentoMateriales(trabajoAdicional.getTipoDescuentoMateriales())
+                .descuentoGastosGenerales(trabajoAdicional.getDescuentoGastosGenerales())
+                .tipoDescuentoGastosGenerales(trabajoAdicional.getTipoDescuentoGastosGenerales())
+                .descuentoMayoresCostos(trabajoAdicional.getDescuentoMayoresCostos())
+                .tipoDescuentoMayoresCostos(trabajoAdicional.getTipoDescuentoMayoresCostos())
+                // Descuentos sobre honorarios
+                .descuentoHonorarioJornales(trabajoAdicional.getDescuentoHonorarioJornales())
+                .tipoDescuentoHonorarioJornales(trabajoAdicional.getTipoDescuentoHonorarioJornales())
+                .descuentoHonorarioMateriales(trabajoAdicional.getDescuentoHonorarioMateriales())
+                .tipoDescuentoHonorarioMateriales(trabajoAdicional.getTipoDescuentoHonorarioMateriales())
+                .descuentoHonorarioGastosGenerales(trabajoAdicional.getDescuentoHonorarioGastosGenerales())
+                .tipoDescuentoHonorarioGastosGenerales(trabajoAdicional.getTipoDescuentoHonorarioGastosGenerales())
+                .descuentoHonorarioMayoresCostos(trabajoAdicional.getDescuentoHonorarioMayoresCostos())
+                .tipoDescuentoHonorarioMayoresCostos(trabajoAdicional.getTipoDescuentoHonorarioMayoresCostos())
                 .diasNecesarios(trabajoAdicional.getDiasNecesarios())
                 .fechaInicio(trabajoAdicional.getFechaInicio())
                 .descripcion(trabajoAdicional.getDescripcion())
@@ -424,5 +508,320 @@ public class TrabajoAdicionalService {
         java.util.regex.Matcher m = p.matcher(json);
         if (m.find()) return java.util.Optional.of(m.group(1));
         return java.util.Optional.empty();
+    }
+
+    // === MÉTODOS PARA SISTEMA DE BORRADORES ===
+
+    /**
+     * Crea un trabajo adicional en estado BORRADOR.
+     * Permite ir guardando los datos del formulario por etapas.
+     * @param requestDTO Datos parciales o completos del trabajo adicional
+     * @return Trabajo adicional creado en estado BORRADOR
+     */
+    @Transactional
+    public TrabajoAdicionalResponseDTO crearBorrador(TrabajoAdicionalRequestDTO requestDTO) {
+        log.info("🔧 Creando trabajo adicional como BORRADOR...");
+        
+        // Validaciones básicas (menos estrictas que la creación normal)
+        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId());
+        validarObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), requestDTO.getEmpresaId());
+
+        // Crear entidad principal con estado BORRADOR
+        TrabajoAdicional trabajoAdicional = TrabajoAdicional.builder()
+                .nombre(requestDTO.getNombre() != null ? requestDTO.getNombre() : "Borrador - " + java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("dd/MM HH:mm")))
+                .importe(requestDTO.getImporte())
+                .importeJornales(requestDTO.getImporteJornales())
+                .importeMateriales(requestDTO.getImporteMateriales())
+                .importeGastosGenerales(requestDTO.getImporteGastosGenerales())
+                .importeHonorarios(requestDTO.getImporteHonorarios())
+                .tipoHonorarios(requestDTO.getTipoHonorarios())
+                .importeMayoresCostos(requestDTO.getImporteMayoresCostos())
+                .tipoMayoresCostos(requestDTO.getTipoMayoresCostos())
+                // Honorarios individuales
+                .honorarioJornales(requestDTO.getHonorarioJornales())
+                .tipoHonorarioJornales(requestDTO.getTipoHonorarioJornales())
+                .honorarioMateriales(requestDTO.getHonorarioMateriales())
+                .tipoHonorarioMateriales(requestDTO.getTipoHonorarioMateriales())
+                .honorarioGastosGenerales(requestDTO.getHonorarioGastosGenerales())
+                .tipoHonorarioGastosGenerales(requestDTO.getTipoHonorarioGastosGenerales())
+                .honorarioMayoresCostos(requestDTO.getHonorarioMayoresCostos())
+                .tipoHonorarioMayoresCostos(requestDTO.getTipoHonorarioMayoresCostos())
+                // Descuentos sobre importes base
+                .descuentoJornales(requestDTO.getDescuentoJornales())
+                .tipoDescuentoJornales(requestDTO.getTipoDescuentoJornales())
+                .descuentoMateriales(requestDTO.getDescuentoMateriales())
+                .tipoDescuentoMateriales(requestDTO.getTipoDescuentoMateriales())
+                .descuentoGastosGenerales(requestDTO.getDescuentoGastosGenerales())
+                .tipoDescuentoGastosGenerales(requestDTO.getTipoDescuentoGastosGenerales())
+                .descuentoMayoresCostos(requestDTO.getDescuentoMayoresCostos())
+                .tipoDescuentoMayoresCostos(requestDTO.getTipoDescuentoMayoresCostos())
+                // Descuentos sobre honorarios
+                .descuentoHonorarioJornales(requestDTO.getDescuentoHonorarioJornales())
+                .tipoDescuentoHonorarioJornales(requestDTO.getTipoDescuentoHonorarioJornales())
+                .descuentoHonorarioMateriales(requestDTO.getDescuentoHonorarioMateriales())
+                .tipoDescuentoHonorarioMateriales(requestDTO.getTipoDescuentoHonorarioMateriales())
+                .descuentoHonorarioGastosGenerales(requestDTO.getDescuentoHonorarioGastosGenerales())
+                .tipoDescuentoHonorarioGastosGenerales(requestDTO.getTipoDescuentoHonorarioGastosGenerales())
+                .descuentoHonorarioMayoresCostos(requestDTO.getDescuentoHonorarioMayoresCostos())
+                .tipoDescuentoHonorarioMayoresCostos(requestDTO.getTipoDescuentoHonorarioMayoresCostos())
+                // Información básica
+                .descripcion(requestDTO.getDescripcion())
+                .fechaInicio(requestDTO.getFechaInicio())
+                .obraId(requestDTO.getObraId())
+                .trabajoExtraId(requestDTO.getTrabajoExtraId())
+                .empresaId(requestDTO.getEmpresaId())
+                .estado(TrabajoAdicional.ESTADO_BORRADOR) // Específicamente como borrador
+                .build();
+
+        // Guardar inmediatamente para obtener ID
+        TrabajoAdicional borradorGuardado = trabajoAdicionalRepository.save(trabajoAdicional);
+        log.info("✅ Trabajo adicional borrador creado con ID: {} en estado: {}", 
+                 borradorGuardado.getId(), borradorGuardado.getEstado());
+
+        // Sincronizar con entidades financieras si aplica
+        try {
+            entidadFinancieraService.sincronizarDesdeTrabajoAdicional(borradorGuardado);
+        } catch (Exception e) {
+            log.warn("⚠️ Error al sincronizar borrador con entidades financieras: {}", e.getMessage());
+        }
+
+        return mapearAResponseDTO(borradorGuardado);
+    }
+
+    /**
+     * Actualiza un borrador de trabajo adicional.
+     * Solo permite actualización si está en estado BORRADOR.
+     * @param id ID del trabajo adicional borrador
+     * @param requestDTO Nuevos datos del trabajo adicional
+     * @return Trabajo adicional borrador actualizado
+     */
+    @Transactional
+    public TrabajoAdicionalResponseDTO actualizarBorrador(Long id, TrabajoAdicionalRequestDTO requestDTO) {
+        log.info("🔧 Actualizando borrador de trabajo adicional ID: {}", id);
+        
+        TrabajoAdicional trabajoExistente = trabajoAdicionalRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trabajo adicional borrador no encontrado con ID: " + id));
+
+        // Verificar que sea realmente un borrador
+        if (!trabajoExistente.esBorrador()) {
+            throw new IllegalStateException("Solo se pueden actualizar trabajos adicionales en estado BORRADOR. Estado actual: " + trabajoExistente.getEstado());
+        }
+
+        // Actualizar todos los campos del formulario
+        actualizarCamposBorrador(trabajoExistente, requestDTO);
+
+        // Mantener estado BORRADOR
+        trabajoExistente.setEstado(TrabajoAdicional.ESTADO_BORRADOR);
+
+        TrabajoAdicional trabajoActualizado = trabajoAdicionalRepository.save(trabajoExistente);
+        log.info("✅ Borrador actualizado exitosamente. Campos persistidos.");
+
+        return mapearAResponseDTO(trabajoActualizado);
+    }
+
+    /**
+     * Convierte un borrador en trabajo adicional activo.
+     * Cambia del estado BORRADOR a PENDIENTE.
+     * @param id ID del trabajo adicional borrador
+     * @return Trabajo adicional transformado a estado activo
+     */
+    @Transactional
+    public TrabajoAdicionalResponseDTO confirmarBorrador(Long id) {
+        log.info("🔧 Confirmando borrador de trabajo adicional ID: {} -> trabajo activo", id);
+        
+        TrabajoAdicional trabajoBorrador = trabajoAdicionalRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Trabajo adicional borrador no encontrado con ID: " + id));
+
+        // Verificar que sea borrador
+        if (!trabajoBorrador.esBorrador()) {
+            throw new IllegalStateException("Solo se pueden confirmar trabajos adicionales en estado BORRADOR. Estado actual: " + trabajoBorrador.getEstado());
+        }
+
+        // Validar que tiene los datos mínimos requeridos
+        validarDatosMinimosParaConfirmacion(trabajoBorrador);
+
+        // Cambiar a estado activo
+        trabajoBorrador.setEstado(TrabajoAdicional.ESTADO_PENDIENTE);
+
+        TrabajoAdicional trabajoConfirmado = trabajoAdicionalRepository.save(trabajoBorrador);
+        log.info("✅ Trabajo adicional confirmado. Estado cambiado de BORRADOR a {}", trabajoConfirmado.getEstado());
+
+        // Re-sincronizar con entidades financieras como trabajo activo
+        try {
+            entidadFinancieraService.sincronizarDesdeTrabajoAdicional(trabajoConfirmado);
+        } catch (Exception e) {
+            log.warn("⚠️ Error al re-sincronizar trabajo adicional confirmado: {}", e.getMessage());
+        }
+
+        return mapearAResponseDTO(trabajoConfirmado);
+    }
+
+    /**
+     * Obtiene todos los borradores de trabajos adicionales por empresa.
+     * @param empresaId ID de la empresa
+     * @param obraId ID de la obra (opcional)
+     * @param trabajoExtraId ID del trabajo extra (opcional)
+     * @return Lista de trabajos adicionales en estado BORRADOR
+     */
+    public List<TrabajoAdicionalResponseDTO> obtenerBorradores(Long empresaId, Long obraId, Long trabajoExtraId) {
+        log.info("📋 Obteniendo borradores de trabajos adicionales para empresa ID: {}", empresaId);
+        
+        List<TrabajoAdicional> borradores;
+        
+        if (obraId != null) {
+            borradores = trabajoAdicionalRepository.findBorradoresByEmpresaIdAndObraId(empresaId, obraId);
+        } else if (trabajoExtraId != null) {
+            borradores = trabajoAdicionalRepository.findBorradoresByEmpresaIdAndTrabajoExtraId(empresaId, trabajoExtraId);
+        } else {
+            borradores = trabajoAdicionalRepository.findBorradoresByEmpresaId(empresaId);
+        }
+        
+        return borradores.stream()
+                .map(this::mapearAResponseDTO)
+                .collect(java.util.stream.Collectors.toList());
+    }
+
+    /**
+     * Método auxiliar para validar datos mínimos antes de confirmar.
+     */
+    private void validarDatosMinimosParaConfirmacion(TrabajoAdicional trabajo) {
+        if (trabajo.getNombre() == null || trabajo.getNombre().trim().isEmpty()) {
+            throw new IllegalStateException("El nombre del trabajo adicional es obligatorio para confirmar el borrador");
+        }
+        
+        if (trabajo.getImporte() == null) {
+            throw new IllegalStateException("El importe total es obligatorio para confirmar el borrador");
+        }
+
+        // Validar que al menos tenga un importe base
+        boolean tieneImporteBase = (trabajo.getImporteJornales() != null && trabajo.getImporteJornales().compareTo(BigDecimal.ZERO) > 0) ||
+                                   (trabajo.getImporteMateriales() != null && trabajo.getImporteMateriales().compareTo(BigDecimal.ZERO) > 0) ||
+                                   (trabajo.getImporteGastosGenerales() != null && trabajo.getImporteGastosGenerales().compareTo(BigDecimal.ZERO) > 0);
+        
+        if (!tieneImporteBase) {
+            throw new IllegalStateException("Debe especificar al menos un importe base (jornales, materiales o gastos generales) para confirmar el borrador");
+        }
+
+        // Agregar más validaciones según reglas de negocio
+    }
+
+    /**
+     * Método auxiliar para actualizar campos de trabajo adicional.
+     */
+    private void actualizarCamposBorrador(TrabajoAdicional trabajoExistente, TrabajoAdicionalRequestDTO nuevosData) {
+        // Información básica
+        if (nuevosData.getNombre() != null) {
+            trabajoExistente.setNombre(nuevosData.getNombre());
+        }
+        if (nuevosData.getDescripcion() != null) {
+            trabajoExistente.setDescripcion(nuevosData.getDescripcion());
+        }
+        if (nuevosData.getFechaInicio() != null) {
+            trabajoExistente.setFechaInicio(nuevosData.getFechaInicio());
+        }
+
+        // Importes base
+        if (nuevosData.getImporte() != null) {
+            trabajoExistente.setImporte(nuevosData.getImporte());
+        }
+        if (nuevosData.getImporteJornales() != null) {
+            trabajoExistente.setImporteJornales(nuevosData.getImporteJornales());
+        }
+        if (nuevosData.getImporteMateriales() != null) {
+            trabajoExistente.setImporteMateriales(nuevosData.getImporteMateriales());
+        }
+        if (nuevosData.getImporteGastosGenerales() != null) {
+            trabajoExistente.setImporteGastosGenerales(nuevosData.getImporteGastosGenerales());
+        }
+        if (nuevosData.getImporteHonorarios() != null) {
+            trabajoExistente.setImporteHonorarios(nuevosData.getImporteHonorarios());
+        }
+        if (nuevosData.getTipoHonorarios() != null) {
+            trabajoExistente.setTipoHonorarios(nuevosData.getTipoHonorarios());
+        }
+        if (nuevosData.getImporteMayoresCostos() != null) {
+            trabajoExistente.setImporteMayoresCostos(nuevosData.getImporteMayoresCostos());
+        }
+        if (nuevosData.getTipoMayoresCostos() != null) {
+            trabajoExistente.setTipoMayoresCostos(nuevosData.getTipoMayoresCostos());
+        }
+
+        // Honorarios individuales por categoría
+        if (nuevosData.getHonorarioJornales() != null) {
+            trabajoExistente.setHonorarioJornales(nuevosData.getHonorarioJornales());
+        }
+        if (nuevosData.getTipoHonorarioJornales() != null) {
+            trabajoExistente.setTipoHonorarioJornales(nuevosData.getTipoHonorarioJornales());
+        }
+        if (nuevosData.getHonorarioMateriales() != null) {
+            trabajoExistente.setHonorarioMateriales(nuevosData.getHonorarioMateriales());
+        }
+        if (nuevosData.getTipoHonorarioMateriales() != null) {
+            trabajoExistente.setTipoHonorarioMateriales(nuevosData.getTipoHonorarioMateriales());
+        }
+        if (nuevosData.getHonorarioGastosGenerales() != null) {
+            trabajoExistente.setHonorarioGastosGenerales(nuevosData.getHonorarioGastosGenerales());
+        }
+        if (nuevosData.getTipoHonorarioGastosGenerales() != null) {
+            trabajoExistente.setTipoHonorarioGastosGenerales(nuevosData.getTipoHonorarioGastosGenerales());
+        }
+        if (nuevosData.getHonorarioMayoresCostos() != null) {
+            trabajoExistente.setHonorarioMayoresCostos(nuevosData.getHonorarioMayoresCostos());
+        }
+        if (nuevosData.getTipoHonorarioMayoresCostos() != null) {
+            trabajoExistente.setTipoHonorarioMayoresCostos(nuevosData.getTipoHonorarioMayoresCostos());
+        }
+
+        // Descuentos sobre importes base
+        if (nuevosData.getDescuentoJornales() != null) {
+            trabajoExistente.setDescuentoJornales(nuevosData.getDescuentoJornales());
+        }
+        if (nuevosData.getTipoDescuentoJornales() != null) {
+            trabajoExistente.setTipoDescuentoJornales(nuevosData.getTipoDescuentoJornales());
+        }
+        if (nuevosData.getDescuentoMateriales() != null) {
+            trabajoExistente.setDescuentoMateriales(nuevosData.getDescuentoMateriales());
+        }
+        if (nuevosData.getTipoDescuentoMateriales() != null) {
+            trabajoExistente.setTipoDescuentoMateriales(nuevosData.getTipoDescuentoMateriales());
+        }
+        if (nuevosData.getDescuentoGastosGenerales() != null) {
+            trabajoExistente.setDescuentoGastosGenerales(nuevosData.getDescuentoGastosGenerales());
+        }
+        if (nuevosData.getTipoDescuentoGastosGenerales() != null) {
+            trabajoExistente.setTipoDescuentoGastosGenerales(nuevosData.getTipoDescuentoGastosGenerales());
+        }
+        if (nuevosData.getDescuentoMayoresCostos() != null) {
+            trabajoExistente.setDescuentoMayoresCostos(nuevosData.getDescuentoMayoresCostos());
+        }
+        if (nuevosData.getTipoDescuentoMayoresCostos() != null) {
+            trabajoExistente.setTipoDescuentoMayoresCostos(nuevosData.getTipoDescuentoMayoresCostos());
+        }
+
+        // Descuentos sobre honorarios
+        if (nuevosData.getDescuentoHonorarioJornales() != null) {
+            trabajoExistente.setDescuentoHonorarioJornales(nuevosData.getDescuentoHonorarioJornales());
+        }
+        if (nuevosData.getTipoDescuentoHonorarioJornales() != null) {
+            trabajoExistente.setTipoDescuentoHonorarioJornales(nuevosData.getTipoDescuentoHonorarioJornales());
+        }
+        if (nuevosData.getDescuentoHonorarioMateriales() != null) {
+            trabajoExistente.setDescuentoHonorarioMateriales(nuevosData.getDescuentoHonorarioMateriales());
+        }
+        if (nuevosData.getTipoDescuentoHonorarioMateriales() != null) {
+            trabajoExistente.setTipoDescuentoHonorarioMateriales(nuevosData.getTipoDescuentoHonorarioMateriales());
+        }
+        if (nuevosData.getDescuentoHonorarioGastosGenerales() != null) {
+            trabajoExistente.setDescuentoHonorarioGastosGenerales(nuevosData.getDescuentoHonorarioGastosGenerales());
+        }
+        if (nuevosData.getTipoDescuentoHonorarioGastosGenerales() != null) {
+            trabajoExistente.setTipoDescuentoHonorarioGastosGenerales(nuevosData.getTipoDescuentoHonorarioGastosGenerales());
+        }
+        if (nuevosData.getDescuentoHonorarioMayoresCostos() != null) {
+            trabajoExistente.setDescuentoHonorarioMayoresCostos(nuevosData.getDescuentoHonorarioMayoresCostos());
+        }
+        if (nuevosData.getTipoDescuentoHonorarioMayoresCostos() != null) {
+            trabajoExistente.setTipoDescuentoHonorarioMayoresCostos(nuevosData.getTipoDescuentoHonorarioMayoresCostos());
+        }
     }
 }

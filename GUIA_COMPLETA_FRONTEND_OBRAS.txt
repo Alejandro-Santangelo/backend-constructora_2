@@ -1,0 +1,788 @@
+================================================================================
+GUIA COMPLETA DE API REST - OBRAS INDEPENDIENTES Y TRABAJOS ADICIONALES
+Backend Spring Boot - Documentación para Frontend
+================================================================================
+
+SERVIDOR: http://localhost:8080
+ESTADO: TODOS LOS ENDPOINTS FUNCIONANDO ✅
+
+================================================================================
+CONFIGURACION OBLIGATORIA PARA TODAS LAS PETICIONES
+================================================================================
+
+HEADERS REQUERIDOS EN TODAS LAS PETICIONES:
+{
+  "Content-Type": "application/json",
+  "empresaId": "1"
+}
+
+IMPORTANTE: El header "empresaId" es OBLIGATORIO. Sin él, todas las peticiones fallan con error 400/403.
+
+================================================================================
+ENDPOINT 1: LISTAR TODAS LAS OBRAS (GET)
+================================================================================
+
+URL: http://localhost:8080/api/obras/todas?empresaId=1
+Método: GET
+Headers: {"empresaId": "1"}
+Query Params: empresaId=1 (obligatorio)
+
+CODIGO JAVASCRIPT/TYPESCRIPT:
+
+// Opción 1: Fetch API
+const response = await fetch('http://localhost:8080/api/obras/todas?empresaId=1', {
+  method: 'GET',
+  headers: {
+    'empresaId': '1',
+    'Content-Type': 'application/json'
+  }
+});
+const obras = await response.json();
+console.log('Total obras:', obras.length); // Debe mostrar: 9
+
+// Opción 2: Axios
+const response = await axios.get('http://localhost:8080/api/obras/todas', {
+  params: { empresaId: 1 },
+  headers: { empresaId: '1' }
+});
+const obras = response.data;
+
+// Opción 3: Angular HttpClient
+this.http.get<any[]>('http://localhost:8080/api/obras/todas', {
+  params: { empresaId: '1' },
+  headers: { empresaId: '1' }
+}).subscribe(obras => {
+  console.log('Total obras:', obras.length);
+});
+
+RESPUESTA EXITOSA (Status 200):
+[
+  {
+    "id": 24,
+    "esObraManual": true,
+    "nombre": "Galpon de Fderico",
+    "direccionObraCalle": "Pichincha",
+    "direccionObraAltura": "1800",
+    "direccionObraBarrio": null,
+    "direccionObraTorre": null,
+    "direccionObraPiso": null,
+    "direccionObraDepartamento": null,
+    "estado": "APROBADO",
+    "fechaInicio": "2026-02-23",
+    "fechaFin": "2026-02-28",
+    "presupuestoEstimado": 6000000.00,
+    "presupuestoJornales": 2000000.00,
+    "presupuestoMateriales": 2000000.00,
+    "importeGastosGeneralesObra": null,
+    "presupuestoHonorarios": null,
+    "tipoHonorarioPresupuesto": null,
+    "presupuestoMayoresCostos": null,
+    "tipoMayoresCostosPresupuesto": null,
+    "honorarioJornalesObra": null,
+    "tipoHonorarioJornalesObra": "fijo",
+    "honorarioMaterialesObra": null,
+    "tipoHonorarioMaterialesObra": "fijo",
+    "honorarioGastosGeneralesObra": null,
+    "tipoHonorarioGastosGeneralesObra": "fijo",
+    "honorarioMayoresCostosObra": null,
+    "tipoHonorarioMayoresCostosObra": "fijo",
+    "descuentoJornalesObra": null,
+    "tipoDescuentoJornalesObra": "fijo",
+    "descuentoMaterialesObra": null,
+    "tipoDescuentoMaterialesObra": "fijo",
+    "descuentoGastosGeneralesObra": null,
+    "tipoDescuentoGastosGeneralesObra": "fijo",
+    "descuentoMayoresCostosObra": null,
+    "tipoDescuentoMayoresCostosObra": "fijo",
+    "descuentoHonorarioJornalesObra": null,
+    "tipoDescuentoHonorarioJornalesObra": "fijo",
+    "descuentoHonorarioMaterialesObra": null,
+    "tipoDescuentoHonorarioMaterialesObra": "fijo",
+    "descuentoHonorarioGastosGeneralesObra": null,
+    "tipoDescuentoHonorarioGastosGeneralesObra": "fijo",
+    "descuentoHonorarioMayoresCostosObra": null,
+    "tipoDescuentoHonorarioMayoresCostosObra": "fijo",
+    "presupuestoNoClienteId": null,
+    "empresaId": 1,
+    "fechaCreacion": "2026-02-18T15:07:36",
+    "idCliente": 27,
+    "nombreSolicitante": "Federico Capurro",
+    "telefono": null,
+    "mail": null,
+    "direccionParticular": null,
+    "descripcion": null,
+    "observaciones": null,
+    "direccionCompleta": "Pichincha 1800",
+    "esTrabajoExtra": false,
+    "obraPadreId": null,
+    "cliente": null,
+    "presupuestoNoCliente": null,
+    "presupuestos": null
+  }
+  // ... más obras
+]
+
+================================================================================
+ENDPOINT 2: CREAR OBRA INDEPENDIENTE COMO BORRADOR (POST)
+================================================================================
+
+URL: http://localhost:8080/api/obras/borrador
+Método: POST
+Headers: {"empresaId": "1", "Content-Type": "application/json"}
+
+CAMPOS OBLIGATORIOS EN EL BODY:
+- direccionObraCalle (string) - La calle de la obra
+- direccionObraAltura (string) - Número/altura de la obra
+
+CAMPOS OPCIONALES (todos pueden enviarse después mediante PUT):
+- nombre, direccionObraBarrio, direccionObraTorre, direccionObraPiso, direccionObraDepartamento
+- fechaInicio, fechaFin
+- presupuestoEstimado, presupuestoJornales, presupuestoMateriales, importeGastosGeneralesObra
+- honorarioJornalesObra, tipoHonorarioJornalesObra (valores: "fijo" o "porcentaje")
+- honorarioMaterialesObra, tipoHonorarioMaterialesObra
+- honorarioGastosGeneralesObra, tipoHonorarioGastosGeneralesObra
+- honorarioMayoresCostosObra, tipoHonorarioMayoresCostosObra
+- descuentoJornalesObra, tipoDescuentoJornalesObra
+- descuentoMaterialesObra, tipoDescuentoMaterialesObra
+- descuentoGastosGeneralesObra, tipoDescuentoGastosGeneralesObra
+- descuentoMayoresCostosObra, tipoDescuentoMayoresCostosObra
+- descuentoHonorarioJornalesObra, tipoDescuentoHonorarioJornalesObra
+- descuentoHonorarioMaterialesObra, tipoDescuentoHonorarioMaterialesObra
+- descuentoHonorarioGastosGeneralesObra, tipoDescuentoHonorarioGastosGeneralesObra
+- descuentoHonorarioMayoresCostosObra, tipoDescuentoHonorarioMayoresCostosObra
+- empresaId, idCliente, nombreSolicitante, telefono, mail, direccionParticular
+- descripcion, observaciones
+
+EJEMPLO 1: CREAR BORRADOR MINIMO (solo campos obligatorios)
+{
+  "direccionObraCalle": "San Martin",
+  "direccionObraAltura": "1234"
+}
+
+EJEMPLO 2: CREAR BORRADOR CON DATOS BASICOS
+{
+  "nombre": "Casa de Juan Perez",
+  "direccionObraCalle": "San Martin",
+  "direccionObraAltura": "1234",
+  "direccionObraBarrio": "Centro",
+  "fechaInicio": "2026-02-25",
+  "fechaFin": "2026-06-30",
+  "empresaId": 1,
+  "observaciones": "Nueva obra independiente"
+}
+
+EJEMPLO 3: CREAR BORRADOR CON PRESUPUESTO COMPLETO
+{
+  "nombre": "Reforma Integral",
+  "direccionObraCalle": "Belgrano",
+  "direccionObraAltura": "567",
+  "direccionObraBarrio": "Palermo",
+  "direccionObraTorre": "Torre A",
+  "direccionObraPiso": "3",
+  "direccionObraDepartamento": "B",
+  "fechaInicio": "2026-03-01",
+  "fechaFin": "2026-08-30",
+  "presupuestoEstimado": 8500000.00,
+  "presupuestoJornales": 3000000.00,
+  "presupuestoMateriales": 2500000.00,
+  "importeGastosGeneralesObra": 500000.00,
+  "honorarioJornalesObra": 300000.00,
+  "tipoHonorarioJornalesObra": "fijo",
+  "honorarioMaterialesObra": 10,
+  "tipoHonorarioMaterialesObra": "porcentaje",
+  "descuentoJornalesObra": 5,
+  "tipoDescuentoJornalesObra": "porcentaje",
+  "empresaId": 1,
+  "idCliente": 27,
+  "observaciones": "Incluye todos los rubros"
+}
+
+CODIGO JAVASCRIPT/TYPESCRIPT:
+
+// Opción 1: Fetch API
+const nuevaObra = {
+  direccionObraCalle: "San Martin",
+  direccionObraAltura: "1234",
+  direccionObraBarrio: "Centro",
+  fechaInicio: "2026-02-25",
+  empresaId: 1
+};
+
+const response = await fetch('http://localhost:8080/api/obras/borrador', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'empresaId': '1'
+  },
+  body: JSON.stringify(nuevaObra)
+});
+
+if (response.ok) {
+  const obraCreada = await response.json();
+  console.log('Obra borrador creada con ID:', obraCreada.id);
+  console.log('Estado:', obraCreada.estado); // BORRADOR
+} else {
+  const error = await response.json();
+  console.error('Error:', error);
+}
+
+// Opción 2: Axios
+const nuevaObra = {
+  direccionObraCalle: "San Martin",
+  direccionObraAltura: "1234",
+  empresaId: 1
+};
+
+try {
+  const response = await axios.post(
+    'http://localhost:8080/api/obras/borrador',
+    nuevaObra,
+    {
+      headers: { 
+        'empresaId': '1',
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  console.log('Obra creada:', response.data);
+} catch (error) {
+  console.error('Error:', error.response.data);
+}
+
+// Opción 3: Angular HttpClient
+const nuevaObra = {
+  direccionObraCalle: "San Martin",
+  direccionObraAltura: "1234",
+  empresaId: 1
+};
+
+this.http.post('http://localhost:8080/api/obras/borrador', nuevaObra, {
+  headers: { 
+    'empresaId': '1',
+    'Content-Type': 'application/json'
+  }
+}).subscribe({
+  next: (obraCreada) => {
+    console.log('Obra creada:', obraCreada);
+  },
+  error: (error) => {
+    console.error('Error:', error);
+  }
+});
+
+RESPUESTA EXITOSA (Status 201 Created):
+{
+  "id": 27,
+  "esObraManual": true,
+  "nombre": "San Martin 1234",
+  "direccionObraCalle": "San Martin",
+  "direccionObraAltura": "1234",
+  "direccionObraBarrio": "Centro",
+  "direccionObraTorre": null,
+  "direccionObraPiso": null,
+  "direccionObraDepartamento": null,
+  "estado": "BORRADOR",
+  "fechaInicio": "2026-02-25",
+  "fechaFin": null,
+  "presupuestoEstimado": 0.00,
+  "presupuestoJornales": null,
+  "presupuestoMateriales": null,
+  "importeGastosGeneralesObra": null,
+  "presupuestoHonorarios": null,
+  "tipoHonorarioPresupuesto": null,
+  "presupuestoMayoresCostos": null,
+  "tipoMayoresCostosPresupuesto": null,
+  "honorarioJornalesObra": null,
+  "tipoHonorarioJornalesObra": "fijo",
+  "honorarioMaterialesObra": null,
+  "tipoHonorarioMaterialesObra": "fijo",
+  "honorarioGastosGeneralesObra": null,
+  "tipoHonorarioGastosGeneralesObra": "fijo",
+  "honorarioMayoresCostosObra": null,
+  "tipoHonorarioMayoresCostosObra": "fijo",
+  "descuentoJornalesObra": null,
+  "tipoDescuentoJornalesObra": "fijo",
+  "descuentoMaterialesObra": null,
+  "tipoDescuentoMaterialesObra": "fijo",
+  "descuentoGastosGeneralesObra": null,
+  "tipoDescuentoGastosGeneralesObra": "fijo",
+  "descuentoMayoresCostosObra": null,
+  "tipoDescuentoMayoresCostosObra": "fijo",
+  "descuentoHonorarioJornalesObra": null,
+  "tipoDescuentoHonorarioJornalesObra": "fijo",
+  "descuentoHonorarioMaterialesObra": null,
+  "tipoDescuentoHonorarioMaterialesObra": "fijo",
+  "descuentoHonorarioGastosGeneralesObra": null,
+  "tipoDescuentoHonorarioGastosGeneralesObra": "fijo",
+  "descuentoHonorarioMayoresCostosObra": null,
+  "tipoDescuentoHonorarioMayoresCostosObra": "fijo",
+  "presupuestoNoClienteId": null,
+  "empresaId": 1,
+  "fechaCreacion": "2026-02-20T10:30:00",
+  "idCliente": null,
+  "nombreSolicitante": null,
+  "telefono": null,
+  "mail": null,
+  "direccionParticular": null,
+  "descripcion": null,
+  "observaciones": null,
+  "direccionCompleta": "San Martin 1234",
+  "esTrabajoExtra": false,
+  "obraPadreId": null,
+  "cliente": null,
+  "presupuestoNoCliente": null,
+  "presupuestos": null
+}
+
+NOTA: El campo "nombre" se genera automáticamente como "Calle Altura" si no se envía.
+
+================================================================================
+ENDPOINT 3: ACTUALIZAR BORRADOR DE OBRA (PUT)
+================================================================================
+
+URL: http://localhost:8080/api/obras/borrador/{id}
+Método: PUT
+Headers: {"empresaId": "1", "Content-Type": "application/json"}
+
+IMPORTANTE: Solo funciona si la obra está en estado BORRADOR.
+Puedes enviar SOLO los campos que quieres actualizar, no es necesario enviar todos.
+
+EJEMPLO 1: ACTUALIZAR SOLO FECHAS
+PUT /api/obras/borrador/27
+{
+  "fechaInicio": "2026-03-01",
+  "fechaFin": "2026-07-15"
+}
+
+EJEMPLO 2: ACTUALIZAR PRESUPUESTO
+PUT /api/obras/borrador/27
+{
+  "presupuestoEstimado": 5000000.00,
+  "presupuestoJornales": 2000000.00,
+  "presupuestoMateriales": 1500000.00,
+  "importeGastosGeneralesObra": 300000.00
+}
+
+EJEMPLO 3: ACTUALIZAR HONORARIOS Y DESCUENTOS
+PUT /api/obras/borrador/27
+{
+  "honorarioJornalesObra": 250000.00,
+  "tipoHonorarioJornalesObra": "fijo",
+  "honorarioMaterialesObra": 12,
+  "tipoHonorarioMaterialesObra": "porcentaje",
+  "descuentoJornalesObra": 5,
+  "tipoDescuentoJornalesObra": "porcentaje",
+  "descuentoMaterialesObra": 50000.00,
+  "tipoDescuentoMaterialesObra": "fijo"
+}
+
+EJEMPLO 4: ACTUALIZAR DIRECCION COMPLETA
+PUT /api/obras/borrador/27
+{
+  "direccionObraCalle": "Av. Libertador",
+  "direccionObraAltura": "5678",
+  "direccionObraBarrio": "Palermo",
+  "direccionObraTorre": "Torre B",
+  "direccionObraPiso": "5",
+  "direccionObraDepartamento": "C"
+}
+
+EJEMPLO 5: ACTUALIZAR CLIENTE Y OBSERVACIONES
+PUT /api/obras/borrador/27
+{
+  "idCliente": 27,
+  "nombreSolicitante": "Juan Perez",
+  "telefono": "+54 11 1234-5678",
+  "mail": "juan@email.com",
+  "observaciones": "Cliente prefiere materiales premium"
+}
+
+CODIGO JAVASCRIPT/TYPESCRIPT:
+
+// Opción 1: Fetch API
+const actualizaciones = {
+  fechaInicio: "2026-03-01",
+  presupuestoEstimado: 5000000.00,
+  observaciones: "Presupuesto actualizado"
+};
+
+const obraId = 27;
+const response = await fetch(`http://localhost:8080/api/obras/borrador/${obraId}`, {
+  method: 'PUT',
+  headers: {
+    'Content-Type': 'application/json',
+    'empresaId': '1'
+  },
+  body: JSON.stringify(actualizaciones)
+});
+
+if (response.ok) {
+  const obraActualizada = await response.json();
+  console.log('Obra actualizada:', obraActualizada);
+} else {
+  const error = await response.json();
+  console.error('Error:', error);
+}
+
+// Opción 2: Axios
+const actualizaciones = {
+  presupuestoJornales: 2000000.00,
+  presupuestoMateriales: 1500000.00
+};
+
+const obraId = 27;
+try {
+  const response = await axios.put(
+    `http://localhost:8080/api/obras/borrador/${obraId}`,
+    actualizaciones,
+    {
+      headers: { 
+        'empresaId': '1',
+        'Content-Type': 'application/json'
+      }
+    }
+  );
+  console.log('Obra actualizada:', response.data);
+} catch (error) {
+  console.error('Error:', error.response.data);
+}
+
+// Opción 3: Angular HttpClient
+const actualizaciones = {
+  honorarioJornalesObra: 300000.00,
+  tipoHonorarioJornalesObra: "fijo"
+};
+
+const obraId = 27;
+this.http.put(`http://localhost:8080/api/obras/borrador/${obraId}`, actualizaciones, {
+  headers: { 
+    'empresaId': '1',
+    'Content-Type': 'application/json'
+  }
+}).subscribe({
+  next: (obraActualizada) => {
+    console.log('Obra actualizada:', obraActualizada);
+  },
+  error: (error) => {
+    console.error('Error:', error);
+  }
+});
+
+RESPUESTA EXITOSA (Status 200 OK):
+Devuelve el objeto completo de la obra con todos los campos actualizados.
+
+ERROR SI NO ES BORRADOR (Status 400):
+{
+  "error": "Solo se pueden actualizar obras en estado BORRADOR. Estado actual: APROBADO"
+}
+
+================================================================================
+ENDPOINT 4: CONFIRMAR BORRADOR COMO OBRA ACTIVA (POST)
+================================================================================
+
+URL: http://localhost:8080/api/obras/borrador/{id}/confirmar
+Método: POST
+Headers: {"empresaId": "1"}
+Body: No requiere body
+
+Convierte el borrador en obra activa, cambiando el estado de BORRADOR a A_ENVIAR.
+
+CODIGO JAVASCRIPT/TYPESCRIPT:
+
+// Opción 1: Fetch API
+const obraId = 27;
+const response = await fetch(`http://localhost:8080/api/obras/borrador/${obraId}/confirmar`, {
+  method: 'POST',
+  headers: {
+    'empresaId': '1',
+    'Content-Type': 'application/json'
+  }
+});
+
+if (response.ok) {
+  const obraConfirmada = await response.json();
+  console.log('Obra confirmada. Nuevo estado:', obraConfirmada.estado);
+}
+
+// Opción 2: Axios
+const obraId = 27;
+const response = await axios.post(
+  `http://localhost:8080/api/obras/borrador/${obraId}/confirmar`,
+  {},
+  {
+    headers: { 'empresaId': '1' }
+  }
+);
+console.log('Estado:', response.data.estado);
+
+// Opción 3: Angular HttpClient
+const obraId = 27;
+this.http.post(`http://localhost:8080/api/obras/borrador/${obraId}/confirmar`, {}, {
+  headers: { 'empresaId': '1' }
+}).subscribe(obraConfirmada => {
+  console.log('Obra confirmada:', obraConfirmada);
+});
+
+RESPUESTA EXITOSA (Status 200):
+{
+  "id": 27,
+  "estado": "A_ENVIAR",
+  // ... resto de campos
+}
+
+================================================================================
+ENDPOINT 5: OBTENER UNA OBRA ESPECIFICA (GET)
+================================================================================
+
+URL: http://localhost:8080/api/obras/{id}
+Método: GET
+Headers: {"empresaId": "1"}
+
+CODIGO JAVASCRIPT/TYPESCRIPT:
+
+const obraId = 27;
+const response = await fetch(`http://localhost:8080/api/obras/${obraId}`, {
+  method: 'GET',
+  headers: { 'empresaId': '1' }
+});
+const obra = await response.json();
+
+RESPUESTA EXITOSA (Status 200):
+Devuelve un solo objeto con todos los 33 campos de la obra.
+
+================================================================================
+OTROS ENDPOINTS DISPONIBLES
+================================================================================
+
+6. OBTENER OBRAS ACTIVAS:
+   GET http://localhost:8080/api/obras/activas?empresaId=1
+
+7. OBTENER OBRAS POR ESTADO:
+   GET http://localhost:8080/api/obras/estado/BORRADOR?empresaId=1
+   Estados válidos: BORRADOR, APROBADO, EN_EJECUCION, EN_PLANIFICACION, EN_REVISION, SUSPENDIDA, FINALIZADA, CANCELADA
+
+8. OBTENER OBRAS POR CLIENTE:
+   GET http://localhost:8080/api/obras/cliente/{clienteId}
+
+9. CAMBIAR ESTADO DE OBRA:
+   PATCH http://localhost:8080/api/obras/{id}/estado?estado=APROBADO
+
+10. ELIMINAR OBRA (con cascada):
+    DELETE http://localhost:8080/api/obras/{id}/cascade?empresaId=1
+
+================================================================================
+ESTRUCTURA DE TODOS LOS CAMPOS (33 CAMPOS TOTALES)
+================================================================================
+
+IDENTIFICACION (4):
+- id: number
+- esObraManual: boolean
+- nombre: string
+- estado: string (BORRADOR, APROBADO, EN_EJECUCION, etc.)
+
+DIRECCION (7):
+- direccionObraCalle: string | null
+- direccionObraAltura: string | null
+- direccionObraBarrio: string | null
+- direccionObraTorre: string | null
+- direccionObraPiso: string | null
+- direccionObraDepartamento: string | null
+- direccionCompleta: string (calculado)
+
+FECHAS (3):
+- fechaInicio: string (ISO: "2026-02-23")
+- fechaFin: string (ISO: "2026-02-28")
+- fechaCreacion: string (ISO: "2026-02-18T15:07:36")
+
+PRESUPUESTO BASE (6):
+- presupuestoEstimado: number
+- presupuestoJornales: number | null
+- presupuestoMateriales: number | null
+- importeGastosGeneralesObra: number | null
+- presupuestoHonorarios: number | null
+- presupuestoMayoresCostos: number | null
+
+HONORARIOS (8):
+- honorarioJornalesObra: number | null
+- tipoHonorarioJornalesObra: string ("fijo" o "porcentaje")
+- honorarioMaterialesObra: number | null
+- tipoHonorarioMaterialesObra: string
+- honorarioGastosGeneralesObra: number | null
+- tipoHonorarioGastosGeneralesObra: string
+- honorarioMayoresCostosObra: number | null
+- tipoHonorarioMayoresCostosObra: string
+
+DESCUENTOS BASE (8):
+- descuentoJornalesObra: number | null
+- tipoDescuentoJornalesObra: string ("fijo" o "porcentaje")
+- descuentoMaterialesObra: number | null
+- tipoDescuentoMaterialesObra: string
+- descuentoGastosGeneralesObra: number | null
+- tipoDescuentoGastosGeneralesObra: string
+- descuentoMayoresCostosObra: number | null
+- tipoDescuentoMayoresCostosObra: string
+
+DESCUENTOS HONORARIOS (8):
+- descuentoHonorarioJornalesObra: number | null
+- tipoDescuentoHonorarioJornalesObra: string ("fijo" o "porcentaje")
+- descuentoHonorarioMaterialesObra: number | null
+- tipoDescuentoHonorarioMaterialesObra: string
+- descuentoHonorarioGastosGeneralesObra: number | null
+- tipoDescuentoHonorarioGastosGeneralesObra: string
+- descuentoHonorarioMayoresCostosObra: number | null
+- tipoDescuentoHonorarioMayoresCostosObra: string
+
+RELACIONES (5):
+- presupuestoNoClienteId: number | null
+- empresaId: number
+- idCliente: number | null
+- obraPadreId: number | null
+- esTrabajoExtra: boolean
+
+CLIENTE (4):
+- nombreSolicitante: string | null
+- telefono: string | null
+- mail: string | null
+- direccionParticular: string | null
+
+ADICIONALES (5):
+- descripcion: string | null
+- observaciones: string | null
+- cliente: object | null
+- presupuestoNoCliente: object | null
+- presupuestos: array | null
+
+================================================================================
+FLUJO RECOMENDADO PARA CREAR OBRA INDEPENDIENTE
+================================================================================
+
+PASO 1: Crear borrador con campos mínimos
+POST /api/obras/borrador
+{
+  "direccionObraCalle": "San Martin",
+  "direccionObraAltura": "1234"
+}
+
+PASO 2: Usuario completa datos básicos (puede hacerlo en múltiples pasos)
+PUT /api/obras/borrador/27
+{
+  "nombre": "Casa de Juan",
+  "fechaInicio": "2026-03-01",
+  "fechaFin": "2026-07-30"
+}
+
+PASO 3: Usuario completa presupuesto
+PUT /api/obras/borrador/27
+{
+  "presupuestoJornales": 2000000.00,
+  "presupuestoMateriales": 1500000.00,
+  "importeGastosGeneralesObra": 300000.00
+}
+
+PASO 4: Usuario completa honorarios y descuentos
+PUT /api/obras/borrador/27
+{
+  "honorarioJornalesObra": 250000.00,
+  "tipoHonorarioJornalesObra": "fijo",
+  "honorarioMaterialesObra": 10,
+  "tipoHonorarioMaterialesObra": "porcentaje",
+  "descuentoJornalesObra": 5,
+  "tipoDescuentoJornalesObra": "porcentaje"
+}
+
+PASO 5: Confirmar borrador como obra activa
+POST /api/obras/borrador/27/confirmar
+
+================================================================================
+MANEJO DE ERRORES
+================================================================================
+
+Error 400 Bad Request - Falta header empresaId:
+{
+  "error": "El header empresaId es obligatorio"
+}
+
+Error 400 Bad Request - Campo obligatorio faltante:
+{
+  "errors": {
+    "direccionObraCalle": "La calle es obligatoria",
+    "direccionObraAltura": "La altura es obligatoria"
+  }
+}
+
+Error 404 Not Found - Obra no existe:
+{
+  "error": "Obra borrador no encontrada con ID: 999"
+}
+
+Error 400 Bad Request - No es borrador:
+{
+  "error": "Solo se pueden actualizar obras en estado BORRADOR. Estado actual: APROBADO"
+}
+
+Error 403 Forbidden - Sin permiso:
+{
+  "error": "No tiene permisos para acceder a esta empresa"
+}
+
+================================================================================
+VALIDACIONES IMPORTANTES
+================================================================================
+
+1. CAMPOS OBLIGATORIOS AL CREAR:
+   - direccionObraCalle
+   - direccionObraAltura
+
+2. TODOS LOS DEMÁS CAMPOS SON OPCIONALES
+
+3. LOS TIPOS DE HONORARIOS/DESCUENTOS SOLO ACEPTAN: "fijo" o "porcentaje"
+
+4. LAS FECHAS DEBEN ESTAR EN FORMATO ISO: "YYYY-MM-DD"
+
+5. EL ESTADO "BORRADOR" PERMITE ACTUALIZACIONES, OTROS ESTADOS NO
+
+6. EL HEADER empresaId ES OBLIGATORIO EN TODAS LAS PETICIONES
+
+7. SI NO SE ENVIA "nombre", SE GENERA AUTOMATICAMENTE COMO "Calle Altura"
+
+================================================================================
+PRUEBAS RAPIDAS DESDE POWERSHELL
+================================================================================
+
+# Listar todas las obras:
+Invoke-RestMethod -Uri "http://localhost:8080/api/obras/todas?empresaId=1" -Headers @{"empresaId"="1"} -Method GET -UseBasicParsing
+
+# Crear borrador mínimo:
+$body = @{
+  direccionObraCalle = "Test"
+  direccionObraAltura = "123"
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/obras/borrador" -Method POST -Headers @{"empresaId"="1";"Content-Type"="application/json"} -Body $body -UseBasicParsing
+
+# Actualizar borrador:
+$body = @{
+  fechaInicio = "2026-03-01"
+  presupuestoEstimado = 5000000
+} | ConvertTo-Json
+
+Invoke-RestMethod -Uri "http://localhost:8080/api/obras/borrador/27" -Method PUT -Headers @{"empresaId"="1";"Content-Type"="application/json"} -Body $body -UseBasicParsing
+
+================================================================================
+RESUMEN EJECUTIVO
+================================================================================
+
+BACKEND FUNCIONANDO: ✅
+ENDPOINT GET PRINCIPAL: http://localhost:8080/api/obras/todas?empresaId=1
+ENDPOINT POST BORRADOR: http://localhost:8080/api/obras/borrador
+ENDPOINT PUT ACTUALIZAR: http://localhost:8080/api/obras/borrador/{id}
+
+CAMPOS OBLIGATORIOS PARA CREAR: Solo direccionObraCalle y direccionObraAltura
+TODOS LOS DEMAS CAMPOS: Opcionales, se pueden cargar/modificar en cualquier momento mediante PUT
+HEADER OBLIGATORIO: empresaId: "1" en todas las peticiones
+
+ESTADO ACTUAL: 9 obras en base de datos, todas devueltas correctamente con 33 campos completos.
+
+================================================================================
+FIN DE LA GUIA COMPLETA
+================================================================================

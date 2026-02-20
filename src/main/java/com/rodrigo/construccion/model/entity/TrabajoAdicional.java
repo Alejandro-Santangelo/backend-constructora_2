@@ -27,7 +27,12 @@ import java.util.List;
  * 
  * Esto permite trazabilidad: Obra Padre → [Trabajo Extra] → Trabajo Adicional
  * 
- * Estados posibles: PENDIENTE, EN_PROGRESO, COMPLETADO, CANCELADO
+ * Estados posibles: BORRADOR, PENDIENTE, EN_PROGRESO, COMPLETADO, CANCELADO
+ * - BORRADOR: Permite edición libre (estado inicial)
+ * - PENDIENTE: Listo para iniciar pero no comenzado
+ * - EN_PROGRESO: En ejecución activa
+ * - COMPLETADO: Finalizado exitosamente
+ * - CANCELADO: Cancelado o descartado
  */
 @Entity
 @Table(name = "trabajos_adicionales", indexes = {
@@ -63,6 +68,9 @@ public class TrabajoAdicional {
     @Column(name = "importe_materiales", precision = 15, scale = 2)
     private BigDecimal importeMateriales;
 
+    @Column(name = "importe_gastos_generales", precision = 15, scale = 2)
+    private BigDecimal importeGastosGenerales;
+
     @Column(name = "importe_honorarios", precision = 15, scale = 2)
     private BigDecimal importeHonorarios;
 
@@ -76,6 +84,96 @@ public class TrabajoAdicional {
     /** Valores posibles: "fijo" | "porcentaje" */
     @Column(name = "tipo_mayores_costos", length = 20)
     private String tipoMayoresCostos;
+
+    // ========== HONORARIOS INDIVIDUALES POR CATEGORÍA (SISTEMA NUEVO) ==========
+    
+    @Column(name = "honorario_jornales", precision = 15, scale = 2)
+    private BigDecimal honorarioJornales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_jornales", length = 10)
+    private String tipoHonorarioJornales;
+
+    @Column(name = "honorario_materiales", precision = 15, scale = 2)
+    private BigDecimal honorarioMateriales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_materiales", length = 10)
+    private String tipoHonorarioMateriales;
+
+    @Column(name = "honorario_gastos_generales", precision = 15, scale = 2)
+    private BigDecimal honorarioGastosGenerales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_gastos_generales", length = 10)
+    private String tipoHonorarioGastosGenerales;
+
+    @Column(name = "honorario_mayores_costos", precision = 15, scale = 2)
+    private BigDecimal honorarioMayoresCostos;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_mayores_costos", length = 10)
+    private String tipoHonorarioMayoresCostos;
+
+    // ========== DESCUENTOS SOBRE IMPORTES BASE POR CATEGORÍA ==========
+
+    @Column(name = "descuento_jornales", precision = 15, scale = 2)
+    private BigDecimal descuentoJornales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_jornales", length = 10)
+    private String tipoDescuentoJornales;
+
+    @Column(name = "descuento_materiales", precision = 15, scale = 2)
+    private BigDecimal descuentoMateriales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_materiales", length = 10)
+    private String tipoDescuentoMateriales;
+
+    @Column(name = "descuento_gastos_generales", precision = 15, scale = 2)
+    private BigDecimal descuentoGastosGenerales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_gastos_generales", length = 10)
+    private String tipoDescuentoGastosGenerales;
+
+    @Column(name = "descuento_mayores_costos", precision = 15, scale = 2)
+    private BigDecimal descuentoMayoresCostos;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_mayores_costos", length = 10)
+    private String tipoDescuentoMayoresCostos;
+
+    // ========== DESCUENTOS SOBRE HONORARIOS POR CATEGORÍA (NUEVOS) ==========
+
+    @Column(name = "descuento_honorario_jornales", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioJornales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_jornales", length = 10)
+    private String tipoDescuentoHonorarioJornales;
+
+    @Column(name = "descuento_honorario_materiales", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioMateriales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_materiales", length = 10)
+    private String tipoDescuentoHonorarioMateriales;
+
+    @Column(name = "descuento_honorario_gastos_generales", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioGastosGenerales;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_gastos_generales", length = 10)
+    private String tipoDescuentoHonorarioGastosGenerales;
+
+    @Column(name = "descuento_honorario_mayores_costos", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioMayoresCostos;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_mayores_costos", length = 10)
+    private String tipoDescuentoHonorarioMayoresCostos;
 
     @NotNull(message = "Los días necesarios son obligatorios")
     @Positive(message = "Los días necesarios deben ser al menos 1")
@@ -115,7 +213,7 @@ public class TrabajoAdicional {
 
     @Builder.Default
     @Column(name = "estado", length = 50, nullable = false)
-    private String estado = "PENDIENTE";
+    private String estado = ESTADO_BORRADOR; // Inicia como borrador para permitir edición por etapas
 
     @CreationTimestamp
     @Column(name = "fecha_creacion", nullable = false, updatable = false)
@@ -158,5 +256,41 @@ public class TrabajoAdicional {
             profesionales.forEach(p -> p.setTrabajoAdicional(null));
             profesionales.clear();
         }
+    }
+
+    // === CONSTANTES DE ESTADO ===
+    public static final String ESTADO_BORRADOR = "BORRADOR";
+    public static final String ESTADO_PENDIENTE = "PENDIENTE";
+    public static final String ESTADO_EN_PROGRESO = "EN_PROGRESO";
+    public static final String ESTADO_COMPLETADO = "COMPLETADO";
+    public static final String ESTADO_CANCELADO = "CANCELADO";
+
+    /**
+     * Verifica si el trabajo adicional está en estado BORRADOR.
+     * Un trabajo adicional borrador permite modificaciones sin restricciones.
+     * @return true si el trabajo adicional está en estado BORRADOR
+     */
+    @Transient
+    public boolean esBorrador() {
+        return ESTADO_BORRADOR.equals(this.estado);
+    }
+
+    /**
+     * Verifica si el trabajo adicional está pendiente.
+     * @return true si está en estado PENDIENTE
+     */
+    @Transient  
+    public boolean estaPendiente() {
+        return ESTADO_PENDIENTE.equals(this.estado);
+    }
+
+    /**
+     * Verifica si el trabajo adicional puede ser editado.
+     * Permite edición en estados BORRADOR y PENDIENTE.
+     * @return true si es editable
+     */
+    @Transient
+    public boolean esEditable() {
+        return ESTADO_BORRADOR.equals(this.estado) || ESTADO_PENDIENTE.equals(this.estado);
     }
 }

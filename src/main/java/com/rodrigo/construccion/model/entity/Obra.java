@@ -85,6 +85,9 @@ public class Obra {
     @Column(name = "presupuesto_materiales", precision = 15, scale = 2)
     private BigDecimal presupuestoMateriales;
 
+    @Column(name = "importe_gastos_generales_obra", precision = 15, scale = 2)
+    private BigDecimal importeGastosGeneralesObra;
+
     @Column(name = "presupuesto_honorarios", precision = 15, scale = 2)
     private BigDecimal presupuestoHonorarios;
 
@@ -98,6 +101,96 @@ public class Obra {
     /** Valores posibles: "fijo" | "porcentaje" */
     @Column(name = "tipo_mayores_costos_presupuesto", length = 20)
     private String tipoMayoresCostosPresupuesto;
+
+    // ========== HONORARIOS INDIVIDUALES POR CATEGORÍA (SISTEMA NUEVO) ==========
+    
+    @Column(name = "honorario_jornales_obra", precision = 15, scale = 2)
+    private BigDecimal honorarioJornalesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_jornales_obra", length = 10)
+    private String tipoHonorarioJornalesObra;
+
+    @Column(name = "honorario_materiales_obra", precision = 15, scale = 2)
+    private BigDecimal honorarioMaterialesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_materiales_obra", length = 10)
+    private String tipoHonorarioMaterialesObra;
+
+    @Column(name = "honorario_gastos_generales_obra", precision = 15, scale = 2)
+    private BigDecimal honorarioGastosGeneralesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_gastos_generales_obra", length = 10)
+    private String tipoHonorarioGastosGeneralesObra;
+
+    @Column(name = "honorario_mayores_costos_obra", precision = 15, scale = 2)
+    private BigDecimal honorarioMayoresCostosObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_honorario_mayores_costos_obra", length = 10)
+    private String tipoHonorarioMayoresCostosObra;
+
+    // ========== DESCUENTOS SOBRE IMPORTES BASE POR CATEGORÍA ==========
+
+    @Column(name = "descuento_jornales_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoJornalesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_jornales_obra", length = 10)
+    private String tipoDescuentoJornalesObra;
+
+    @Column(name = "descuento_materiales_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoMaterialesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_materiales_obra", length = 10)
+    private String tipoDescuentoMaterialesObra;
+
+    @Column(name = "descuento_gastos_generales_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoGastosGeneralesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_gastos_generales_obra", length = 10)
+    private String tipoDescuentoGastosGeneralesObra;
+
+    @Column(name = "descuento_mayores_costos_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoMayoresCostosObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_mayores_costos_obra", length = 10)
+    private String tipoDescuentoMayoresCostosObra;
+
+    // ========== DESCUENTOS SOBRE HONORARIOS POR CATEGORÍA (NUEVOS) ==========
+
+    @Column(name = "descuento_honorario_jornales_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioJornalesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_jornales_obra", length = 10)
+    private String tipoDescuentoHonorarioJornalesObra;
+
+    @Column(name = "descuento_honorario_materiales_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioMaterialesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_materiales_obra", length = 10)
+    private String tipoDescuentoHonorarioMaterialesObra;
+
+    @Column(name = "descuento_honorario_gastos_generales_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioGastosGeneralesObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_gastos_generales_obra", length = 10)
+    private String tipoDescuentoHonorarioGastosGeneralesObra;
+
+    @Column(name = "descuento_honorario_mayores_costos_obra", precision = 15, scale = 2)
+    private BigDecimal descuentoHonorarioMayoresCostosObra;
+
+    /** Valores posibles: "fijo" | "porcentaje" */
+    @Column(name = "tipo_descuento_honorario_mayores_costos_obra", length = 10)
+    private String tipoDescuentoHonorarioMayoresCostosObra;
 
     @Column(name = "presupuesto_no_cliente_id")
     private Long presupuestoNoClienteId;
@@ -131,7 +224,7 @@ public class Obra {
     // Relaciones
     @JsonBackReference("cliente-obras")
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_cliente", nullable = false)
+    @JoinColumn(name = "id_cliente", nullable = true)  // Permitir null para obras borrador sin cliente inicial
     private Cliente cliente;
 
     // Relación con presupuestos no cliente
@@ -199,6 +292,16 @@ public class Obra {
         if (estadoEnum != null) {
             this.estado = estadoEnum.getDisplayName();
         }
+    }
+
+    /**
+     * Verifica si la obra está en estado BORRADOR.
+     * Una obra borrador permite modificaciones sin restricciones.
+     * @return true if la obra está en estado BORRADOR
+     */
+    @Transient
+    public boolean esBorrador() {
+        return EstadoObra.BORRADOR.getDisplayName().equals(this.estado);
     }
 
     /**

@@ -32,12 +32,64 @@ public class TrabajoAdicionalRequestDTO {
 
     private BigDecimal importeJornales;
     private BigDecimal importeMateriales;
+    private BigDecimal importeGastosGenerales;
     private BigDecimal importeHonorarios;
     /** Valores posibles: "fijo" | "porcentaje" */
     private String tipoHonorarios;
     private BigDecimal importeMayoresCostos;
     /** Valores posibles: "fijo" | "porcentaje" */
     private String tipoMayoresCostos;
+
+    // ========== HONORARIOS INDIVIDUALES POR CATEGORÍA (SISTEMA NUEVO) ==========
+    private BigDecimal honorarioJornales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoHonorarioJornales;
+    
+    private BigDecimal honorarioMateriales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoHonorarioMateriales;
+    
+    private BigDecimal honorarioGastosGenerales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoHonorarioGastosGenerales;
+    
+    private BigDecimal honorarioMayoresCostos;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoHonorarioMayoresCostos;
+
+    // ========== DESCUENTOS SOBRE IMPORTES BASE POR CATEGORÍA ==========
+    private BigDecimal descuentoJornales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoJornales;
+    
+    private BigDecimal descuentoMateriales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoMateriales;
+    
+    private BigDecimal descuentoGastosGenerales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoGastosGenerales;
+    
+    private BigDecimal descuentoMayoresCostos;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoMayoresCostos;
+
+    // ========== DESCUENTOS SOBRE HONORARIOS POR CATEGORÍA (NUEVOS) ==========
+    private BigDecimal descuentoHonorarioJornales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoHonorarioJornales;
+    
+    private BigDecimal descuentoHonorarioMateriales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoHonorarioMateriales;
+    
+    private BigDecimal descuentoHonorarioGastosGenerales;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoHonorarioGastosGenerales;
+    
+    private BigDecimal descuentoHonorarioMayoresCostos;
+    /** Valores posibles: "fijo" | "porcentaje" */
+    private String tipoDescuentoHonorarioMayoresCostos;
 
     @NotNull(message = "Los días necesarios son obligatorios")
     @Positive(message = "Los días necesarios deben ser al menos 1")

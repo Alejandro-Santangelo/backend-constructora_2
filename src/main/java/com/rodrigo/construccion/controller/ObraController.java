@@ -145,7 +145,48 @@ public class ObraController {
         ObraResponseDTO obraDto = obraService.cambiarEstado(id, estadoEnum);
         return ResponseEntity.ok(obraDto);
     }
+    // === ENDPOINTS PARA BORRADORES DE OBRAS INDEPENDIENTES ===
 
+    @Operation(summary = "Crear obra independiente como borrador", 
+               description = "Crea una obra independiente en estado BORRADOR que permite ir guardando datos por etapas. " +
+                             "Todos los campos del formulario se persisten automáticamente.")
+    @PostMapping("/borrador")
+    public ResponseEntity<ObraResponseDTO> crearBorrador(@Valid @RequestBody ObraRequestDTO obraRequestDTO) {
+        ObraResponseDTO obraBorrador = obraService.crearBorrador(obraRequestDTO, obraRequestDTO.getIdCliente());
+        return ResponseEntity.status(HttpStatus.CREATED).body(obraBorrador);
+    }
+
+    @Operation(summary = "Actualizar borrador de obra independiente",
+               description = "Actualiza cualquier campo de un borrador de obra independiente. " +
+                             "Solo funciona si la obra está en estado BORRADOR. Permite persistir cambios incrementales.")
+    @PutMapping("/borrador/{id}")
+    public ResponseEntity<ObraResponseDTO> actualizarBorrador(
+            @Parameter(description = "ID del borrador de obra") @PathVariable Long id,
+            @RequestBody ObraRequestDTO obraRequestDTO) {  // Sin @Valid para permitir actualizaciones parciales
+        ObraResponseDTO obraActualizada = obraService.actualizarBorrador(id, obraRequestDTO);
+        return ResponseEntity.ok(obraActualizada);
+    }
+
+    @Operation(summary = "Confirmar borrador como obra activa",
+               description = "Convierte un borrador en obra activa, cambiando su estado de BORRADOR a A_ENVIAR. " +
+                             "Valida que tenga los datos mínimos requeridos.")
+    @PostMapping("/borrador/{id}/confirmar")
+    public ResponseEntity<ObraResponseDTO> confirmarBorrador(
+            @Parameter(description = "ID del borrador de obra") @PathVariable Long id) {
+        ObraResponseDTO obraConfirmada = obraService.confirmarBorrador(id);
+        return ResponseEntity.ok(obraConfirmada);
+    }
+
+    @Operation(summary = "Listar borradores de obras independientes",
+               description = "Obtiene todas las obras independientes en estado BORRADOR para una empresa. " +
+                             "Útil para mostrar lista de obras en progreso.")
+    @GetMapping("/borradores")
+    public ResponseEntity<List<ObraResponseDTO>> obtenerBorradores(
+            @Parameter(description = "ID de la empresa", required = true)
+            @RequestParam Long empresaId) {
+        List<ObraResponseDTO> borradores = obraService.obtenerBorradores(empresaId);
+        return ResponseEntity.ok(borradores);
+    }
     @Operation(summary = "Obtener estadísticas de obras")
     @GetMapping("/estadisticas")
     public ResponseEntity<EstadisticasObraDTO> obtenerEstadisticas() {

@@ -27,10 +27,50 @@ public class TrabajoAdicionalResponseDTO {
 
     private BigDecimal importeJornales;
     private BigDecimal importeMateriales;
+    private BigDecimal importeGastosGenerales;
     private BigDecimal importeHonorarios;
     private String tipoHonorarios;
     private BigDecimal importeMayoresCostos;
     private String tipoMayoresCostos;
+
+    // ========== HONORARIOS INDIVIDUALES POR CATEGORÍA (SISTEMA NUEVO) ==========
+    private BigDecimal honorarioJornales;
+    private String tipoHonorarioJornales;
+    
+    private BigDecimal honorarioMateriales;
+    private String tipoHonorarioMateriales;
+    
+    private BigDecimal honorarioGastosGenerales;
+    private String tipoHonorarioGastosGenerales;
+    
+    private BigDecimal honorarioMayoresCostos;
+    private String tipoHonorarioMayoresCostos;
+
+    // ========== DESCUENTOS SOBRE IMPORTES BASE POR CATEGORÍA ==========
+    private BigDecimal descuentoJornales;
+    private String tipoDescuentoJornales;
+    
+    private BigDecimal descuentoMateriales;
+    private String tipoDescuentoMateriales;
+    
+    private BigDecimal descuentoGastosGenerales;
+    private String tipoDescuentoGastosGenerales;
+    
+    private BigDecimal descuentoMayoresCostos;
+    private String tipoDescuentoMayoresCostos;
+
+    // ========== DESCUENTOS SOBRE HONORARIOS POR CATEGORÍA (NUEVOS) ==========
+    private BigDecimal descuentoHonorarioJornales;
+    private String tipoDescuentoHonorarioJornales;
+    
+    private BigDecimal descuentoHonorarioMateriales;
+    private String tipoDescuentoHonorarioMateriales;
+    
+    private BigDecimal descuentoHonorarioGastosGenerales;
+    private String tipoDescuentoHonorarioGastosGenerales;
+    
+    private BigDecimal descuentoHonorarioMayoresCostos;
+    private String tipoDescuentoHonorarioMayoresCostos;
 
     private Integer diasNecesarios;
 

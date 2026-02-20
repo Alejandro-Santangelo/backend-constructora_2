@@ -44,6 +44,9 @@ public interface ObraRepository extends JpaRepository<Obra, Long> {
   @Query("SELECT o FROM Obra o WHERE o.estado = 'En obra'")
   List<Obra> findObrasActivas();
 
+  /* Buscar obras manuales por estado (para borradores) */
+  List<Obra> findByEsObraManualTrueAndEstado(String estado);
+
 
 
   /* ------------- * METODOS QUE NO SE ESTÁN USANDO EN NINGÚN LADO  * ------------------  */

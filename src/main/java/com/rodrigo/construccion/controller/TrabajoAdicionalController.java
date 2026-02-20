@@ -148,4 +148,66 @@ public class TrabajoAdicionalController {
                 id, dto.getEstado(), empresaId);
         return ResponseEntity.ok(response);
     }
+
+    // === ENDPOINTS PARA BORRADORES DE TRABAJOS ADICIONALES ===
+
+    @Operation(summary = "Crear trabajo adicional como borrador", 
+               description = "Crea un trabajo adicional en estado BORRADOR que permite ir guardando datos por etapas. " +
+                             "Todos los campos del formulario (incluido desglose de honorarios y descuentos) se persisten automáticamente.")
+    @PostMapping("/borrador")
+    public ResponseEntity<TrabajoAdicionalResponseDTO> crearBorrador(
+            @Valid @RequestBody TrabajoAdicionalRequestDTO requestDTO) {
+        
+        log.info("POST /api/trabajos-adicionales/borrador - Creando borrador: {}", requestDTO.getNombre());
+        TrabajoAdicionalResponseDTO borrador = trabajoAdicionalService.crearBorrador(requestDTO);
+        return ResponseEntity.status(HttpStatus.CREATED).body(borrador);
+    }
+
+    @Operation(summary = "Actualizar borrador de trabajo adicional",
+               description = "Actualiza cualquier campo de un borrador de trabajo adicional. " +
+                             "Solo funciona si el trabajo está en estado BORRADOR. Permite persistir cambios incrementales " +
+                             "de todo el desglose de honorarios y descuentos.")
+    @PutMapping("/borrador/{id}")
+    public ResponseEntity<TrabajoAdicionalResponseDTO> actualizarBorrador(
+            @Parameter(description = "ID del borrador de trabajo adicional") @PathVariable Long id,
+            @Valid @RequestBody TrabajoAdicionalRequestDTO requestDTO) {
+        
+        log.info("PUT /api/trabajos-adicionales/borrador/{} - Actualizando borrador", id);
+        TrabajoAdicionalResponseDTO trabajoActualizado = trabajoAdicionalService.actualizarBorrador(id, requestDTO);
+        return ResponseEntity.ok(trabajoActualizado);
+    }
+
+    @Operation(summary = "Confirmar borrador como trabajo adicional activo",
+               description = "Convierte un borrador en trabajo adicional activo, cambiando su estado de BORRADOR a PENDIENTE. " +
+                             "Valida que tenga los datos mínimos requeridos.")
+    @PostMapping("/borrador/{id}/confirmar")
+    public ResponseEntity<TrabajoAdicionalResponseDTO> confirmarBorrador(
+            @Parameter(description = "ID del borrador de trabajo adicional") @PathVariable Long id) {
+        
+        log.info("POST /api/trabajos-adicionales/borrador/{}/confirmar - Confirmando borrador", id);
+        TrabajoAdicionalResponseDTO trabajoConfirmado = trabajoAdicionalService.confirmarBorrador(id);
+        return ResponseEntity.ok(trabajoConfirmado);
+    }
+
+    @Operation(summary = "Listar borradores de trabajos adicionales",
+               description = "Obtiene todos los trabajos adicionales en estado BORRADOR con filtros opcionales por obra o trabajo extra. " +
+                             "Útil para mostrar lista de trabajos en progreso.")
+    @GetMapping("/borradores")
+    public ResponseEntity<List<TrabajoAdicionalResponseDTO>> obtenerBorradores(
+            @Parameter(description = "ID de la empresa", required = true)
+            @RequestParam Long empresaId,
+            
+            @Parameter(description = "ID de la obra (opcional)")
+            @RequestParam(required = false) Long obraId,
+            
+            @Parameter(description = "ID del trabajo extra (opcional)")
+            @RequestParam(required = false) Long trabajoExtraId) {
+        
+        log.info("GET /api/trabajos-adicionales/borradores - empresaId: {}, obraId: {}, trabajoExtraId: {}", 
+                 empresaId, obraId, trabajoExtraId);
+        
+        List<TrabajoAdicionalResponseDTO> borradores = trabajoAdicionalService.obtenerBorradores(
+                empresaId, obraId, trabajoExtraId);
+        return ResponseEntity.ok(borradores);
+    }
 }

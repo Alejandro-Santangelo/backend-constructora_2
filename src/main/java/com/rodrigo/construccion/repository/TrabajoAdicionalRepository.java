@@ -36,6 +36,25 @@ public interface TrabajoAdicionalRepository extends JpaRepository<TrabajoAdicion
     List<TrabajoAdicional> findByEmpresaIdAndEstado(Long empresaId, String estado);
 
     /**
+     * Buscar todos los borradores de trabajos adicionales por empresa
+     * (específicamente para el sistema de borradores)
+     */
+    @Query("SELECT ta FROM TrabajoAdicional ta WHERE ta.empresaId = :empresaId AND ta.estado = 'BORRADOR'")
+    List<TrabajoAdicional> findBorradoresByEmpresaId(@Param("empresaId") Long empresaId);
+
+    /**
+     * Buscar borradores de trabajos adicionales por obra
+     */
+    @Query("SELECT ta FROM TrabajoAdicional ta WHERE ta.empresaId = :empresaId AND ta.obraId = :obraId AND ta.estado = 'BORRADOR'")
+    List<TrabajoAdicional> findBorradoresByEmpresaIdAndObraId(@Param("empresaId") Long empresaId, @Param("obraId") Long obraId);
+
+    /**
+     * Buscar borradores de trabajos adicionales por trabajo extra
+     */
+    @Query("SELECT ta FROM TrabajoAdicional ta WHERE ta.empresaId = :empresaId AND ta.trabajoExtraId = :trabajoExtraId AND ta.estado = 'BORRADOR'")
+    List<TrabajoAdicional> findBorradoresByEmpresaIdAndTrabajoExtraId(@Param("empresaId") Long empresaId, @Param("trabajoExtraId") Long trabajoExtraId);
+
+    /**
      * Buscar un trabajo adicional por ID y empresa (para validación de permisos)
      */
     Optional<TrabajoAdicional> findByIdAndEmpresaId(Long id, Long empresaId);
