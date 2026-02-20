@@ -328,6 +328,73 @@ public class PresupuestoNoClienteRequestDTO {
     
     @Schema(description = "Valor del descuento para mayores costos", example = "0.0")
     private Double descuentosMayoresCostosValor;
+    
+    // ========== SUB-TIPOS DE DESCUENTOS SOBRE HONORARIOS ==========
+    /**
+     * Descuentos granulares sobre cada categoría de honorarios.
+     * El frontend envía estos campos para aplicar descuentos específicos
+     * sobre los honorarios de cada rubro.
+     */
+    
+    // Descuentos sobre Honorarios de JORNALES
+    @Schema(description = "Si el descuento sobre honorarios de jornales está activo", example = "true")
+    private Boolean descuentosHonorariosJornalesActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios de jornales: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosJornalesTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios de jornales", example = "0.0")
+    private java.math.BigDecimal descuentosHonorariosJornalesValor;
+    
+    // Descuentos sobre Honorarios de PROFESIONALES
+    @Schema(description = "Si el descuento sobre honorarios de profesionales está activo", example = "true")
+    private Boolean descuentosHonorariosProfesionalesActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios de profesionales: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosProfesionalesTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios de profesionales", example = "0.0")
+    private java.math.BigDecimal descuentosHonorariosProfesionalesValor;
+    
+    // Descuentos sobre Honorarios de MATERIALES
+    @Schema(description = "Si el descuento sobre honorarios de materiales está activo", example = "true")
+    private Boolean descuentosHonorariosMaterialesActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios de materiales: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosMaterialesTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios de materiales", example = "0.0")
+    private java.math.BigDecimal descuentosHonorariosMaterialesValor;
+    
+    // Descuentos sobre Honorarios de OTROS COSTOS
+    @Schema(description = "Si el descuento sobre honorarios de otros costos está activo", example = "true")
+    private Boolean descuentosHonorariosOtrosActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios de otros costos: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosOtrosTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios de otros costos", example = "0.0")
+    private java.math.BigDecimal descuentosHonorariosOtrosValor;
+    
+    // Descuentos sobre Honorarios de GASTOS GENERALES
+    @Schema(description = "Si el descuento sobre honorarios de gastos generales está activo", example = "true")
+    private Boolean descuentosHonorariosGastosGeneralesActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios de gastos generales: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosGastosGeneralesTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios de gastos generales", example = "0.0")
+    private java.math.BigDecimal descuentosHonorariosGastosGeneralesValor;
+    
+    // Descuentos sobre Honorarios de CONFIGURACIÓN DE PRESUPUESTO
+    @Schema(description = "Si el descuento sobre honorarios de configuración está activo", example = "true")
+    private Boolean descuentosHonorariosConfiguracionActivo;
+    
+    @Schema(description = "Tipo de descuento para honorarios de configuración: porcentaje o fijo", example = "porcentaje")
+    private String descuentosHonorariosConfiguracionTipo;
+    
+    @Schema(description = "Valor del descuento para honorarios de configuración", example = "0.0")
+    private java.math.BigDecimal descuentosHonorariosConfiguracionValor;
 
     // ========== COSTOS INICIALES POR M² ==========
     @Schema(description = "Cálculo inicial de costos basado en metros cuadrados (opcional)")
@@ -342,6 +409,9 @@ public class PresupuestoNoClienteRequestDTO {
     
         @Schema(description = "TOTAL FINAL: presupuesto base + honorarios", example = "21150000")
         private java.math.BigDecimal totalPresupuestoConHonorarios;
+
+    @Schema(description = "Total del presupuesto después de aplicar descuentos", example = "19150000")
+    private java.math.BigDecimal totalConDescuentos;
 
     // ========== ITEMS DE CALCULADORA ==========
     @Schema(description = "Items ingresados mediante la calculadora rápida de presupuestos. Soporta modo automático (jornales + materiales) y modo manual (total directo).")

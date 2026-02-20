@@ -486,6 +486,49 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             pnc.setDescuentosMayoresCostosValor(BigDecimal.valueOf(dto.getDescuentosMayoresCostosValor()));
         }
         
+        // ========== MAPEAR SUB-TIPOS DE DESCUENTOS SOBRE HONORARIOS ==========
+        // Descuentos sobre Honorarios de JORNALES
+        pnc.setDescuentosHonorariosJornalesActivo(dto.getDescuentosHonorariosJornalesActivo());
+        pnc.setDescuentosHonorariosJornalesTipo(dto.getDescuentosHonorariosJornalesTipo());
+        if (dto.getDescuentosHonorariosJornalesValor() != null) {
+            pnc.setDescuentosHonorariosJornalesValor(dto.getDescuentosHonorariosJornalesValor());
+        }
+        
+        // Descuentos sobre Honorarios de PROFESIONALES
+        pnc.setDescuentosHonorariosProfesionalesActivo(dto.getDescuentosHonorariosProfesionalesActivo());
+        pnc.setDescuentosHonorariosProfesionalesTipo(dto.getDescuentosHonorariosProfesionalesTipo());
+        if (dto.getDescuentosHonorariosProfesionalesValor() != null) {
+            pnc.setDescuentosHonorariosProfesionalesValor(dto.getDescuentosHonorariosProfesionalesValor());
+        }
+        
+        // Descuentos sobre Honorarios de MATERIALES
+        pnc.setDescuentosHonorariosMaterialesActivo(dto.getDescuentosHonorariosMaterialesActivo());
+        pnc.setDescuentosHonorariosMaterialesTipo(dto.getDescuentosHonorariosMaterialesTipo());
+        if (dto.getDescuentosHonorariosMaterialesValor() != null) {
+            pnc.setDescuentosHonorariosMaterialesValor(dto.getDescuentosHonorariosMaterialesValor());
+        }
+        
+        // Descuentos sobre Honorarios de OTROS COSTOS
+        pnc.setDescuentosHonorariosOtrosActivo(dto.getDescuentosHonorariosOtrosActivo());
+        pnc.setDescuentosHonorariosOtrosTipo(dto.getDescuentosHonorariosOtrosTipo());
+        if (dto.getDescuentosHonorariosOtrosValor() != null) {
+            pnc.setDescuentosHonorariosOtrosValor(dto.getDescuentosHonorariosOtrosValor());
+        }
+        
+        // Descuentos sobre Honorarios de GASTOS GENERALES
+        pnc.setDescuentosHonorariosGastosGeneralesActivo(dto.getDescuentosHonorariosGastosGeneralesActivo());
+        pnc.setDescuentosHonorariosGastosGeneralesTipo(dto.getDescuentosHonorariosGastosGeneralesTipo());
+        if (dto.getDescuentosHonorariosGastosGeneralesValor() != null) {
+            pnc.setDescuentosHonorariosGastosGeneralesValor(dto.getDescuentosHonorariosGastosGeneralesValor());
+        }
+        
+        // Descuentos sobre Honorarios de CONFIGURACIÓN DE PRESUPUESTO
+        pnc.setDescuentosHonorariosConfiguracionActivo(dto.getDescuentosHonorariosConfiguracionActivo());
+        pnc.setDescuentosHonorariosConfiguracionTipo(dto.getDescuentosHonorariosConfiguracionTipo());
+        if (dto.getDescuentosHonorariosConfiguracionValor() != null) {
+            pnc.setDescuentosHonorariosConfiguracionValor(dto.getDescuentosHonorariosConfiguracionValor());
+        }
+        
         // Validar descuentos antes de guardar
         String errorValidacion = pnc.validarDescuentos();
         if (errorValidacion != null) {
@@ -501,6 +544,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setTotalPresupuesto(dto.getTotalPresupuesto());
         pnc.setTotalHonorariosCalculado(dto.getTotalHonorarios());
         pnc.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        if (dto.getTotalConDescuentos() != null) {
+            pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
+        }
 
         log.info("📊 Totales mapeados del frontend: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
                 dto.getTotalPresupuesto(), dto.getTotalHonorarios(), dto.getTotalPresupuestoConHonorarios());
@@ -740,9 +786,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // ========== PASO 1: ACTUALIZAR EL PRESUPUESTO EXISTENTE CON LOS DATOS DEL DTO ==========
         // Esto es CRÍTICO para que tenga los valores más recientes antes de copiar
-        // IMPORTANTE: Guardar obra y cliente original por si se pierden en el mapeo
+        // IMPORTANTE: Guardar obra, cliente Y esPresupuestoTrabajoExtra original por si se pierden en el mapeo
         Obra obraOriginal = existente.getObra();
         Cliente clienteOriginal = existente.getCliente();
+        Boolean esPresupuestoTrabajoExtraOriginal = existente.getEsPresupuestoTrabajoExtra();
+        log.info("🔒 PRESERVANDO esPresupuestoTrabajoExtra ORIGINAL para nueva versión: {}", esPresupuestoTrabajoExtraOriginal);
 
         PresupuestoNoCliente presupuestoConDatosActualizados = actualizarVersionExistente(existente, dto);
 
@@ -814,9 +862,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // ========== TIPO DE PRESUPUESTO ==========
         nuevaVersion.setTipoPresupuesto(presupuestoConDatosActualizados.getTipoPresupuesto());
         
-        // ========== COPIAR CAMPO ES TRABAJO EXTRA (CRÍTICO) ==========
-        nuevaVersion.setEsPresupuestoTrabajoExtra(presupuestoConDatosActualizados.getEsPresupuestoTrabajoExtra());
-        log.info("🔗 Campo esPresupuestoTrabajoExtra copiado: {}", nuevaVersion.getEsPresupuestoTrabajoExtra());
+        // ========== COPIAR CAMPO ES TRABAJO EXTRA (CRÍTICO - INMUTABLE EN VERSIONADO) ==========
+        // IMPORTANTE: Usar el valor ORIGINAL guardado al inicio, NO el del presupuesto actualizado
+        // Este campo es INMUTABLE: una vez que un presupuesto se crea como trabajo extra o normal,
+        // todas sus versiones futuras deben mantener ese mismo valor
+        nuevaVersion.setEsPresupuestoTrabajoExtra(esPresupuestoTrabajoExtraOriginal);
+        log.info("🔗 Campo esPresupuestoTrabajoExtra INMUTABLE copiado desde ORIGINAL: {} (ignorando DTO)", esPresupuestoTrabajoExtraOriginal);
 
         // ========== ESTADO SEGÚN TIPO DE PRESUPUESTO ==========
         // Si es TRABAJOS_SEMANALES, mantener APROBADO; si es TRADICIONAL, resetear a A_ENVIAR
@@ -836,6 +887,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         nuevaVersion.setTotalHonorariosCalculado(presupuestoConDatosActualizados.getTotalHonorariosCalculado());
         nuevaVersion.setTotalMayoresCostos(presupuestoConDatosActualizados.getTotalMayoresCostos());
         nuevaVersion.setTotalPresupuestoConHonorarios(presupuestoConDatosActualizados.getTotalPresupuestoConHonorarios());
+        nuevaVersion.setTotalConDescuentos(presupuestoConDatosActualizados.getTotalConDescuentos());
 
         // CONFIGURACIÓN DE HONORARIOS COMPLETA
         nuevaVersion.setHonorarioDireccionValorFijo(presupuestoConDatosActualizados.getHonorarioDireccionValorFijo());
@@ -918,6 +970,27 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         nuevaVersion.setDescuentosMayoresCostosActivo(presupuestoConDatosActualizados.getDescuentosMayoresCostosActivo());
         nuevaVersion.setDescuentosMayoresCostosTipo(presupuestoConDatosActualizados.getDescuentosMayoresCostosTipo());
         nuevaVersion.setDescuentosMayoresCostosValor(presupuestoConDatosActualizados.getDescuentosMayoresCostosValor());
+        
+        // ========== SUB-TIPOS DE DESCUENTOS SOBRE HONORARIOS ==========
+        nuevaVersion.setDescuentosHonorariosJornalesActivo(presupuestoConDatosActualizados.getDescuentosHonorariosJornalesActivo());
+        nuevaVersion.setDescuentosHonorariosJornalesTipo(presupuestoConDatosActualizados.getDescuentosHonorariosJornalesTipo());
+        nuevaVersion.setDescuentosHonorariosJornalesValor(presupuestoConDatosActualizados.getDescuentosHonorariosJornalesValor());
+        nuevaVersion.setDescuentosHonorariosProfesionalesActivo(presupuestoConDatosActualizados.getDescuentosHonorariosProfesionalesActivo());
+        nuevaVersion.setDescuentosHonorariosProfesionalesTipo(presupuestoConDatosActualizados.getDescuentosHonorariosProfesionalesTipo());
+        nuevaVersion.setDescuentosHonorariosProfesionalesValor(presupuestoConDatosActualizados.getDescuentosHonorariosProfesionalesValor());
+        nuevaVersion.setDescuentosHonorariosMaterialesActivo(presupuestoConDatosActualizados.getDescuentosHonorariosMaterialesActivo());
+        nuevaVersion.setDescuentosHonorariosMaterialesTipo(presupuestoConDatosActualizados.getDescuentosHonorariosMaterialesTipo());
+        nuevaVersion.setDescuentosHonorariosMaterialesValor(presupuestoConDatosActualizados.getDescuentosHonorariosMaterialesValor());
+        nuevaVersion.setDescuentosHonorariosOtrosActivo(presupuestoConDatosActualizados.getDescuentosHonorariosOtrosActivo());
+        nuevaVersion.setDescuentosHonorariosOtrosTipo(presupuestoConDatosActualizados.getDescuentosHonorariosOtrosTipo());
+        nuevaVersion.setDescuentosHonorariosOtrosValor(presupuestoConDatosActualizados.getDescuentosHonorariosOtrosValor());
+        nuevaVersion.setDescuentosHonorariosGastosGeneralesActivo(presupuestoConDatosActualizados.getDescuentosHonorariosGastosGeneralesActivo());
+        nuevaVersion.setDescuentosHonorariosGastosGeneralesTipo(presupuestoConDatosActualizados.getDescuentosHonorariosGastosGeneralesTipo());
+        nuevaVersion.setDescuentosHonorariosGastosGeneralesValor(presupuestoConDatosActualizados.getDescuentosHonorariosGastosGeneralesValor());
+        nuevaVersion.setDescuentosHonorariosConfiguracionActivo(presupuestoConDatosActualizados.getDescuentosHonorariosConfiguracionActivo());
+        nuevaVersion.setDescuentosHonorariosConfiguracionTipo(presupuestoConDatosActualizados.getDescuentosHonorariosConfiguracionTipo());
+        nuevaVersion.setDescuentosHonorariosConfiguracionValor(presupuestoConDatosActualizados.getDescuentosHonorariosConfiguracionValor());
+        
         log.info("📊 Descuentos copiados a nueva versión: {}", 
                  nuevaVersion.getDescuentosJornalesActivo() != null && nuevaVersion.getDescuentosJornalesActivo() ? "SI" : "NO");
 
@@ -1361,6 +1434,49 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             pnc.setDescuentosMayoresCostosValor(BigDecimal.valueOf(dto.getDescuentosMayoresCostosValor()));
         }
         
+        // ========== MAPEAR SUB-TIPOS DE DESCUENTOS SOBRE HONORARIOS ==========
+        // Descuentos sobre Honorarios de JORNALES
+        pnc.setDescuentosHonorariosJornalesActivo(dto.getDescuentosHonorariosJornalesActivo());
+        pnc.setDescuentosHonorariosJornalesTipo(dto.getDescuentosHonorariosJornalesTipo());
+        if (dto.getDescuentosHonorariosJornalesValor() != null) {
+            pnc.setDescuentosHonorariosJornalesValor(dto.getDescuentosHonorariosJornalesValor());
+        }
+        
+        // Descuentos sobre Honorarios de PROFESIONALES
+        pnc.setDescuentosHonorariosProfesionalesActivo(dto.getDescuentosHonorariosProfesionalesActivo());
+        pnc.setDescuentosHonorariosProfesionalesTipo(dto.getDescuentosHonorariosProfesionalesTipo());
+        if (dto.getDescuentosHonorariosProfesionalesValor() != null) {
+            pnc.setDescuentosHonorariosProfesionalesValor(dto.getDescuentosHonorariosProfesionalesValor());
+        }
+        
+        // Descuentos sobre Honorarios de MATERIALES
+        pnc.setDescuentosHonorariosMaterialesActivo(dto.getDescuentosHonorariosMaterialesActivo());
+        pnc.setDescuentosHonorariosMaterialesTipo(dto.getDescuentosHonorariosMaterialesTipo());
+        if (dto.getDescuentosHonorariosMaterialesValor() != null) {
+            pnc.setDescuentosHonorariosMaterialesValor(dto.getDescuentosHonorariosMaterialesValor());
+        }
+        
+        // Descuentos sobre Honorarios de OTROS COSTOS
+        pnc.setDescuentosHonorariosOtrosActivo(dto.getDescuentosHonorariosOtrosActivo());
+        pnc.setDescuentosHonorariosOtrosTipo(dto.getDescuentosHonorariosOtrosTipo());
+        if (dto.getDescuentosHonorariosOtrosValor() != null) {
+            pnc.setDescuentosHonorariosOtrosValor(dto.getDescuentosHonorariosOtrosValor());
+        }
+        
+        // Descuentos sobre Honorarios de GASTOS GENERALES
+        pnc.setDescuentosHonorariosGastosGeneralesActivo(dto.getDescuentosHonorariosGastosGeneralesActivo());
+        pnc.setDescuentosHonorariosGastosGeneralesTipo(dto.getDescuentosHonorariosGastosGeneralesTipo());
+        if (dto.getDescuentosHonorariosGastosGeneralesValor() != null) {
+            pnc.setDescuentosHonorariosGastosGeneralesValor(dto.getDescuentosHonorariosGastosGeneralesValor());
+        }
+        
+        // Descuentos sobre Honorarios de CONFIGURACIÓN DE PRESUPUESTO
+        pnc.setDescuentosHonorariosConfiguracionActivo(dto.getDescuentosHonorariosConfiguracionActivo());
+        pnc.setDescuentosHonorariosConfiguracionTipo(dto.getDescuentosHonorariosConfiguracionTipo());
+        if (dto.getDescuentosHonorariosConfiguracionValor() != null) {
+            pnc.setDescuentosHonorariosConfiguracionValor(dto.getDescuentosHonorariosConfiguracionValor());
+        }
+        
         // Validar descuentos antes de guardar
         String errorValidacionDesc = pnc.validarDescuentos();
         if (errorValidacionDesc != null) {
@@ -1376,6 +1492,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setTotalPresupuesto(dto.getTotalPresupuesto());
         pnc.setTotalHonorariosCalculado(dto.getTotalHonorarios());
         pnc.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        if (dto.getTotalConDescuentos() != null) {
+            pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
+        }
 
         // ========== NO recalcular si los totales vienen del frontend ==========
         // Si el DTO trae los totales, no recalcular aquí para evitar perder el valor correcto
@@ -1740,6 +1859,49 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             pnc.setDescuentosMayoresCostosValor(BigDecimal.valueOf(dto.getDescuentosMayoresCostosValor()));
         }
         
+        // ========== MAPEAR SUB-TIPOS DE DESCUENTOS SOBRE HONORARIOS ==========
+        // Descuentos sobre Honorarios de JORNALES
+        pnc.setDescuentosHonorariosJornalesActivo(dto.getDescuentosHonorariosJornalesActivo());
+        pnc.setDescuentosHonorariosJornalesTipo(dto.getDescuentosHonorariosJornalesTipo());
+        if (dto.getDescuentosHonorariosJornalesValor() != null) {
+            pnc.setDescuentosHonorariosJornalesValor(dto.getDescuentosHonorariosJornalesValor());
+        }
+        
+        // Descuentos sobre Honorarios de PROFESIONALES
+        pnc.setDescuentosHonorariosProfesionalesActivo(dto.getDescuentosHonorariosProfesionalesActivo());
+        pnc.setDescuentosHonorariosProfesionalesTipo(dto.getDescuentosHonorariosProfesionalesTipo());
+        if (dto.getDescuentosHonorariosProfesionalesValor() != null) {
+            pnc.setDescuentosHonorariosProfesionalesValor(dto.getDescuentosHonorariosProfesionalesValor());
+        }
+        
+        // Descuentos sobre Honorarios de MATERIALES
+        pnc.setDescuentosHonorariosMaterialesActivo(dto.getDescuentosHonorariosMaterialesActivo());
+        pnc.setDescuentosHonorariosMaterialesTipo(dto.getDescuentosHonorariosMaterialesTipo());
+        if (dto.getDescuentosHonorariosMaterialesValor() != null) {
+            pnc.setDescuentosHonorariosMaterialesValor(dto.getDescuentosHonorariosMaterialesValor());
+        }
+        
+        // Descuentos sobre Honorarios de OTROS COSTOS
+        pnc.setDescuentosHonorariosOtrosActivo(dto.getDescuentosHonorariosOtrosActivo());
+        pnc.setDescuentosHonorariosOtrosTipo(dto.getDescuentosHonorariosOtrosTipo());
+        if (dto.getDescuentosHonorariosOtrosValor() != null) {
+            pnc.setDescuentosHonorariosOtrosValor(dto.getDescuentosHonorariosOtrosValor());
+        }
+        
+        // Descuentos sobre Honorarios de GASTOS GENERALES
+        pnc.setDescuentosHonorariosGastosGeneralesActivo(dto.getDescuentosHonorariosGastosGeneralesActivo());
+        pnc.setDescuentosHonorariosGastosGeneralesTipo(dto.getDescuentosHonorariosGastosGeneralesTipo());
+        if (dto.getDescuentosHonorariosGastosGeneralesValor() != null) {
+            pnc.setDescuentosHonorariosGastosGeneralesValor(dto.getDescuentosHonorariosGastosGeneralesValor());
+        }
+        
+        // Descuentos sobre Honorarios de CONFIGURACIÓN DE PRESUPUESTO
+        pnc.setDescuentosHonorariosConfiguracionActivo(dto.getDescuentosHonorariosConfiguracionActivo());
+        pnc.setDescuentosHonorariosConfiguracionTipo(dto.getDescuentosHonorariosConfiguracionTipo());
+        if (dto.getDescuentosHonorariosConfiguracionValor() != null) {
+            pnc.setDescuentosHonorariosConfiguracionValor(dto.getDescuentosHonorariosConfiguracionValor());
+        }
+        
         // Validar descuentos antes de guardar
         String errorValidacionDesc = pnc.validarDescuentos();
         if (errorValidacionDesc != null) {
@@ -1754,6 +1916,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setTotalPresupuesto(dto.getTotalPresupuesto());
         pnc.setTotalHonorariosCalculado(dto.getTotalHonorarios());
         pnc.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        if (dto.getTotalConDescuentos() != null) {
+            pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
+        }
         
         /* LEGACY: Profesionales y Materiales ahora en items_calculadora
         // Mapear colecciones básicas (profesionales, materiales)
@@ -2145,6 +2310,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         nuevaVersion.setNumeroPresupuesto(presupuestoBase.getNumeroPresupuesto());
         nuevaVersion.setNumeroVersion(presupuestoBase.getNumeroVersion() + 1);
 
+        // ========== COPIAR CAMPO ES TRABAJO EXTRA (INMUTABLE) ==========
+        // Este campo NO debe cambiar entre versiones - copiar SIEMPRE del presupuesto base
+        nuevaVersion.setEsPresupuestoTrabajoExtra(presupuestoBase.getEsPresupuestoTrabajoExtra());
+        log.info("🔒 esPresupuestoTrabajoExtra INMUTABLE copiado desde presupuesto base: {}", 
+                presupuestoBase.getEsPresupuestoTrabajoExtra());
+
         // Copiar empresa del presupuesto base (o del DTO si viene)
         if (dto.getIdEmpresa() != null) {
             Empresa empresa = empresaRepository.findById(dto.getIdEmpresa())
@@ -2284,6 +2455,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         nuevaVersion.setTotalPresupuesto(dto.getTotalPresupuesto());
         nuevaVersion.setTotalHonorariosCalculado(dto.getTotalHonorarios());
         nuevaVersion.setTotalPresupuestoConHonorarios(dto.getTotalPresupuestoConHonorarios());
+        if (dto.getTotalConDescuentos() != null) {
+            nuevaVersion.setTotalConDescuentos(dto.getTotalConDescuentos());
+        }
 
         // Actualizar otros campos
         nuevaVersion.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
@@ -4142,6 +4316,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         duplicado.setTotalMateriales(original.getTotalMateriales());
         duplicado.setTotalGeneral(original.getTotalGeneral());
         duplicado.setTotalPresupuestoConHonorarios(original.getTotalPresupuestoConHonorarios());
+        duplicado.setTotalConDescuentos(original.getTotalConDescuentos());
 
         // Copiar tipo de presupuesto
         duplicado.setTipoPresupuesto(original.getTipoPresupuesto());

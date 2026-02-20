@@ -148,6 +148,9 @@ public class PresupuestoNoCliente {
     @Column(name = "total_presupuesto_con_honorarios", precision = 15, scale = 2)
     private BigDecimal totalPresupuestoConHonorarios; // ⭐ TOTAL FINAL (lo más importante)
 
+    @Column(name = "total_con_descuentos", precision = 15, scale = 2)
+    private BigDecimal totalConDescuentos; // Total después de aplicar descuentos
+
     @com.fasterxml.jackson.annotation.JsonProperty("totalFinal")
     public BigDecimal getTotalPresupuestoConHonorarios() {
         return this.totalPresupuestoConHonorarios;
@@ -356,6 +359,73 @@ public class PresupuestoNoCliente {
     
     @Column(name = "descuentos_mayores_costos_valor", precision = 15, scale = 2)
     private BigDecimal descuentosMayoresCostosValor;
+    
+    // ========== SUB-TIPOS DE DESCUENTOS SOBRE HONORARIOS ==========
+    /**
+     * Descuentos granulares sobre cada categoría de honorarios.
+     * Estos campos permiten aplicar descuentos específicos sobre los honorarios 
+     * de cada rubro (jornales, profesionales, materiales, etc.).
+     */
+    
+    // Descuentos sobre Honorarios de JORNALES
+    @Column(name = "descuentos_honorarios_jornales_activo")
+    private Boolean descuentosHonorariosJornalesActivo = true;
+    
+    @Column(name = "descuentos_honorarios_jornales_tipo", length = 20)
+    private String descuentosHonorariosJornalesTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_jornales_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosJornalesValor;
+    
+    // Descuentos sobre Honorarios de PROFESIONALES
+    @Column(name = "descuentos_honorarios_profesionales_activo")
+    private Boolean descuentosHonorariosProfesionalesActivo = true;
+    
+    @Column(name = "descuentos_honorarios_profesionales_tipo", length = 20)
+    private String descuentosHonorariosProfesionalesTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_profesionales_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosProfesionalesValor;
+    
+    // Descuentos sobre Honorarios de MATERIALES
+    @Column(name = "descuentos_honorarios_materiales_activo")
+    private Boolean descuentosHonorariosMaterialesActivo = true;
+    
+    @Column(name = "descuentos_honorarios_materiales_tipo", length = 20)
+    private String descuentosHonorariosMaterialesTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_materiales_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosMaterialesValor;
+    
+    // Descuentos sobre Honorarios de OTROS COSTOS
+    @Column(name = "descuentos_honorarios_otros_activo")
+    private Boolean descuentosHonorariosOtrosActivo = true;
+    
+    @Column(name = "descuentos_honorarios_otros_tipo", length = 20)
+    private String descuentosHonorariosOtrosTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_otros_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosOtrosValor;
+    
+    // Descuentos sobre Honorarios de GASTOS GENERALES
+    @Column(name = "descuentos_honorarios_gastos_generales_activo")
+    private Boolean descuentosHonorariosGastosGeneralesActivo = true;
+    
+    @Column(name = "descuentos_honorarios_gastos_generales_tipo", length = 20)
+    private String descuentosHonorariosGastosGeneralesTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_gastos_generales_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosGastosGeneralesValor;
+    
+    // Descuentos sobre Honorarios de CONFIGURACIÓN DE PRESUPUESTO
+    @Column(name = "descuentos_honorarios_configuracion_activo")
+    private Boolean descuentosHonorariosConfiguracionActivo = true;
+    
+    @Column(name = "descuentos_honorarios_configuracion_tipo", length = 20)
+    private String descuentosHonorariosConfiguracionTipo = "porcentaje";
+    
+    @Column(name = "descuentos_honorarios_configuracion_valor", precision = 15, scale = 2)
+    private BigDecimal descuentosHonorariosConfiguracionValor;
 
     // Campos transient para cálculos temporales de descuentos
     @Transient
