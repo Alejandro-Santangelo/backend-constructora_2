@@ -712,52 +712,25 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     @Transactional
     public PresupuestoNoCliente actualizar(Long id, PresupuestoNoClienteRequestDTO dto) {
         try {
-            log.info("🔄 ACTUALIZANDO PRESUPUESTO - ID: {}", id);
+            log.info("🔄 ACTUALIZANDO PRESUPUESTO POR ID - ID: {} (SIN crear nueva versión)", id);
 
             // PASO 1: Obtener presupuesto existente
             PresupuestoNoCliente existente = obtenerPorId(id);
             log.info("📊 Presupuesto actual - Estado: {}, Versión: {}, Total: {}",
                     existente.getEstado(), existente.getNumeroVersion(), existente.getTotalPresupuesto());
 
-            // ========== VERIFICAR SI DEBE CREAR NUEVA VERSIÓN ==========
-            // Si el presupuesto está APROBADO o EN_EJECUCION, crear nueva versión
-            boolean esAprobadoOEnEjecucion = existente.getEstado() == PresupuestoEstado.APROBADO ||
-                    existente.getEstado() == PresupuestoEstado.EN_EJECUCION;
+            // ========== IMPORTANTE: PUT /{id} SIEMPRE ACTUALIZA EL MISMO REGISTRO ==========
+            // Este endpoint NO crea versiones nuevas independientemente del estado.
+            // Para crear versiones, usar PUT sin /{id} con parámetros de dirección.
+            
+            log.info("📝 Actualizando el MISMO registro (ID: {}, Versión: {}) sin cambiar versión",
+                    existente.getId(), existente.getNumeroVersion());
 
-            if (esAprobadoOEnEjecucion) {
-                log.info("🔀 Presupuesto en estado {} - CREANDO NUEVA VERSIÓN", existente.getEstado());
+            PresupuestoNoCliente actualizado = actualizarVersionExistenteCompleto(existente, dto);
+            log.info("✅ Presupuesto ACTUALIZADO (mismo registro) - ID: {}, Versión: {}, Estado: {}, Total: {}",
+                    actualizado.getId(), actualizado.getNumeroVersion(), actualizado.getEstado(), actualizado.getTotalPresupuesto());
 
-                // Guardar el estado actual para la nueva versión
-                PresupuestoEstado estadoActual = existente.getEstado();
-
-                // Cambiar estado de la versión anterior a MODIFICADO
-                existente.setEstado(PresupuestoEstado.MODIFICADO);
-                repository.save(existente);
-                log.info("📝 Versión anterior (ID: {}) cambiada a estado MODIFICADO", existente.getId());
-
-                // Crear nueva versión con los datos actualizados
-                PresupuestoNoCliente nuevaVersion = crearNuevaVersion(existente, dto);
-
-                // Asignar el mismo estado que tenía (APROBADO o EN_EJECUCION)
-                nuevaVersion.setEstado(estadoActual);
-
-                PresupuestoNoCliente guardado = repository.save(nuevaVersion);
-                log.info("✅ NUEVA VERSIÓN CREADA - ID: {}, Versión: {}, Estado: {}, Total: {}",
-                        guardado.getId(), guardado.getNumeroVersion(), guardado.getEstado(), guardado.getTotalPresupuesto());
-
-                return guardado;
-
-            } else {
-                // Si NO está aprobado/en ejecución, actualizar el mismo registro
-                log.info("📝 Presupuesto en estado {} - Actualizando el MISMO registro (ID: {}, Versión: {})",
-                        existente.getEstado(), existente.getId(), existente.getNumeroVersion());
-
-                PresupuestoNoCliente actualizado = actualizarVersionExistenteCompleto(existente, dto);
-                log.info("✅ Presupuesto ACTUALIZADO (mismo registro) - ID: {}, Versión: {}, Estado: {}, Total: {}",
-                        actualizado.getId(), actualizado.getNumeroVersion(), actualizado.getEstado(), actualizado.getTotalPresupuesto());
-
-                return actualizado;
-            }
+            return actualizado;
 
         } catch (Exception e) {
             log.error("❌ ERROR EN ACTUALIZACIÓN - ID: {}", id, e);
