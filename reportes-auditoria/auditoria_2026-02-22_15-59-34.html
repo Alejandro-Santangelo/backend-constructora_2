@@ -1,0 +1,113 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Auditoria Semanal - Datos Huerfanos</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #2c3e50;
+            border-bottom: 3px solid #3498db;
+            padding-bottom: 10px;
+        }
+        h2 {
+            color: #34495e;
+            margin-top: 30px;
+        }
+        .header-info {
+            background: #ecf0f1;
+            padding: 15px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+        .header-info p {
+            margin: 5px 0;
+            color: #555;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th {
+            background: #3498db;
+            color: white;
+            padding: 12px;
+            text-align: left;
+        }
+        td {
+            padding: 10px;
+            border-bottom: 1px solid #ddd;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .ok {
+            color: #27ae60;
+            font-weight: bold;
+        }
+        .warning {
+            color: #e74c3c;
+            font-weight: bold;
+        }
+        .status-ok {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #28a745;
+            margin: 20px 0;
+        }
+        .status-warning {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            border-left: 4px solid #dc3545;
+            margin: 20px 0;
+        }
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #ddd;
+            color: #888;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Auditoria Semanal - Datos Huerfanos</h1>
+        
+        <div class="header-info">
+            <p><strong>Fecha de ejecucion:</strong> domingo, 22 febrero 2026 15:59:35</p>
+            <p><strong>Base de datos:</strong> construccion_app_v3 @ localhost</p>
+            <p><strong>Sistema:</strong> Backend Constructora v3</p>
+        </div>
+
+        <h2>Resultados de la Auditoria</h2>
+        
+        <table border="1">   <tr>     <th align="center">fecha_auditoria</th>     <th align="center">hora_ejecucion</th>     <th align="center">reporte</th>     <th align="center">sistema</th>   </tr>   <tr valign="top">     <td align="left">2026-02-22</td>     <td align="left">15:59:35.048974-03</td>     <td align="left">AUDITORIA SEMANAL DE DATOS HUERFANOS</td>     <td align="left">Sistema Backend Constructora v3</td>   </tr> </table> <p>(1 fila)<br /> </p> <table border="1">   <tr>     <th align="center">problema</th>     <th align="center">cantidad</th>     <th align="center">estado</th>   </tr>   <tr valign="top">     <td align="left">[INFO] TRIGGERS ACTIVOS</td>     <td align="right">9</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">1. EF Trabajos Adicionales</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">10. Etapas diarias sin obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">11. Items sin presupuesto</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">12. TE Dias huerfanos</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">13. TE Profesionales huerfanos</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">14. TE Tareas huerfanas</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">15. Jornales sin prof_obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">16. Gastos sin prof_obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">2. EF Obras Independientes</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">3. EF Trabajos Extra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">4. Asignaciones sin cobro_obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">5. Asignaciones sin cobro_empresa</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">6. Profesionales_obra sin obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">7. Asignaciones prof sin obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">8. Cobros_obra sin obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr>   <tr valign="top">     <td align="left">9. Honorarios sin obra</td>     <td align="right">0</td>     <td align="left">[OK]</td>   </tr> </table> <p>(17 filas)<br /> </p> <table border="1">   <tr>     <th align="center">seccion</th>     <th align="center">estado_sistema</th>     <th align="center">triggers_activos_count</th>     <th align="center">estado_proteccion</th>   </tr>   <tr valign="top">     <td align="left">RESULTADO FINAL</td>     <td align="left">[OK] SISTEMA LIMPIO - Sin datos huerfanos detectados</td>     <td align="right">9</td>     <td align="left">[OK] Proteccion activa</td>   </tr> </table> <p>(1 fila)<br /> </p>
+        
+        <div class="footer">
+            <p>Reporte generado automaticamente por el sistema de auditoria semanal.</p>
+            <p>Ubicacion del script: C:\Users\Usuario\Desktop\AppConstructoras\backend-constructora_2\auditoria_datos_huerfanos_clean.sql</p>
+            <p>Si detecta datos huerfanos [ADVERTENCIA], investigar inmediatamente el origen del problema.</p>
+        </div>
+    </div>
+</body>
+</html>
