@@ -3664,6 +3664,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
                 // Gastos generales
                 procesarGastosGeneralesDelItem(itemGuardado, dto.getGastosGenerales(), presupuesto.getEmpresa());
+
+                // ========== RECALCULAR TOTALES CONSOLIDADOS DESDE TABLAS HIJAS ==========
+                recalcularTotalesItemDesdeHijos(itemGuardado);
             }
 
             log.info("✅ {} items de calculadora procesados para presupuesto {}",
@@ -4024,6 +4027,57 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     }
 
     // ========== METODOS DE RECALCULO DE TOTALES ==========
+
+    /**
+     * CRÍTICO: Recalcula los campos consolidados del item sumando desde las tablas hijas.
+     * Este método debe llamarse DESPUÉS de guardar todos los hijos (materiales, jornales, gastos).
+     * 
+     * CORRIGE el bug donde el frontend envía valores incorrectos y el backend los guardaba sin validar.
+     */
+    private void recalcularTotalesItemDesdeHijos(ItemCalculadoraPresupuesto item) {
+        log.debug("🔄 Recalculando totales del item ID {} desde tablas hijas", item.getId());
+
+        // 1. Recalcular materiales desde material_calculadora
+        List<MaterialCalculadora> materiales = materialCalculadoraRepository.findByItemCalculadoraId(item.getId());
+        BigDecimal totalMateriales = materiales.stream()
+                .map(MaterialCalculadora::getSubtotal)
+                .filter(subtotal -> subtotal != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        item.setMateriales(totalMateriales);
+        item.setSubtotalMateriales(totalMateriales);
+        log.debug("  📦 Materiales recalculados: {} (desde {} registros)", totalMateriales, materiales.size());
+
+        // 2. Recalcular mano de obra desde jornal_calculadora
+        List<JornalCalculadora> jornales = jornalCalculadoraRepository.findByItemCalculadoraId(item.getId());
+        BigDecimal totalJornales = jornales.stream()
+                .map(JornalCalculadora::getSubtotal)
+                .filter(subtotal -> subtotal != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        item.setSubtotalManoObra(totalJornales);
+        log.debug("  👷 Jornales recalculados: {} (desde {} registros)", totalJornales, jornales.size());
+
+        // 3. Recalcular gastos generales desde presupuesto_gasto_general
+        List<PresupuestoGastoGeneral> gastos = gastoGeneralRepository.findByItemCalculadoraId(item.getId());
+        BigDecimal totalGastos = gastos.stream()
+                .map(PresupuestoGastoGeneral::getSubtotal)
+                .filter(subtotal -> subtotal != null)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        item.setSubtotalGastosGenerales(totalGastos);
+        log.debug("  💰 Gastos generales recalculados: {} (desde {} registros)", totalGastos, gastos.size());
+
+        // 4. Recalcular total del item
+        BigDecimal totalItem = totalMateriales.add(totalJornales).add(totalGastos);
+        item.setTotal(totalItem);
+
+        // 5. Guardar item actualizado
+        itemCalculadoraRepository.save(item);
+        
+        log.info("✅ Item ID {} recalculado: Materiales={}, Jornales={}, Gastos={}, Total={}",
+                item.getId(), totalMateriales, totalJornales, totalGastos, totalItem);
+    }
 
     /**
      * Recalcula el total del item basado en sus subtotales consolidados.
