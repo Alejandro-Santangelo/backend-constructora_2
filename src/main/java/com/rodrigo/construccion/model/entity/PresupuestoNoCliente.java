@@ -108,6 +108,13 @@ public class PresupuestoNoCliente {
     @Enumerated(EnumType.STRING)
     @Column(name = "estado")
     private PresupuestoEstado estado;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_presupuesto", nullable = false, length = 50)
+    private TipoPresupuesto tipoPresupuesto = TipoPresupuesto.TRADICIONAL;
+    
+    @Column(name = "modo_presupuesto", nullable = false, length = 50)
+    private String modoPresupuesto = "TRADICIONAL";
 
     // Direccion obra desglosada
     @Column(name = "direccion_obra_calle", nullable = false)
@@ -457,16 +464,7 @@ public class PresupuestoNoCliente {
 
     // ========== TIPO DE PRESUPUESTO ==========
     /**
-     * Tipo de presupuesto: TRADICIONAL o TRABAJOS_SEMANALES.
-     * - TRADICIONAL: Flujo normal con estados (A enviar, Enviado, Aprobado, etc.)
-     * - TRABAJOS_SEMANALES: Se aprueba automáticamente, no requiere envío al cliente
-     */
-    @Enumerated(EnumType.STRING)
-    @Column(name = "modo_presupuesto", nullable = false, length = 50)
-    private TipoPresupuesto tipoPresupuesto =
-            TipoPresupuesto.TRADICIONAL;
 
-    /**
      * Fecha de la última modificación del estado.
      * Se usa para evitar que el proceso automático sobrescriba cambios manuales recientes.
      * El proceso automático NO cambia el estado si fue modificado manualmente en las últimas 24 horas.

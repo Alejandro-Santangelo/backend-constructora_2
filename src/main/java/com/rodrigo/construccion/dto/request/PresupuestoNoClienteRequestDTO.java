@@ -23,6 +23,9 @@ public class PresupuestoNoClienteRequestDTO {
     @Schema(description = "ID de la obra asociada al presupuesto", example = "1")
     private Long idObra;
     
+    @Schema(description = "Tipo de presupuesto: TRADICIONAL, TRABAJO_DIARIO, TRABAJO_EXTRA, TAREA_LEVE", example = "TRADICIONAL")
+    private String tipoPresupuesto;
+    
     @Schema(description = "Indica si el presupuesto es para un trabajo extra", example = "false")
     private Boolean esPresupuestoTrabajoExtra = false;
     
@@ -106,11 +109,6 @@ public class PresupuestoNoClienteRequestDTO {
             example = "A enviar",
             allowableValues = {"A enviar", "Borrador", "Modificado", "Enviado", "APROBADO", "EN EJECUCION", "TERMINADO"})
     private String estado;
-
-    @Schema(description = "Tipo de presupuesto (nullable). Valores: TRADICIONAL, TRABAJOS_SEMANALES. Por defecto: TRADICIONAL", 
-            example = "TRADICIONAL",
-            allowableValues = {"TRADICIONAL", "TRABAJOS_SEMANALES"})
-    private String tipoPresupuesto;
 
     @Schema(description = "Fecha probable de inicio (nullable)")
     private LocalDate fechaProbableInicio;

@@ -217,7 +217,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setFechaEmision(ahora);
         pnc.setFechaCreacion(dto.getFechaCreacion() != null ? dto.getFechaCreacion() : ahora);
         pnc.setNombreObra(dto.getNombreObra());
-        pnc.setEsPresupuestoTrabajoExtra(dto.getEsPresupuestoTrabajoExtra() != null ? dto.getEsPresupuestoTrabajoExtra() : false);
+        // ELIMINADO: esPresupuestoTrabajoExtra ahora se setea automáticamente según TipoPresupuesto en configurarPresupuestoPorTipo()
 
         // Empresa
         if (dto.getIdEmpresa() == null) {
@@ -286,41 +286,26 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         }
         pnc.setObservaciones(dto.getObservaciones());
         // ========== TIPO DE PRESUPUESTO ==========
+        if (dto.getTipoPresupuesto() == null || dto.getTipoPresupuesto().trim().isEmpty()) {
+            throw new IllegalArgumentException(
+                "El campo 'tipoPresupuesto' es obligatorio. " +
+                "Valores técnicos: TRADICIONAL, TRABAJO_DIARIO, TRABAJO_EXTRA, TAREA_LEVE. " +
+                "Aliases semánticos aceptados: PRESUPUESTO_PRINCIPAL, PRESUPUESTO_TRABAJO_DIARIO, PRESUPUESTO_ADICIONAL_OBRA, PRESUPUESTO_TAREA_LEVE");
+        }
         TipoPresupuesto tipoPresupuesto;
-        if (dto.getTipoPresupuesto() != null && !dto.getTipoPresupuesto().trim().isEmpty()) {
-            try {
-                tipoPresupuesto = TipoPresupuesto.valueOf(dto.getTipoPresupuesto().toUpperCase());
-            } catch (IllegalArgumentException e) {
-                log.warn("Tipo de presupuesto inválido: {}. Usando TRADICIONAL por defecto.", dto.getTipoPresupuesto());
-                tipoPresupuesto = TipoPresupuesto.TRADICIONAL;
-            }
-        } else {
-            tipoPresupuesto = TipoPresupuesto.TRADICIONAL;
+        try {
+            tipoPresupuesto = TipoPresupuesto.fromString(dto.getTipoPresupuesto());
+        } catch (IllegalArgumentException e) {
+            throw new IllegalArgumentException(e.getMessage());
         }
         pnc.setTipoPresupuesto(tipoPresupuesto);
         log.info("📋 Creando presupuesto tipo: {} para empresa: {}", tipoPresupuesto, empresa.getId());
-        // ========== ESTADO POR DEFECTO SEGÚN TIPO ==========
-        if (dto.getEstado() != null) {
-            com.rodrigo.construccion.enums.PresupuestoEstado e = com.rodrigo.construccion.enums.PresupuestoEstado.fromString(dto.getEstado());
-
-            // Validar OBRA_A_CONFIRMAR solo para TRABAJOS_SEMANALES
-            if (e == com.rodrigo.construccion.enums.PresupuestoEstado.OBRA_A_CONFIRMAR &&
-                    tipoPresupuesto != TipoPresupuesto.TRABAJOS_SEMANALES) {
-                log.warn("⚠️ Estado OBRA_A_CONFIRMAR solo permitido para TRABAJOS_SEMANALES. Tipo actual: {}. Usando A_ENVIAR", tipoPresupuesto);
-                pnc.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
-            } else {
-                pnc.setEstado(e != null ? e : com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
-            }
-        } else {
-            // Si no viene estado, asignar según el tipo de presupuesto
-            if (tipoPresupuesto == TipoPresupuesto.TRABAJOS_SEMANALES) {
-                pnc.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
-                log.info("✅ Presupuesto TRABAJOS_SEMANALES → Estado automático: APROBADO");
-            } else {
-                pnc.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.A_ENVIAR);
-                log.info("📤 Presupuesto TRADICIONAL → Estado por defecto: A_ENVIAR");
-            }
-        }
+        
+        // ========== VALIDACIONES POR TIPO ==========
+        validarDatosPorTipoPresupuesto(dto, tipoPresupuesto);
+        
+        // ========== CONFIGURAR ESTADO Y PROPIEDADES SEGÚN TIPO ==========
+        configurarPresupuestoPorTipo(pnc, dto, tipoPresupuesto);
 
         // numeroPresupuesto / numeroVersion
         if (dto.getNumeroPresupuesto() != null) {
@@ -557,6 +542,14 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // Guardar el presupuesto primero para obtener su ID
         log.info("💾 INICIANDO GUARDADO - Presupuesto ID: {}", pnc.getId());
         PresupuestoNoCliente guardado = repository.save(pnc);
+        
+        // ============= AUTO-CREACIÓN DE OBRA SEGÚN TIPO =============
+        if (tipoPresupuesto.creaObraInmediatamente()) {
+            log.info("🏗️ Tipo {} requiere crear obra inmediatamente", tipoPresupuesto);
+            crearObraAutomaticamente(guardado);
+            guardado = repository.findById(guardado.getId()).orElse(guardado); // Recargar con obra asociada
+        }
+        
         log.info("✅ PRESUPUESTO GUARDADO - ID: {}, Total: {}", guardado.getId(), guardado.getTotalPresupuesto());
         log.info("🔍 Obra vinculada: {}", guardado.getObra() != null ? "ID " + guardado.getObra().getId() : "NULL");
         log.info("🔍 esPresupuestoTrabajoExtra: {}", guardado.getEsPresupuestoTrabajoExtra());
@@ -5116,6 +5109,164 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("✅ Se obtuvieron honorarios de {} obras de {} solicitadas", resultado.size(), obraIds.size());
 
         return resultado;
+    }
+    
+    // ============= MÉTODOS DE VALIDACIÓN POR TIPO DE PRESUPUESTO =============
+    
+    /**
+     * Valida los datos del presupuesto según su tipo
+     */
+    private void validarDatosPorTipoPresupuesto(PresupuestoNoClienteRequestDTO dto, TipoPresupuesto tipo) {
+        log.info("🔍 Validando datos para tipo presupuesto: {}", tipo);
+        
+        switch (tipo) {
+            case TRADICIONAL:
+            case TRABAJO_DIARIO:
+                // Validar campos descriptivos de la obra (sin restricción sobre obraId)
+                validarCamposRequeridosParaObraNueva(dto);
+                break;
+
+            case TRABAJOS_SEMANALES:
+                // Sin restricciones - el tipo es solo una clasificación
+                log.info("ℹ️ Tipo {} sin restricciones de validación.", tipo);
+                break;
+                
+            case TRABAJO_EXTRA:
+            case TAREA_LEVE:
+                // Validar que tenga obra asociada
+                if (dto.getIdObra() == null) {
+                    throw new RuntimeException("ERROR: Presupuestos tipo " + tipo + " requieren obraId obligatorio.");
+                }
+                validarObraExistente(dto.getIdObra());
+                break;
+                
+            default:
+                throw new RuntimeException("ERROR: Tipo de presupuesto no soportado: " + tipo);
+        }
+    }
+    
+    /**
+     * Valida campos requeridos para crear obra nueva
+     */
+    private void validarCamposRequeridosParaObraNueva(PresupuestoNoClienteRequestDTO dto) {
+        if (dto.getNombreObra() == null || dto.getNombreObra().trim().isEmpty()) {
+            throw new RuntimeException("ERROR: nombreObra es obligatorio para presupuestos que crean obra nueva.");
+        }
+        if (dto.getDireccionObraCalle() == null || dto.getDireccionObraCalle().trim().isEmpty()) {
+            throw new RuntimeException("ERROR: direccionObraCalle es obligatorio para presupuestos que crean obra nueva.");
+        }
+        if (dto.getDireccionObraAltura() == null || dto.getDireccionObraAltura().trim().isEmpty()) {
+            throw new RuntimeException("ERROR: direccionObraAltura es obligatorio para presupuestos que crean obra nueva.");
+        }
+    }
+    
+    /**
+     * Valida que la obra existe
+     */
+    private void validarObraExistente(Long obraId) {
+        if (!obraRepository.existsById(obraId)) {
+            throw new RuntimeException("ERROR: Obra con ID " + obraId + " no existe.");
+        }
+    }
+    
+    /**
+     * Configura el presupuesto según su tipo
+     */
+    private void configurarPresupuestoPorTipo(PresupuestoNoCliente pnc, PresupuestoNoClienteRequestDTO dto, TipoPresupuesto tipo) {
+        log.info("⚙️ Configurando presupuesto según tipo: {}", tipo);
+        
+        // Configurar estado según tipo
+        if (dto.getEstado() != null) {
+            // Si viene estado específico, validarlo
+            PresupuestoEstado estadoSolicitado = PresupuestoEstado.fromString(dto.getEstado());
+            pnc.setEstado(estadoSolicitado != null ? estadoSolicitado : tipo.getEstadoPorDefecto());
+        } else {
+            // Usar estado por defecto del tipo
+            pnc.setEstado(tipo.getEstadoPorDefecto());
+        }
+        
+        // Configurar esPresupuestoTrabajoExtra según tipo
+        pnc.setEsPresupuestoTrabajoExtra(tipo.getEsPresupuestoTrabajoExtra());
+        
+        // Heredar cliente de obra padre si corresponde
+        if (tipo.requiereObraExistente() && dto.getIdObra() != null) {
+            configurarClienteDesdeObra(pnc, dto.getIdObra());
+        }
+        
+        log.info("✅ Presupuesto configurado: estado={}, esTrabajoExtra={}", 
+                pnc.getEstado(), pnc.getEsPresupuestoTrabajoExtra());
+    }
+    
+    /**
+     * Configura el cliente heredándolo de la obra padre
+     */
+    private void configurarClienteDesdeObra(PresupuestoNoCliente pnc, Long obraId) {
+        log.info("👥 Heredando cliente de obra ID: {}", obraId);
+        
+        Optional<com.rodrigo.construccion.model.entity.Obra> obraOpt = obraRepository.findById(obraId);
+        if (obraOpt.isPresent()) {
+            com.rodrigo.construccion.model.entity.Obra obra = obraOpt.get();
+            if (obra.getCliente() != null) {
+                pnc.setCliente(obra.getCliente());
+                log.info("✅ Cliente heredado: {} (ID: {})", obra.getCliente().getNombre(), obra.getCliente().getId());
+            } else {
+                log.warn("⚠️ Obra {} no tiene cliente asignado", obraId);
+            }
+        }
+    }
+    
+    /**
+     * Crea una obra automáticamente para presupuestos que la requieren inmediatamente
+     */
+    private void crearObraAutomaticamente(PresupuestoNoCliente presupuesto) {
+        log.info("🏗️ Creando obra automáticamente para presupuesto ID: {}", presupuesto.getId());
+        
+        try {
+            com.rodrigo.construccion.model.entity.Obra nuevaObra = new com.rodrigo.construccion.model.entity.Obra();
+            
+            // Datos básicos de la obra
+            nuevaObra.setNombre(presupuesto.getNombreObra());
+            nuevaObra.setDireccionObraCalle(presupuesto.getDireccionObraCalle());
+            nuevaObra.setDireccionObraAltura(presupuesto.getDireccionObraAltura());
+            nuevaObra.setDireccionObraPiso(presupuesto.getDireccionObraPiso());
+            nuevaObra.setDireccionObraDepartamento(presupuesto.getDireccionObraDepartamento());
+            nuevaObra.setDireccionObraBarrio(presupuesto.getDireccionObraBarrio());
+            nuevaObra.setDireccionObraTorre(presupuesto.getDireccionObraTorre());
+            
+            // Configuración según tipo de presupuesto
+            nuevaObra.setPresupuestoOriginalId(presupuesto.getId());
+            nuevaObra.setTipoOrigen(com.rodrigo.construccion.enums.TipoOrigen.fromTipoPresupuesto(presupuesto.getTipoPresupuesto()));
+            
+            // Cliente y empresa
+            nuevaObra.setCliente(presupuesto.getCliente());
+            nuevaObra.setEmpresaId(presupuesto.getEmpresa().getId());
+            
+            // Estados y fechas
+            nuevaObra.setEstado(com.rodrigo.construccion.enums.EstadoObra.BORRADOR);
+            nuevaObra.setFechaInicio(presupuesto.getFechaProbableInicio());
+            
+            // Presupuestos financieros
+            if (presupuesto.getTotalPresupuesto() != null) {
+                nuevaObra.setPresupuestoEstimado(presupuesto.getTotalPresupuesto());
+            }
+            
+            // Flags
+            nuevaObra.setEsObraManual(false);
+            nuevaObra.setEsObraTrabajoExtra(presupuesto.getEsPresupuestoTrabajoExtra());
+            
+            // Guardar obra
+            nuevaObra = obraRepository.save(nuevaObra);
+            log.info("✅ Obra creada con ID: {}", nuevaObra.getId());
+            
+            // Asociar obra al presupuesto
+            presupuesto.setObra(nuevaObra);
+            repository.save(presupuesto);
+            log.info("✅ Presupuesto {} vinculado a obra {}", presupuesto.getId(), nuevaObra.getId());
+            
+        } catch (Exception e) {
+            log.error("❌ Error al crear obra automáticamente para presupuesto {}: {}", presupuesto.getId(), e.getMessage());
+            throw new RuntimeException("Error al crear obra automáticamente: " + e.getMessage());
+        }
     }
 
 }

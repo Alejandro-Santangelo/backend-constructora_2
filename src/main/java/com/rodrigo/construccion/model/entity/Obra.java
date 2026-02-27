@@ -4,6 +4,8 @@ import com.fasterxml.jackson.annotation.JsonBackReference;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonManagedReference;
 import com.rodrigo.construccion.enums.EstadoObra;
+import com.rodrigo.construccion.enums.TipoOrigen;
+import com.rodrigo.construccion.enums.TipoPresupuesto;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -44,6 +46,13 @@ public class Obra {
 
     @Column(name = "es_obra_manual")
     private Boolean esObraManual = false;
+    
+    @Column(name = "presupuesto_original_id")
+    private Long presupuestoOriginalId;
+    
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_origen", length = 50)
+    private TipoOrigen tipoOrigen;
 
     @Column(name = "nombre", nullable = false, length = 200)
     private String nombre;

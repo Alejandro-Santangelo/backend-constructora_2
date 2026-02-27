@@ -9,6 +9,7 @@ import com.rodrigo.construccion.dto.response.*;
 import com.rodrigo.construccion.dto.request.ObraRequestDTO;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.enums.EstadoObra;
+import com.rodrigo.construccion.enums.TipoOrigen;
 import com.rodrigo.construccion.model.entity.*;
 import com.rodrigo.construccion.repository.*;
 
@@ -172,6 +173,7 @@ public class ObraService implements IObraService {
         // Las obras manuales son creadas directamente sin presupuesto previo
         if (obra.getPresupuestoNoClienteId() == null) {
             obra.setEsObraManual(true);
+            obra.setTipoOrigen(TipoOrigen.OBRA_INDEPENDIENTE);
             // Compatibilidad: extraer desglose si el frontend lo envió embebido en observaciones
             extraerDesgloseDeObservaciones(obra);
         } else {
@@ -616,6 +618,7 @@ public class ObraService implements IObraService {
         // Establecer específicamente como BORRADOR
         nuevaObra.setEstado(EstadoObra.BORRADOR);
         nuevaObra.setEsObraManual(true); // Es obra independiente
+        nuevaObra.setTipoOrigen(TipoOrigen.OBRA_INDEPENDIENTE);
         
         // Guardar inmediatamente para obtener ID
         Obra obraBorrador = obraRepository.save(nuevaObra);
