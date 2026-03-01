@@ -2882,15 +2882,21 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         subObra.setPresupuestoEstimado(presupuesto.getTotalPresupuestoConHonorarios()); // Total final
         subObra.setCliente(cliente); // Heredar cliente del padre
         subObra.setEmpresaId(presupuesto.getEmpresa().getId());
-        subObra.setEstado(com.rodrigo.construccion.enums.EstadoObra.APROBADO);
         subObra.setFechaInicio(presupuesto.getFechaProbableInicio() != null 
                 ? presupuesto.getFechaProbableInicio() 
                 : LocalDate.now());
         
         // Marcar como obra de trabajo extra
         subObra.setEsObraTrabajoExtra(true);
+        subObra.setTipoOrigen(com.rodrigo.construccion.enums.TipoOrigen.TRABAJO_EXTRA);
+        subObra.setPresupuestoOriginalId(presupuesto.getId());
         
-        // Copiar datos del presupuesto a la sub-obra
+        // ⚡ FIX: Setear APROBADO en el presupuesto ANTES de sincronizar,
+        // para que sincronizarEstado() lea APROBADO y mapee correctamente el estado de la sub-obra.
+        // Si se hace después, sincronizarEstado lee BORRADOR y sobreescribe el estado de la obra.
+        presupuesto.setEstado(com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO);
+
+        // Copiar datos del presupuesto a la sub-obra (incluye sincronización de estado)
         sincronizarPresupuestoAObra(presupuesto, subObra);
         
         // Agregar observación indicando el origen
@@ -3101,10 +3107,27 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("✅ Estado actualizado: Presupuesto {} → {} (anterior: {}, empresaId: {})",
                 id, estado.name(), estadoAnterior != null ? estadoAnterior.name() : "null", empresaId);
 
-        // 5. 🔄 SINCRONIZACIÓN AUTOMÁTICA: Si el presupuesto tiene obra asociada, sincronizar estado
-        if (presupuesto.getObra() != null) {
+        // 5. 🔄 LÓGICA ESPECIAL PARA TAREA_LEVE: crear obra al aprobar (APROBADO o TERMINADO)
+        if (presupuestoGuardado.getTipoPresupuesto() == com.rodrigo.construccion.enums.TipoPresupuesto.TAREA_LEVE
+                && (estado == com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO 
+                    || estado == com.rodrigo.construccion.enums.PresupuestoEstado.TERMINADO)
+                && presupuestoGuardado.getObra() == null) {
             try {
-                Obra obra = obraRepository.findById(presupuesto.getObra().getId())
+                log.info("🏗️ TAREA_LEVE aprobado - Creando obra automáticamente con estado: {}", estado);
+                crearObraAutomaticamente(presupuestoGuardado);
+                // Refrescar presupuesto después de crear la obra
+                presupuestoGuardado = repository.findById(id).orElse(presupuestoGuardado);
+                log.info("✅ Obra creada exitosamente para presupuesto TAREA_LEVE ID: {}", presupuestoGuardado.getId());
+            } catch (Exception e) {
+                log.error("❌ Error al crear obra para TAREA_LEVE {}: {}", presupuestoGuardado.getId(), e.getMessage());
+                throw new RuntimeException("Error al crear obra: " + e.getMessage());
+            }
+        }
+        
+        // 6. 🔄 SINCRONIZACIÓN AUTOMÁTICA: Si el presupuesto tiene obra asociada, sincronizar estado
+        if (presupuestoGuardado.getObra() != null) {
+            try {
+                Obra obra = obraRepository.findById(presupuestoGuardado.getObra().getId())
                         .orElse(null);
                 if (obra != null) {
                     // Convertir estado de presupuesto a estado de obra
@@ -3112,11 +3135,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                     obra.setEstado(estadoObra);
                     obraRepository.save(obra);
                     log.info("✅ Estado sincronizado: Presupuesto {} → Obra {} (estado: {})",
-                            presupuesto.getId(), obra.getId(), estadoObra.getDisplayName());
+                            presupuestoGuardado.getId(), obra.getId(), estadoObra.getDisplayName());
                 }
             } catch (Exception e) {
                 log.error("❌ Error al sincronizar estado con obra {}: {}",
-                        presupuesto.getObra() != null ? presupuesto.getObra().getId() : null, e.getMessage());
+                        presupuestoGuardado.getObra() != null ? presupuestoGuardado.getObra().getId() : null, e.getMessage());
                 // No lanzar excepción para no interrumpir el flujo principal
             }
         }
@@ -5219,11 +5242,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
      * Crea una obra automáticamente para presupuestos que la requieren inmediatamente
      */
     private void crearObraAutomaticamente(PresupuestoNoCliente presupuesto) {
-        log.info("🏗️ Creando obra automáticamente para presupuesto ID: {}", presupuesto.getId());
-        
+        log.info("🏗️ Creando obra automáticamente para presupuesto ID: {} (tipo: {})",
+                presupuesto.getId(), presupuesto.getTipoPresupuesto());
+
         try {
             com.rodrigo.construccion.model.entity.Obra nuevaObra = new com.rodrigo.construccion.model.entity.Obra();
-            
+
             // Datos básicos de la obra
             nuevaObra.setNombre(presupuesto.getNombreObra());
             nuevaObra.setDireccionObraCalle(presupuesto.getDireccionObraCalle());
@@ -5232,37 +5256,50 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             nuevaObra.setDireccionObraDepartamento(presupuesto.getDireccionObraDepartamento());
             nuevaObra.setDireccionObraBarrio(presupuesto.getDireccionObraBarrio());
             nuevaObra.setDireccionObraTorre(presupuesto.getDireccionObraTorre());
-            
+
             // Configuración según tipo de presupuesto
             nuevaObra.setPresupuestoOriginalId(presupuesto.getId());
             nuevaObra.setTipoOrigen(com.rodrigo.construccion.enums.TipoOrigen.fromTipoPresupuesto(presupuesto.getTipoPresupuesto()));
-            
+
+            // ⚡ TAREA_LEVE: vincular a obra padre (puede ser Obra Principal o Sub-Obra de TRABAJO_EXTRA)
+            // El presupuesto llega con obra = obra padre (puesta en crear() desde dto.getIdObra())
+            // Guardamos ese vínculo en obraOrigenId ANTES de sobreescribir presupuesto.obra
+            if (presupuesto.getTipoPresupuesto() == com.rodrigo.construccion.enums.TipoPresupuesto.TAREA_LEVE
+                    && presupuesto.getObra() != null) {
+                Long obraOrigenId = presupuesto.getObra().getId();
+                nuevaObra.setObraOrigenId(obraOrigenId);
+                log.info("🔗 TAREA_LEVE: nueva obra vinculada a obra padre ID: {}", obraOrigenId);
+            }
+
             // Cliente y empresa
             nuevaObra.setCliente(presupuesto.getCliente());
             nuevaObra.setEmpresaId(presupuesto.getEmpresa().getId());
-            
-            // Estados y fechas
-            nuevaObra.setEstado(com.rodrigo.construccion.enums.EstadoObra.BORRADOR);
+
+            // Estado: Sincronizado con el presupuesto (APROBADO, TERMINADO, etc.)
+            com.rodrigo.construccion.enums.EstadoObra estadoObra = 
+                com.rodrigo.construccion.enums.EstadoObra.fromPresupuestoEstado(presupuesto.getEstado());
+            nuevaObra.setEstado(estadoObra);
+            log.info("🔄 Obra creada con estado: {} (sincronizado con presupuesto)", estadoObra);
             nuevaObra.setFechaInicio(presupuesto.getFechaProbableInicio());
-            
+
             // Presupuestos financieros
             if (presupuesto.getTotalPresupuesto() != null) {
                 nuevaObra.setPresupuestoEstimado(presupuesto.getTotalPresupuesto());
             }
-            
+
             // Flags
             nuevaObra.setEsObraManual(false);
             nuevaObra.setEsObraTrabajoExtra(presupuesto.getEsPresupuestoTrabajoExtra());
-            
+
             // Guardar obra
             nuevaObra = obraRepository.save(nuevaObra);
-            log.info("✅ Obra creada con ID: {}", nuevaObra.getId());
-            
-            // Asociar obra al presupuesto
+            log.info("✅ Obra creada con ID: {} (obraOrigenId: {})", nuevaObra.getId(), nuevaObra.getObraOrigenId());
+
+            // Asociar obra al presupuesto (reemplaza la obra padre temporal para TAREA_LEVE)
             presupuesto.setObra(nuevaObra);
             repository.save(presupuesto);
-            log.info("✅ Presupuesto {} vinculado a obra {}", presupuesto.getId(), nuevaObra.getId());
-            
+            log.info("✅ Presupuesto {} vinculado a su nueva obra {}", presupuesto.getId(), nuevaObra.getId());
+
         } catch (Exception e) {
             log.error("❌ Error al crear obra automáticamente para presupuesto {}: {}", presupuesto.getId(), e.getMessage());
             throw new RuntimeException("Error al crear obra automáticamente: " + e.getMessage());

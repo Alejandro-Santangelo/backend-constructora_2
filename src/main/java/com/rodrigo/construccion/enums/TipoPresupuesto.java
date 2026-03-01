@@ -43,8 +43,10 @@ public enum TipoPresupuesto {
     /**
      * Presupuesto Tarea Leve
      * Alias frontend: PRESUPUESTO_TAREA_LEVE
-     * Estado inicial: APROBADO (auto-aprobado) → NO crea obra nueva
-     * Campo OBLIGATORIO: obraId (vinculado a obra existente)
+     * Estado inicial: BORRADOR → el usuario edita → clic en "Aprobar" → cambia a TERMINADO
+     * Campo OBLIGATORIO: idObra (obra padre: puede ser Obra Principal o Sub-Obra de TRABAJO_EXTRA)
+     * Al APROBAR (cambiar estado a TERMINADO) crea su propia obra vinculada en estado TERMINADO
+     * obraOrigenId = idObra del padre
      * Cliente heredado de obra padre
      */
     @JsonAlias("PRESUPUESTO_TAREA_LEVE")
@@ -64,12 +66,13 @@ public enum TipoPresupuesto {
     public PresupuestoEstado getEstadoPorDefecto() {
         switch (this) {
             case TRABAJO_DIARIO:
-            case TAREA_LEVE:
             case TRABAJOS_SEMANALES:
                 return PresupuestoEstado.APROBADO;
+            case TAREA_LEVE:
             case TRABAJO_EXTRA:
             case TRADICIONAL:
             default:
+                // TAREA_LEVE arranca en BORRADOR: el usuario puede editarlo antes de marcarlo TERMINADO
                 return PresupuestoEstado.BORRADOR;
         }
     }
@@ -89,7 +92,8 @@ public enum TipoPresupuesto {
      * @return true si se aprueba automáticamente, false en caso contrario
      */
     public boolean seApruebaAutomaticamente() {
-        return this == TRABAJO_DIARIO || this == TAREA_LEVE || this == TRABAJOS_SEMANALES;
+        // TAREA_LEVE ya NO se auto-aprueba: tiene flujo BORRADOR → TERMINADO
+        return this == TRABAJO_DIARIO || this == TRABAJOS_SEMANALES;
     }
     
     /**
@@ -107,6 +111,7 @@ public enum TipoPresupuesto {
      * @return true si debe crear obra inmediatamente al crear presupuesto
      */
     public boolean creaObraInmediatamente() {
+        // TAREA_LEVE NO crea obra al POST - la crea al aprobar (cambiar estado a TERMINADO)
         return this == TRABAJO_DIARIO;
     }
     

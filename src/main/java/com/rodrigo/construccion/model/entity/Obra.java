@@ -26,7 +26,7 @@ import java.util.List;
         @Index(name = "idx_obras_cliente", columnList = "id_cliente"),
         @Index(name = "idx_obras_estado", columnList = "estado")
 })
-@Filter(name = "empresaFilter", condition = "EXISTS (SELECT 1 FROM cliente_empresa ce WHERE ce.id_cliente = id_cliente AND ce.id_empresa = :empresaId)")
+@Filter(name = "empresaFilter", condition = "(empresa_id = :empresaId OR EXISTS (SELECT 1 FROM cliente_empresa ce WHERE ce.id_cliente = id_cliente AND ce.id_empresa = :empresaId))")
 @Getter
 @Setter
 @NoArgsConstructor

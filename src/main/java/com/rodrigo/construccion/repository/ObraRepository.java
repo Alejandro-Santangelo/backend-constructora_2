@@ -22,16 +22,16 @@ public interface ObraRepository extends JpaRepository<Obra, Long> {
 
   /* CONSULTAS MULTI-TENANT: Filtradas por empresa */
 
-  /* Buscar obras por empresa (a través del cliente) */
-  @Query("SELECT o FROM Obra o JOIN o.cliente.empresas e WHERE e.id = :empresaId")
+  /* Buscar obras por empresa (por empresa_id directo O a través del cliente) */
+  @Query("SELECT o FROM Obra o LEFT JOIN o.cliente c LEFT JOIN c.empresas e WHERE o.empresaId = :empresaId OR e.id = :empresaId")
   List<Obra> findByEmpresaId(@Param("empresaId") Long empresaId);
 
   /* Buscar obras MANUALES por empresa (sin presupuesto previo) */
   @Query("SELECT o FROM Obra o JOIN o.cliente.empresas e WHERE e.id = :empresaId AND o.esObraManual = true")
   List<Obra> findObrasManualesByEmpresaId(@Param("empresaId") Long empresaId);
 
-  /* Buscar obra por ID y empresa */
-  @Query("SELECT o FROM Obra o JOIN o.cliente.empresas e WHERE o.id = :id AND e.id = :empresaId")
+  /* Buscar obra por ID y empresa (incluye obras con cliente null como TAREA_LEVE) */
+  @Query("SELECT o FROM Obra o LEFT JOIN o.cliente c LEFT JOIN c.empresas e WHERE o.id = :id AND (o.empresaId = :empresaId OR e.id = :empresaId)")
   Optional<Obra> findByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
 
   /* Buscar obras por cliente específico */
@@ -143,8 +143,8 @@ public interface ObraRepository extends JpaRepository<Obra, Long> {
       @Param("altura") Integer altura
   );
 
-  /* Verificar si existe una obra por ID y empresa */
-  @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Obra o JOIN o.cliente.empresas e WHERE o.id = :id AND e.id = :empresaId")
+  /* Verificar si existe una obra por ID y empresa (incluye obras con cliente null como TAREA_LEVE) */
+  @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Obra o LEFT JOIN o.cliente c LEFT JOIN c.empresas e WHERE o.id = :id AND (o.empresaId = :empresaId OR e.id = :empresaId)")
   boolean existsByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
 
   /**

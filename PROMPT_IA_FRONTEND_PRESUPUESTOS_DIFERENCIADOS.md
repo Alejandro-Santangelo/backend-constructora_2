@@ -1,10 +1,25 @@
 # 🤖 PROMPT PARA IA DEL FRONTEND - Sistema de Presupuestos Diferenciados
 
+> **⚡ Última actualización**: 28 de febrero de 2026 — Correcciones críticas tras verificación end-to-end del backend.
+
 ---
 
 ## 📋 CONTEXTO DE LA IMPLEMENTACIÓN
 
-El backend ha implementado un **sistema diferenciado de presupuestos** con 4 tipos distintos, cada uno con reglas de validación específicas. Necesitas adaptar el frontend para soportar esta nueva funcionalidad.
+El backend tiene un **sistema diferenciado de presupuestos** con 4 tipos activos. Cada tipo tiene reglas distintas de validación, estados, y comportamiento sobre obras.
+
+---
+
+## 🗂️ TABLA RÁPIDA DE REFERENCIA
+
+| Tipo (técnico) | Alias frontend | Estado inicial | ¿Crea obra? | ¿Requiere `idObra`? |
+|---|---|---|---|---|
+| `TRADICIONAL` | `PRESUPUESTO_PRINCIPAL` | `BORRADOR` | ✅ Al aprobar (Obra Principal) | ❌ null |
+| `TRABAJO_DIARIO` | `PRESUPUESTO_TRABAJO_DIARIO` | `APROBADO` | ✅ Inmediatamente | ❌ null |
+| `TRABAJO_EXTRA` | `PRESUPUESTO_ADICIONAL_OBRA` | `BORRADOR` | ✅ Al aprobar (**Sub-Obra**) | ✅ obligatorio |
+| `TAREA_LEVE` | `PRESUPUESTO_TAREA_LEVE` | `BORRADOR` | ✅ Su propia obra (BORRADOR→TERMINADO) | ✅ obligatorio (obra padre) |
+
+> ⚠️ **El backend acepta TANTO el nombre técnico como el alias.** Por ejemplo, enviar `"tipoPresupuesto": "PRESUPUESTO_PRINCIPAL"` es equivalente a `"TRADICIONAL"`.
 
 ---
 
@@ -13,7 +28,7 @@ El backend ha implementado un **sistema diferenciado de presupuestos** con 4 tip
 Modificar el formulario de creación/edición de presupuestos para:
 1. Permitir seleccionar entre 4 tipos de presupuestos
 2. Mostrar/ocultar campos dinámicamente según el tipo seleccionado
-3. Validar datos ANTES de enviar al backend para evitar errores 409
+3. Validar datos ANTES de enviar al backend para evitar errores
 4. Proporcionar feedback claro al usuario sobre las reglas de cada tipo
 
 ---
@@ -21,11 +36,11 @@ Modificar el formulario de creación/edición de presupuestos para:
 ## 📊 LOS 4 TIPOS DE PRESUPUESTOS
 
 ### **TIPO 1: TRADICIONAL** (Flujo estándar)
-- **Código**: `"TRADICIONAL"`
+- **Código**: `"TRADICIONAL"` / alias `"PRESUPUESTO_PRINCIPAL"`
 - **Comportamiento**: 
-  - Se crea en estado `A_ENVIAR` (borrador)
-  - Requiere aprobación manual del usuario
-  - Al aprobar, se crea automáticamente una **obra nueva**
+  - Se crea en estado `BORRADOR`
+  - Requiere aprobación manual del usuario (botón "Aprobar y Crear Obra" cuando está en ENVIADO)
+  - Al aprobar, se crea automáticamente una **Obra Principal** nueva
 - **Campo `idObra`**: ❌ **DEBE SER `null`** (NO seleccionar obra existente)
 - **Campos obligatorios**:
   - ✅ `nombreObra` (nombre de la obra que se creará)
@@ -36,10 +51,10 @@ Modificar el formulario de creación/edición de presupuestos para:
 ---
 
 ### **TIPO 2: TRABAJO_DIARIO** (Aprobación automática + obra inmediata)
-- **Código**: `"TRABAJO_DIARIO"`
+- **Código**: `"TRABAJO_DIARIO"` / alias `"PRESUPUESTO_TRABAJO_DIARIO"`
 - **Comportamiento**: 
   - Se crea directamente en estado `APROBADO` (sin pasar por borrador)
-  - Se crea la **obra inmediatamente** al guardar (sin esperar aprobación)
+  - Se crea la **Obra Principal** inmediatamente al guardar (sin esperar aprobación)
 - **Campo `idObra`**: ❌ **DEBE SER `null`**
 - **Campos obligatorios**:
   - ✅ `nombreObra`
@@ -49,31 +64,36 @@ Modificar el formulario de creación/edición de presupuestos para:
 
 ---
 
-### **TIPO 3: TRABAJO_EXTRA** (Trabajo adicional de obra existente)
-- **Código**: `"TRABAJO_EXTRA"`
+### **TIPO 3: TRABAJO_EXTRA** (Trabajo adicional de obra existente → crea Sub-Obra)
+- **Código**: `"TRABAJO_EXTRA"` / alias `"PRESUPUESTO_ADICIONAL_OBRA"`
 - **Comportamiento**: 
-  - Se crea en estado `A_ENVIAR` (borrador)
-  - Se vincula a una **obra existente** (obra padre)
+  - Se crea en estado `BORRADOR`
+  - Se vincula a una **obra PADRE existente** (Obra Principal o Sub-Obra)
   - El cliente se **hereda automáticamente** de la obra padre
-  - **NO** crea una obra nueva
-- **Campo `idObra`**: ✅ **OBLIGATORIO** (debe seleccionar obra existente)
-- **Campo `idCliente`**: ⚠️ No enviarlo (se ignora, se hereda de la obra)
-- **Campos de dirección**: No obligatorios (se ignoran)
-- **Uso típico**: Presupuestos de trabajos extras/adicionales en una obra en curso
+  - **NO** crea obra al crearse. Al aprobar `→` **crea una Sub-Obra** vinculada a la obra padre
+  - La sub-obra tiene `obraOrigenId = id_obra_padre` y `esObraTrabajoExtra = true`
+- **Campo `idObra`**: ✅ **OBLIGATORIO** — debe ser el ID de una obra EXISTENTE (la obra padre)
+- **Campo `idCliente`**: ⚠️ No enviar — se hereda automáticamente de la obra padre
+- **Campos de dirección**: No obligatorios al crear — se usan para nombrar la sub-obra
+- **Para aprobar**: Usar `POST /api/presupuestos-no-cliente/{id}/aprobar-y-crear-obra`
+- **Uso típico**: Ampliación, reforma o trabajo adicional en una obra ya en curso
 
 ---
 
-### **TIPO 4: TAREA_LEVE** (Tarea menor con aprobación automática)
-- **Código**: `"TAREA_LEVE"`
+### **TIPO 4: TAREA_LEVE** (Tarea menor con obra propia, flujo BORRADOR→TERMINADO)
+- **Código**: `"TAREA_LEVE"` / alias `"PRESUPUESTO_TAREA_LEVE"`
 - **Comportamiento**: 
-  - Se crea directamente en estado `APROBADO` (sin borrador)
-  - Se vincula a una **obra existente**
+  - Se crea en estado `BORRADOR` (el usuario puede editarlo antes de finalizar)
+  - Al guardarse, **crea su propia obra independiente** en estado `BORRADOR`
+  - La nueva obra queda vinculada a la **obra padre** mediante `obraOrigenId`
   - El cliente se **hereda automáticamente** de la obra padre
-  - **NO** crea una obra nueva
-- **Campo `idObra`**: ✅ **OBLIGATORIO** (debe seleccionar obra existente)
-- **Campo `idCliente`**: ⚠️ No enviarlo (se ignora, se hereda de la obra)
-- **Campos de dirección**: No obligatorios (se ignoran)
-- **Uso típico**: Arreglos menores, mantenimientos, tareas ligeras en obra existente
+  - El usuario finaliza la tarea → cambia estado del presupuesto a `TERMINADO` → la obra sincroniza a `TERMINADO`
+  - La obra propia permite tracking financiero independiente (cobros/pagos separados del padre)
+- **Campo `idObra`**: ✅ **OBLIGATORIO** — es la **obra padre** (puede ser Obra Principal **o** Sub-Obra creada por TRABAJO_EXTRA)
+- **Campo `idCliente`**: ⚠️ No enviar — se hereda automáticamente
+- **Campos de dirección**: No obligatorios (puede heredar los del padre visualmente)
+- **Flujo de estados**: `BORRADOR` → (usuario edita) → `TERMINADO`
+- **Uso típico**: Arreglos menores, mantenimientos, tareas ligeras. Tanto en obras principales como en sub-obras de TRABAJO_EXTRA
 
 ---
 
@@ -302,12 +322,25 @@ function guardarPresupuesto() {
 
 ## 📤 ESTRUCTURA DEL REQUEST AL BACKEND
 
-### **Endpoint**: `POST /api/v1/presupuestos-no-cliente?empresaId={id}`
+### **Endpoint crear presupuesto**: `POST /api/presupuestos-no-cliente`
+> ⚠️ La URL correcta es `/api/presupuestos-no-cliente` (sin `/v1/` y sin `?empresaId`)
+
+### **Campos obligatorios siempre** (NOT NULL en BD, sin default):
+| Campo | Tipo | Notas |
+|---|---|---|
+| `idEmpresa` | Long | ID de la empresa |
+| `tipoPresupuesto` | String | Ver tabla de tipos arriba |
+| `modoPresupuesto` | String | Usar el tipo como valor, ej: `"TRADICIONAL"` |
+| `calculoAutomaticoDiasHabiles` | boolean | Enviar `false` si no se usa |
+| `direccionObraCalle` | String | ⚠️ NOT NULL aunque sea trabajos extra |
+| `direccionObraAltura` | String | ⚠️ NOT NULL aunque sea trabajos extra |
 
 ### **Request Body - Ejemplo TRADICIONAL**:
 ```json
 {
   "tipoPresupuesto": "TRADICIONAL",
+  "modoPresupuesto": "TRADICIONAL",
+  "calculoAutomaticoDiasHabiles": false,
   "idEmpresa": 1,
   "idCliente": 5,
   "idObra": null,
@@ -326,37 +359,99 @@ function guardarPresupuesto() {
   "vencimiento": "2026-03-12",
   "fechaProbableInicio": "2026-03-15",
   
+  "totalPresupuesto": 150000.0,
+  "totalPresupuestoConHonorarios": 165000.0,
   "materialesList": [],
   "profesionales": []
 }
 ```
 
-### **Request Body - Ejemplo TRABAJO_EXTRA**:
+### **Request Body - Ejemplo TRABAJO_EXTRA** (vinculado a obra padre existente):
 ```json
 {
   "tipoPresupuesto": "TRABAJO_EXTRA",
+  "modoPresupuesto": "TRADICIONAL",
+  "calculoAutomaticoDiasHabiles": false,
   "idEmpresa": 1,
-  "idObra": 123,
+  "idObra": 46,
   
-  "nombreObra": "Trabajo extra - Pintura adicional",
+  "nombreObra": "Cabaña 2 - Pintura adicional",
+  "direccionObraCalle": "La Granja",
+  "direccionObraAltura": "193",
   
-  "nombreSolicitante": "María López",
-  "telefono": "+54 9 11 2222-3333",
-  "mail": "maria@example.com",
   "vencimiento": "2026-03-05",
-  
-  "materialesList": [
-    {
-      "idMaterial": 15,
-      "cantidad": 20.0,
-      "precioUnitario": 250.0
-    }
-  ],
+  "totalPresupuesto": 80000.0,
+  "totalPresupuestoConHonorarios": 88000.0,
+  "materialesList": [],
   "profesionales": []
 }
 ```
 
-**NOTA IMPORTANTE**: Para TRABAJO_EXTRA y TAREA_LEVE, **NO enviar `idCliente`** - se hereda automáticamente de la obra.
+> ℹ️ Para TRABAJO_EXTRA y TAREA_LEVE, **NO enviar `idCliente`** — se hereda automáticamente de la obra.
+
+### **Request Body - Ejemplo TAREA_LEVE** (crea obra propia, estado BORRADOR):
+```json
+{
+  "tipoPresupuesto": "TAREA_LEVE",
+  "modoPresupuesto": "TAREA_LEVE",
+  "calculoAutomaticoDiasHabiles": false,
+  "idEmpresa": 1,
+  "idObra": 46,
+
+  "nombreObra": "Reparación cañeria baño",
+  "direccionObraCalle": "La Granja",
+  "direccionObraAltura": "193",
+
+  "totalPresupuesto": 15000.0,
+  "totalPresupuestoConHonorarios": 15000.0
+}
+```
+
+> **Resultado**: Presupuesto en `BORRADOR` + obra propia creada en `BORRADOR` con `obraOrigenId = 46`  
+> Para finalizar: `PATCH /api/presupuestos-no-cliente/{id}/estado` con `{"estado": "TERMINADO"}` → la obra sincroniza a `TERMINADO`
+
+---
+
+## 🔄 FLUJO DE APROBACIÓN PARA TRABAJO_EXTRA
+
+> ⚠️ Para `TRABAJO_EXTRA`, el endpoint `/aprobar-y-crear-obra` es distinto al de `TRADICIONAL`. Ambos usan el mismo endpoint pero el comportamiento varía según el tipo.
+
+### **Endpoint aprobar**: `POST /api/presupuestos-no-cliente/{id}/aprobar-y-crear-obra`
+
+**Condiciones para llamarlo**:  
+- El presupuesto debe estar en estado `ENVIADO` (no BORRADOR)
+- Para pasar de BORRADOR → ENVIADO existe un endpoint de transición de estado
+
+**Respuesta exitosa** (`200 OK`):
+```json
+{
+  "obraId": 47,
+  "obraCreada": true,
+  "mensaje": "Sub-obra creada exitosamente para el trabajo extra",
+  "obraPadreId": 46,
+  "nombreSubObra": "Cabaña 2 - Pintura adicional",
+  "presupuestosActualizados": 1,
+  "clienteReutilizado": true,
+  "clienteId": 47
+}
+```
+
+**Qué crea el backend**:
+- Una **Sub-Obra** con `estado=APROBADO`, vinculada al padre mediante `obra_origen_id`
+- La sub-obra tiene `es_obra_trabajo_extra = true`
+- El cliente y empresa se heredan de la obra padre
+
+---
+
+## 🗄️ TABLA DE ITEMS — DATO CRÍTICO PARA EL FRONTEND
+
+> 🚨 **TODOS** los items de la calculadora (para CUALQUIER tipo de presupuesto) se guardan en `items_calculadora_presupuesto` (FK: `presupuesto_no_cliente_id`).
+
+La tabla `trabajos_extra_items_calculadora` es de una entidad SEPARADA (`TrabajoExtra`, endpoint `/api/v1/trabajos-extra`) y **NO tiene relación** con los presupuesto diferenciados. No buscar ahí los items de un `PresupuestoNoCliente`.
+
+---
+
+## 🔴 REGLAS DE VALIDACIÓN CRÍTICAS
 
 ---
 
@@ -364,60 +459,89 @@ function guardarPresupuesto() {
 
 ### **Error 409 - Conflict**
 
-**Causa**: Violación de reglas de validación del backend.
+Hay dos causas distintas que producen 409:
 
-**Mensajes de error que puede devolver el backend**:
+**Causa A — DataIntegrityViolationException** (campo obligatorio nulo):
+```json
+{
+  "status": 409,
+  "error": "Error de Integridad",
+  "message": "Error de integridad de datos. Verifique que los datos no estén duplicados..."
+}
+```
+- La causa más común: olvidar `modoPresupuesto` o `calculoAutomaticoDiasHabiles` en el payload
+- **Solución**: Incluir siempre esos dos campos en todos los requests de creación
 
-1. `"ERROR: Presupuestos tipo TRADICIONAL no deben tener obraId. Debe ser NULL para crear obra nueva."`
-   - **Solución frontend**: Asegurar que `idObra = null` para TRADICIONAL/TRABAJO_DIARIO
+**Causa B — IllegalStateException** (conflicto de reglas de negocio):
+```json
+{
+  "status": 409,
+  "message": "ERROR: Presupuestos tipo TRABAJO_EXTRA requieren obraId obligatorio."
+}
+```
+- **Solución frontend**: Validar antes de enviar (ver sección de validaciones)
 
-2. `"ERROR: nombreObra es obligatorio para presupuestos que crean obra nueva."`
-   - **Solución frontend**: Validar que `nombreObra` tenga texto
+### **Mensajes de error del backend**:
 
-3. `"ERROR: direccionObraCalle es obligatorio para presupuestos que crean obra nueva."`
-   - **Solución frontend**: Validar que `direccionObraCalle` tenga texto
-
-4. `"ERROR: direccionObraAltura es obligatorio para presupuestos que crean obra nueva."`
-   - **Solución frontend**: Validar que `direccionObraAltura` tenga texto
-
-5. `"ERROR: Presupuestos tipo TRABAJO_EXTRA requieren obraId obligatorio."`
-   - **Solución frontend**: Asegurar que se seleccionó una obra para TRABAJO_EXTRA/TAREA_LEVE
-
-6. `"ERROR: Obra con ID 999 no existe."`
-   - **Solución frontend**: Validar que la obra seleccionada existe antes de enviar
+1. `"ERROR: Presupuestos tipo TRADICIONAL no deben tener obraId."` → Limpiar `idObra = null`
+2. `"ERROR: nombreObra es obligatorio..."` → Validar campo
+3. `"ERROR: Presupuestos tipo TRABAJO_EXTRA requieren obraId obligatorio."` → Seleccionar obra
+4. `"ERROR: Obra con ID 999 no existe."` → ID de obra inválido
+5. `"Error de integridad de datos..."` → Revisar campos NOT NULL (`modoPresupuesto`, `calculoAutomaticoDiasHabiles`, etc.)
 
 **Implementación del manejo de errores**:
 
 ```javascript
 async function enviarAlBackend(presupuesto) {
   try {
-    const response = await fetch('/api/v1/presupuestos-no-cliente?empresaId=' + empresaId, {
+    const response = await fetch('/api/presupuestos-no-cliente', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'X-Empresa-Id': empresaId
+        'X-Empresa-Id': presupuesto.idEmpresa
       },
       body: JSON.stringify(presupuesto)
     });
     
     if (response.status === 409) {
-      // Error de validación
       const error = await response.json();
-      mostrarError('Error de validación: ' + error.message);
+      mostrarError('Error: ' + error.message);
       return;
     }
     
     if (!response.ok) {
-      throw new Error('Error al guardar presupuesto');
+      throw new Error('Error al guardar presupuesto: ' + response.status);
     }
     
     const presupuestoGuardado = await response.json();
-    mostrarExito('Presupuesto creado exitosamente');
+    mostrarExito('Presupuesto creado. Estado: ' + presupuestoGuardado.estado);
+    
+    // Para TRABAJO_DIARIO y TAREA_LEVE → ya está APROBADO, mostrar info de obra
+    if (presupuestoGuardado.estado === 'APROBADO' && presupuestoGuardado.obra) {
+      mostrarInfo('Obra vinculada: ' + presupuestoGuardado.obra.nombre);
+    }
+    
     redirigirAListado();
     
   } catch (error) {
     console.error('Error:', error);
-    mostrarError('Error al guardar el presupuesto. Por favor, inténtelo nuevamente.');
+    mostrarError('Error al guardar el presupuesto.');
+  }
+}
+
+// Para aprobar TRABAJO_EXTRA (presupuesto debe estar en ENVIADO)
+async function aprobarYCrearSubObra(presupuestoId) {
+  const response = await fetch(`/api/presupuestos-no-cliente/${presupuestoId}/aprobar-y-crear-obra`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' }
+  });
+  
+  if (response.ok) {
+    const resultado = await response.json();
+    // resultado.obraId → ID de la sub-obra creada
+    // resultado.obraPadreId → ID de la obra padre
+    // resultado.nombreSubObra → nombre de la sub-obra
+    mostrarExito(`Sub-Obra "${resultado.nombreSubObra}" creada (ID: ${resultado.obraId})`);
   }
 }
 ```
@@ -563,35 +687,57 @@ async function enviarAlBackend(presupuesto) {
 ### **Test 1: Crear Presupuesto TRADICIONAL**
 1. Seleccionar tipo "TRADICIONAL"
 2. Verificar que selector de obra está oculto
-3. Completar nombreObra, direccionObraCalle, direccionObraAltura
+3. Completar `nombreObra`, `direccionObraCalle`, `direccionObraAltura`, `modoPresupuesto`, `calculoAutomaticoDiasHabiles`
 4. Guardar
-5. **Resultado esperado**: Presupuesto creado en estado A_ENVIAR
+5. **Resultado esperado**: Presupuesto creado en estado `BORRADOR`, sin obra
 
 ### **Test 2: Crear Presupuesto TRABAJO_DIARIO**
 1. Seleccionar tipo "TRABAJO_DIARIO"
 2. Verificar que selector de obra está oculto
-3. Completar campos de obra
+3. Completar campos de obra y `modoPresupuesto`, `calculoAutomaticoDiasHabiles`
 4. Guardar
-5. **Resultado esperado**: Presupuesto creado en estado APROBADO + obra creada inmediatamente
+5. **Resultado esperado**: Presupuesto creado en estado `APROBADO` + Obra Principal creada inmediatamente
 
-### **Test 3: Crear Presupuesto TRABAJO_EXTRA**
+### **Test 3: Crear Presupuesto TRABAJO_EXTRA y aprobarlo**
 1. Seleccionar tipo "TRABAJO_EXTRA"
 2. Verificar que selector de obra está visible y obligatorio
-3. Seleccionar obra existente
+3. Seleccionar obra existente (ej: Obra Principal ID 46)
 4. Guardar
-5. **Resultado esperado**: Presupuesto vinculado a obra seleccionada + cliente heredado de obra
+5. **Resultado esperado 3a**: Presupuesto en estado `BORRADOR`, vinculado a obra 46, cliente heredado
+6. Cambiar estado a ENVIADO (si aplica el flujo del sistema)
+7. Llamar `POST /api/presupuestos-no-cliente/{id}/aprobar-y-crear-obra`
+8. **Resultado esperado 3b**: Sub-Obra creada, estado `APROBADO`, con `obraOrigenId = 46`, `esObraTrabajoExtra = true`
 
-### **Test 4: Validación - TRADICIONAL sin campos de obra**
+### **Test 4: Crear Presupuesto TAREA_LEVE (vinculado a Obra Principal)**
+1. Seleccionar tipo "TAREA_LEVE"
+2. Seleccionar obra padre existente (Obra Principal ej: ID 46)
+3. Completar `nombreObra`, `modoPresupuesto`, `calculoAutomaticoDiasHabiles`, `direccionObraCalle`, `direccionObraAltura`
+4. Guardar
+5. **Resultado esperado**: Presupuesto en `BORRADOR` + obra propia nueva con `obraOrigenId = 46`
+6. Editar si necesario, luego cambiar estado a `TERMINADO`
+7. **Resultado esperado**: Presupuesto `TERMINADO` + obra sincronizada a `TERMINADO`
+
+### **Test 5: Crear Presupuesto TAREA_LEVE (vinculado a Sub-Obra de TRABAJO_EXTRA)**
+1. Seleccionar tipo "TAREA_LEVE"
+2. Seleccionar obra padre existente (**Sub-Obra** ej: ID 47, creada desde TRABAJO_EXTRA)
+3. Guardar
+4. **Resultado esperado**: Presupuesto en `BORRADOR` + obra propia nueva con `obraOrigenId = 47` (sub-obra padre)
+
+### **Test 5: Validación - TRADICIONAL sin campos de obra**
 1. Seleccionar tipo "TRADICIONAL"
-2. Dejar nombreObra vacío
+2. Dejar `nombreObra` vacío
 3. Intentar guardar
 4. **Resultado esperado**: Error de validación "nombreObra es obligatorio"
 
-### **Test 5: Validación - TRABAJO_EXTRA sin obra seleccionada**
-1. Seleccionar tipo "TRABAJO_EXTRA"
-2. No seleccionar obra
-3. Intentar guardar
-4. **Resultado esperado**: Error de validación "requiere seleccionar obra"
+### **Test 6: Verificar que items se guardan en la tabla correcta**
+Al crear cualquier presupuesto con items → verificar en BD:
+```sql
+-- ✅ CORRECTO: Items siempre en esta tabla
+SELECT * FROM items_calculadora_presupuesto WHERE presupuesto_no_cliente_id = {id};
+
+-- ❌ INCORRECTO (esta tabla es para otra entidad)
+-- NO buscar items de PresupuestoNoCliente en trabajos_extra_items_calculadora
+```
 
 ---
 
@@ -599,32 +745,49 @@ async function enviarAlBackend(presupuesto) {
 
 **IMPLEMENTA LO SIGUIENTE**:
 
-1. **Selector de tipo de presupuesto** con 4 opciones: TRADICIONAL, TRABAJO_DIARIO, TRABAJO_EXTRA, TAREA_LEVE
+1. **Selector de tipo con 4 opciones**: `TRADICIONAL`, `TRABAJO_DIARIO`, `TRABAJO_EXTRA`, `TAREA_LEVE`
+   - El backend también acepta los aliases: `PRESUPUESTO_PRINCIPAL`, `PRESUPUESTO_TRABAJO_DIARIO`, `PRESUPUESTO_ADICIONAL_OBRA`, `PRESUPUESTO_TAREA_LEVE`
 
 2. **Lógica dinámica**:
-   - TRADICIONAL/TRABAJO_DIARIO → Ocultar selector de obra, mostrar campos de dirección obligatorios
-   - TRABAJO_EXTRA/TAREA_LEVE → Mostrar selector de obra obligatorio, ocultar cliente
+   - TRADICIONAL/TRABAJO_DIARIO → Sin `idObra`, campos de dirección obligatorios
+   - TRABAJO_EXTRA/TAREA_LEVE → `idObra` obligatorio, cliente oculto (se hereda)
 
-3. **Validaciones cliente**:
-   - TRADICIONAL/TRABAJO_DIARIO: `idObra = null`, campos de obra obligatorios
-   - TRABAJO_EXTRA/TAREA_LEVE: `idObra` obligatorio
+3. **Campos SIEMPRE requeridos en el request** (NOT NULL, sin default en BD):
+   - `modoPresupuesto` → usar el mismo valor que `tipoPresupuesto` (ej: `"TRADICIONAL"`)
+   - `calculoAutomaticoDiasHabiles` → enviar `false` si no aplica
+   - `direccionObraCalle` y `direccionObraAltura` → enviar aunque sea para TRABAJO_EXTRA/TAREA_LEVE
 
-4. **Request al backend**:
-   - Incluir campo `"tipoPresupuesto": "TRADICIONAL"` (o el tipo seleccionado)
-   - Para TRABAJO_EXTRA/TAREA_LEVE: NO enviar `idCliente`
+4. **Flujo de aprobación**:
+   - TRADICIONAL/TRABAJO_EXTRA: Requieren aprobación manual → `POST /api/presupuestos-no-cliente/{id}/aprobar-y-crear-obra`
+   - TRABAJO_DIARIO: Se aprueba automáticamente al crearse
+   - TAREA_LEVE: Comienza en BORRADOR, el usuario lo marca TERMINADO cuando finaliza
 
-5. **Manejo de errores 409**: Capturar y mostrar mensajes específicos del backend
+5. **Items de calculadora**: Siempre en tabla `items_calculadora_presupuesto`. **NUNCA** en `trabajos_extra_items_calculadora`
 
-6. **Feedback visual**: Mensajes informativos, badges, indicadores de campos obligatorios
+6. **TRABAJO_EXTRA aprobado** → crea Sub-Obra con:
+   - `estado = APROBADO`
+   - `obraOrigenId = id_obra_padre`
+   - `esObraTrabajoExtra = true`
+   - La response incluye: `obraId`, `obraPadreId`, `nombreSubObra`, `obraCreada: true`
+
+7. **TAREA_LEVE** nuevo comportamiento:
+   - Crea su **propia obra** (con `obraOrigenId` = ID del padre)
+   - `idObra` del request = obra PADRE (Obra Principal **o** Sub-Obra de TRABAJO_EXTRA)
+   - Estado inicial: `BORRADOR` (el usuario puede editar)
+   - Flujo: `BORRADOR` → (editar) → `TERMINADO` (presupuesto + su obra se sincronizan)
+   - Tiene tracking financiero independiente (cobros/pagos separados del padre)
+
+8. **Endpoint correcto**: `/api/presupuestos-no-cliente` (NO `/api/v1/presupuestos-no-cliente`)
 
 ---
 
 **DOCUMENTACIÓN COMPLETA**: Ver archivos adjuntos
 - `FRONTEND_GUIA_PRESUPUESTOS_DIFERENCIADOS.md` - Guía técnica detallada
 - `INFORME_COMPATIBILIDAD_TIPO_PRESUPUESTO.md` - Análisis de compatibilidad
+- `SISTEMA_PRESUPUESTOS_DIFERENCIADOS_README.md` - README del sistema
 
 ---
 
-**Última actualización**: 26 de febrero de 2026  
-**Versión Backend**: 2.0 - Sistema Diferenciado  
-**Autor**: Sistema Backend Constructora
+**Última actualización**: 28 de febrero de 2026  
+**Versión Backend**: 2.2 — TAREA_LEVE genera obra propia con flujo BORRADOR→TERMINADO  
+**Cambios**: TAREA_LEVE ahora inicia en BORRADOR, crea obra propia con obraOrigenId=padre (compatible con Obra Principal y Sub-Obra de TRABAJO_EXTRA)
