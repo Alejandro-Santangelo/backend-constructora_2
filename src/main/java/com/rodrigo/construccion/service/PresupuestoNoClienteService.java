@@ -3110,17 +3110,29 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // 5. 🔄 LÓGICA ESPECIAL PARA TAREA_LEVE: crear obra al aprobar (APROBADO o TERMINADO)
         if (presupuestoGuardado.getTipoPresupuesto() == com.rodrigo.construccion.enums.TipoPresupuesto.TAREA_LEVE
                 && (estado == com.rodrigo.construccion.enums.PresupuestoEstado.APROBADO 
-                    || estado == com.rodrigo.construccion.enums.PresupuestoEstado.TERMINADO)
-                && presupuestoGuardado.getObra() == null) {
-            try {
-                log.info("🏗️ TAREA_LEVE aprobado - Creando obra automáticamente con estado: {}", estado);
-                crearObraAutomaticamente(presupuestoGuardado);
-                // Refrescar presupuesto después de crear la obra
-                presupuestoGuardado = repository.findById(id).orElse(presupuestoGuardado);
-                log.info("✅ Obra creada exitosamente para presupuesto TAREA_LEVE ID: {}", presupuestoGuardado.getId());
-            } catch (Exception e) {
-                log.error("❌ Error al crear obra para TAREA_LEVE {}: {}", presupuestoGuardado.getId(), e.getMessage());
-                throw new RuntimeException("Error al crear obra: " + e.getMessage());
+                    || estado == com.rodrigo.construccion.enums.PresupuestoEstado.TERMINADO)) {
+            
+            // Verificar si ya existe una obra propia creada para este presupuesto
+            Optional<Obra> obraPropia = obraRepository.findByPresupuestoOriginalId(presupuestoGuardado.getId());
+            
+            if (!obraPropia.isPresent()) {
+                try {
+                    log.info("🏗️ TAREA_LEVE aprobado - Creando obra automáticamente con estado: {}", estado);
+                    log.info("🔍 Obra padre (temporal): ID = {}", 
+                            presupuestoGuardado.getObra() != null ? presupuestoGuardado.getObra().getId() : "NULL");
+                    crearObraAutomaticamente(presupuestoGuardado);
+                    // Refrescar presupuesto después de crear la obra
+                    presupuestoGuardado = repository.findById(id).orElse(presupuestoGuardado);
+                    log.info("✅ Obra creada exitosamente para presupuesto TAREA_LEVE ID: {} (nueva obra ID: {})", 
+                            presupuestoGuardado.getId(), 
+                            presupuestoGuardado.getObra() != null ? presupuestoGuardado.getObra().getId() : "NULL");
+                } catch (Exception e) {
+                    log.error("❌ Error al crear obra para TAREA_LEVE {}: {}", presupuestoGuardado.getId(), e.getMessage());
+                    throw new RuntimeException("Error al crear obra: " + e.getMessage());
+                }
+            } else {
+                log.info("ℹ️ TAREA_LEVE {} ya tiene obra propia creada (ID: {}), no se crea nueva obra",
+                        presupuestoGuardado.getId(), obraPropia.get().getId());
             }
         }
         

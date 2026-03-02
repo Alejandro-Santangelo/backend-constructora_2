@@ -147,6 +147,10 @@ public interface ObraRepository extends JpaRepository<Obra, Long> {
   @Query("SELECT CASE WHEN COUNT(o) > 0 THEN true ELSE false END FROM Obra o LEFT JOIN o.cliente c LEFT JOIN c.empresas e WHERE o.id = :id AND (o.empresaId = :empresaId OR e.id = :empresaId)")
   boolean existsByIdAndEmpresaId(@Param("id") Long id, @Param("empresaId") Long empresaId);
 
+  /* Buscar obra creada a partir de un presupuesto específico (para TAREA_LEVE) */
+  @Query("SELECT o FROM Obra o WHERE o.presupuestoOriginalId = :presupuestoId")
+  Optional<Obra> findByPresupuestoOriginalId(@Param("presupuestoId") Long presupuestoId);
+
   /**
    * Actualiza el campo presupuesto_no_cliente_id de una obra específica
    * Usado para mantener sincronizado el vínculo con el presupuesto de mayor versión
