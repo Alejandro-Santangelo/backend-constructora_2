@@ -194,4 +194,19 @@ public interface PagoProfesionalObraRepository extends JpaRepository<PagoProfesi
     List<PagoProfesionalObra> findByEmpresaIdAndTipoPago(
         @Param("empresaId") Long empresaId,
         @Param("tipoPago") String tipoPago);
+
+    /**
+     * Buscar adelantos activos de un profesional con saldo pendiente.
+     * Retorna adelantos ordenados por fecha (FIFO - First In, First Out).
+     * 
+     * @param profesionalObraId ID del profesional en obra
+     * @return Lista de adelantos activos ordenados por fecha ascendente
+     */
+    @Query("SELECT p FROM PagoProfesionalObra p " +
+           "WHERE p.profesionalObra.id = :profesionalObraId " +
+           "AND p.esAdelanto = true " +
+           "AND p.estadoAdelanto = 'ACTIVO' " +
+           "AND p.saldoAdelantoPorDescontar > 0 " +
+           "ORDER BY p.fechaPago ASC")
+    List<PagoProfesionalObra> findAdelantosActivosByProfesionalObraId(@Param("profesionalObraId") Long profesionalObraId);
 }

@@ -9,6 +9,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.List;
 
 @Getter
 @Setter
@@ -55,6 +56,45 @@ public class PagoProfesionalObraRequestDTO {
     private BigDecimal montoBase; // Backward compatibility
     private BigDecimal ajustes;
     private BigDecimal montoFinal; // Backward compatibility
+
+    // ========== CAMPOS DE ADELANTOS ==========
+    
+    /**
+     * Indica si este pago es un adelanto (true) o un pago regular (false)
+     */
+    private Boolean esAdelanto = false;
+
+    /**
+     * Tipo/período del adelanto: 1_SEMANA, 2_SEMANAS, 1_MES, OBRA_COMPLETA
+     */
+    private String periodoAdelanto;
+
+    /**
+     * Estado del adelanto: ACTIVO, COMPLETADO, CANCELADO
+     */
+    private String estadoAdelanto;
+
+    /**
+     * Saldo pendiente por descontar del adelanto.
+     * Empieza igual a montoFinal y se va reduciendo con cada descuento.
+     */
+    private BigDecimal saldoAdelantoPorDescontar;
+
+    /**
+     * Monto original del adelanto para referencia histórica
+     */
+    private BigDecimal montoOriginalAdelanto;
+
+    /**
+     * Array de IDs de adelantos que se descontaron en este pago regular.
+     * Formato JSON string: "[1, 5, 8]" o puede venir como List<Long>
+     */
+    private String adelantosAplicadosIds;
+
+    /**
+     * Fecha de referencia de la semana del adelanto
+     */
+    private LocalDate semanaReferencia;
 
     // Datos de premios/bonos
     private String premioTipo; // FIJO, PORCENTAJE

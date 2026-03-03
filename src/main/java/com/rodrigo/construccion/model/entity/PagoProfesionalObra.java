@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Entidad PagoProfesionalObra
@@ -104,6 +105,52 @@ public class PagoProfesionalObra {
 
     @Column(name = "ajustes", precision = 15, scale = 2)
     private BigDecimal ajustes = BigDecimal.ZERO;
+
+    // ========== CAMPOS DE ADELANTOS ==========
+    
+    /**
+     * Indica si este pago es un adelanto (true) o un pago regular (false)
+     */
+    @Column(name = "es_adelanto")
+    private Boolean esAdelanto = false;
+
+    /**
+     * Tipo/período del adelanto: 1_SEMANA, 2_SEMANAS, 1_MES, OBRA_COMPLETA
+     */
+    @Column(name = "periodo_adelanto", length = 50)
+    private String periodoAdelanto;
+
+    /**
+     * Estado del adelanto: ACTIVO, COMPLETADO, CANCELADO
+     */
+    @Column(name = "estado_adelanto", length = 50)
+    private String estadoAdelanto = ESTADO_ADELANTO_ACTIVO;
+
+    /**
+     * Saldo pendiente por descontar del adelanto.
+     * Empieza igual a montoFinal y se va reduciendo con cada descuento.
+     */
+    @Column(name = "saldo_adelanto_por_descontar", precision = 10, scale = 2)
+    private BigDecimal saldoAdelantoPorDescontar = BigDecimal.ZERO;
+
+    /**
+     * Monto original del adelanto para referencia histórica
+     */
+    @Column(name = "monto_original_adelanto", precision = 10, scale = 2)
+    private BigDecimal montoOriginalAdelanto = BigDecimal.ZERO;
+
+    /**
+     * Array de IDs de adelantos que se descontaron en este pago regular.
+     * Formato JSON: [1, 5, 8]
+     */
+    @Column(name = "adelantos_aplicados_ids", columnDefinition = "jsonb")
+    private String adelantosAplicadosIds;
+
+    /**
+     * Fecha de referencia de la semana del adelanto
+     */
+    @Column(name = "semana_referencia")
+    private LocalDate semanaReferencia;
 
     @NotNull(message = "El monto final es obligatorio")
     @Column(name = "monto_final", nullable = false, precision = 15, scale = 2)
@@ -195,6 +242,17 @@ public class PagoProfesionalObra {
     public static final String PREMIO_TIPO_FIJO = "FIJO";
     public static final String PREMIO_TIPO_PORCENTAJE = "PORCENTAJE";
 
+    // ========== CONSTANTES DE PERÍODO DE ADELANTO ==========
+    public static final String PERIODO_1_SEMANA = "1_SEMANA";
+    public static final String PERIODO_2_SEMANAS = "2_SEMANAS";
+    public static final String PERIODO_1_MES = "1_MES";
+    public static final String PERIODO_OBRA_COMPLETA = "OBRA_COMPLETA";
+
+    // ========== CONSTANTES DE ESTADO DE ADELANTO ==========
+    public static final String ESTADO_ADELANTO_ACTIVO = "ACTIVO";
+    public static final String ESTADO_ADELANTO_COMPLETADO = "COMPLETADO";
+    public static final String ESTADO_ADELANTO_CANCELADO = "CANCELADO";
+
     // ========== MÉTODOS DE UTILIDAD ==========
     
     public boolean esPagoSemanal() {
@@ -202,7 +260,19 @@ public class PagoProfesionalObra {
     }
 
     public boolean esAdelanto() {
-        return TIPO_ADELANTO.equals(this.tipoPago);
+        return TIPO_ADELANTO.equals(this.tipoPago) || Boolean.TRUE.equals(this.esAdelanto);
+    }
+
+    public boolean esAdelantoActivo() {
+        return esAdelanto() && ESTADO_ADELANTO_ACTIVO.equals(this.estadoAdelanto);
+    }
+
+    public boolean esAdelantoCompletado() {
+        return esAdelanto() && ESTADO_ADELANTO_COMPLETADO.equals(this.estadoAdelanto);
+    }
+
+    public boolean tieneAdelantosAplicados() {
+        return this.adelantosAplicadosIds != null && !this.adelantosAplicadosIds.isEmpty();
     }
 
     public boolean esPremio() {
@@ -349,6 +419,21 @@ public class PagoProfesionalObra {
         }
         if (ajustes == null) {
             ajustes = BigDecimal.ZERO;
+        }
+        // Inicializar campos de adelantos si es un adelanto
+        if (Boolean.TRUE.equals(esAdelanto)) {
+            if (estadoAdelanto == null) {
+                estadoAdelanto = ESTADO_ADELANTO_ACTIVO;
+            }
+            if (saldoAdelantoPorDescontar == null && montoFinal != null) {
+                saldoAdelantoPorDescontar = montoFinal;
+            }
+            if (montoOriginalAdelanto == null && montoFinal != null) {
+                montoOriginalAdelanto = montoFinal;
+            }
+            if (tipoPago == null || tipoPago.isEmpty()) {
+                tipoPago = TIPO_ADELANTO;
+            }
         }
         // Calcular presentismo si no está establecido
         if (porcentajePresentismo == null && diasTrabajados != null && diasEsperados != null) {

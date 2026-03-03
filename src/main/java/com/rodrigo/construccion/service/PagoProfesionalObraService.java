@@ -11,15 +11,20 @@ import com.rodrigo.construccion.repository.ProfesionalObraRepository;
 import com.rodrigo.construccion.config.TenantContext;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class PagoProfesionalObraService implements IPagoProfesionalObraService {
@@ -103,15 +108,6 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
             pago.setEmpresaId(TenantContext.getTenantId());
         }
         
-        // Calcular adelantos pendientes si es pago semanal
-        if (PagoProfesionalObra.TIPO_SEMANAL.equals(request.getTipoPago()) 
-                && (request.getDescuentoAdelantos() == null || request.getDescuentoAdelantos().compareTo(BigDecimal.ZERO) == 0)) {
-            BigDecimal adelantosPendientes = calcularAdelantosPendientes(request.getProfesionalObraId());
-            if (adelantosPendientes.compareTo(BigDecimal.ZERO) > 0) {
-                pago.setDescuentoAdelantos(adelantosPendientes);
-            }
-        }
-        
         // Calcular presentismo si no viene
         if (pago.getPorcentajePresentismo() == null && pago.getDiasTrabajados() != null && pago.getDiasEsperados() != null) {
             pago.setPorcentajePresentismo(pago.calcularPorcentajePresentismo());
@@ -121,6 +117,17 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         if (pago.getMontoFinal() == null) {
             pago.setMontoFinal(pago.calcularMontoFinal());
         }
+
+        // ═══════════════════════════════════════════════════════════════
+        // ⭐ NUEVO: Aplicar descuentos de adelantos si es pago semanal
+        // ═══════════════════════════════════════════════════════════════
+        
+        if (PagoProfesionalObra.TIPO_SEMANAL.equals(request.getTipoPago()) && !Boolean.TRUE.equals(pago.getEsAdelanto())) {
+            // Solo aplicar descuentos en pagos semanales regulares (no en adelantos)
+            aplicarDescuentosDeAdelantos(pago);
+        }
+        
+        // ═══════════════════════════════════════════════════════════════
 
         PagoProfesionalObra pagoGuardado = pagoRepository.save(pago);
         return mapearEntityAResponse(pagoGuardado);
@@ -348,6 +355,35 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         pago.setConcepto(request.getConcepto());
         pago.setObservaciones(request.getObservaciones());
         pago.setComprobanteUrl(request.getComprobanteUrl());
+        
+        // ========== CAMPOS DE ADELANTOS ==========
+        if (request.getEsAdelanto() != null) {
+            pago.setEsAdelanto(request.getEsAdelanto());
+        }
+        
+        if (request.getPeriodoAdelanto() != null) {
+            pago.setPeriodoAdelanto(request.getPeriodoAdelanto());
+        }
+        
+        if (request.getEstadoAdelanto() != null) {
+            pago.setEstadoAdelanto(request.getEstadoAdelanto());
+        }
+        
+        if (request.getSaldoAdelantoPorDescontar() != null) {
+            pago.setSaldoAdelantoPorDescontar(request.getSaldoAdelantoPorDescontar());
+        }
+        
+        if (request.getMontoOriginalAdelanto() != null) {
+            pago.setMontoOriginalAdelanto(request.getMontoOriginalAdelanto());
+        }
+        
+        if (request.getAdelantosAplicadosIds() != null) {
+            pago.setAdelantosAplicadosIds(request.getAdelantosAplicadosIds());
+        }
+        
+        if (request.getSemanaReferencia() != null) {
+            pago.setSemanaReferencia(request.getSemanaReferencia());
+        }
     }
 
     private PagoProfesionalObraResponseDTO mapearEntityAResponse(PagoProfesionalObra pago) {
@@ -418,6 +454,15 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         response.setEsPremio(pago.esPremio());
         response.setEsBono(pago.esBono());
         response.setEstaPagado(pago.estaPagado());
+        
+        // ========== CAMPOS DE ADELANTOS ==========
+        response.setEsAdelantoRegistrado(pago.getEsAdelanto());
+        response.setPeriodoAdelanto(pago.getPeriodoAdelanto());
+        response.setEstadoAdelanto(pago.getEstadoAdelanto());
+        response.setSaldoAdelantoPorDescontar(pago.getSaldoAdelantoPorDescontar());
+        response.setMontoOriginalAdelanto(pago.getMontoOriginalAdelanto());
+        response.setAdelantosAplicadosIds(pago.getAdelantosAplicadosIds());
+        response.setSemanaReferencia(pago.getSemanaReferencia());
 
         return response;
     }
@@ -474,5 +519,143 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         PagoProfesionalObra actualizado = pagoRepository.save(pago);
         return mapearEntityAResponse(actualizado);
     }
-}
 
+    // ══════════════════════════════════════════════════════════════════════════════════
+    // LÓGICA DE ADELANTOS
+    // ══════════════════════════════════════════════════════════════════════════════════
+
+    /**
+     * Aplica descuentos de adelantos activos a un pago regular (semanal).
+     * 
+     * Busca todos los adelantos activos del profesional y descuenta proporcionalmente
+     * del pago regular. Actualiza el saldo pendiente de cada adelanto y marca como
+     * COMPLETADO cuando el saldo llega a cero.
+     * 
+     * @param pagoRegular Pago semanal al que se aplicarán los descuentos
+     */
+    private void aplicarDescuentosDeAdelantos(PagoProfesionalObra pagoRegular) {
+        // Solo aplicar en pagos semanales regulares (no en adelantos, premios, etc.)
+        if (!PagoProfesionalObra.TIPO_SEMANAL.equals(pagoRegular.getTipoPago())) {
+            return;
+        }
+        
+        Long profesionalObraId = pagoRegular.getProfesionalObraId();
+        
+        // Buscar adelantos activos del profesional
+        List<PagoProfesionalObra> adelantosActivos = pagoRepository.findAdelantosActivosByProfesionalObraId(profesionalObraId);
+        
+        if (adelantosActivos == null || adelantosActivos.isEmpty()) {
+            log.debug("No hay adelantos activos para el profesional obra ID: {}", profesionalObraId);
+            return;
+        }
+        
+        log.info("💸 Aplicando descuentos de {} adelantos activos para profesional obra ID: {}", 
+                 adelantosActivos.size(), profesionalObraId);
+        
+        // Calcular monto disponible para descontar del pago regular
+        BigDecimal montoBruto = pagoRegular.getMontoBruto();
+        if (montoBruto == null || montoBruto.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("El pago regular no tiene monto bruto válido para aplicar descuentos");
+            return;
+        }
+        
+        BigDecimal descuentoPresentismo = pagoRegular.getDescuentoPresentismo();
+        if (descuentoPresentismo == null) {
+            descuentoPresentismo = BigDecimal.ZERO;
+        }
+        
+        // Monto disponible = monto bruto - descuento por presentismo
+        BigDecimal montoDisponible = montoBruto.subtract(descuentoPresentismo);
+        
+        if (montoDisponible.compareTo(BigDecimal.ZERO) <= 0) {
+            log.warn("El pago regular no tiene monto disponible después del descuento de presentismo");
+            return;
+        }
+        
+        // Calcular total de adelantos pendientes
+        BigDecimal totalAdelantosPendientes = adelantosActivos.stream()
+            .map(PagoProfesionalObra::getSaldoAdelantoPorDescontar)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        
+        log.info("Total de adelantos pendientes: ${}, Monto disponible para descontar: ${}", 
+                 totalAdelantosPendientes, montoDisponible);
+        
+        // Calcular monto a descontar (máximo 40% del monto disponible)
+        BigDecimal porcentajeMaximo = new BigDecimal("0.40"); // 40%
+        BigDecimal montoMaximoDescuento = montoDisponible.multiply(porcentajeMaximo)
+            .setScale(2, RoundingMode.HALF_UP);
+        
+        // El descuento no debe exceder el total de adelantos pendientes
+        BigDecimal descuentoTotal = montoMaximoDescuento.min(totalAdelantosPendientes);
+        
+        log.info("Descuento total a aplicar: ${} (máximo 40% = ${})", 
+                 descuentoTotal, montoMaximoDescuento);
+        
+        // Distribuir el descuento proporcionalmente entre los adelantos
+        BigDecimal descuentoAcumulado = BigDecimal.ZERO;
+        List<Long> adelantosAplicadosIds = new ArrayList<>();
+        
+        for (int i = 0; i < adelantosActivos.size(); i++) {
+            PagoProfesionalObra adelanto = adelantosActivos.get(i);
+            BigDecimal saldoPendiente = adelanto.getSaldoAdelantoPorDescontar();
+            
+            BigDecimal descuentoAdelanto;
+            
+            if (i == adelantosActivos.size() - 1) {
+                // Último adelanto: descontar lo que reste para evitar errores de redondeo
+                descuentoAdelanto = descuentoTotal.subtract(descuentoAcumulado);
+            } else {
+                // Calcular descuento proporcional
+                BigDecimal proporcion = saldoPendiente.divide(totalAdelantosPendientes, 4, RoundingMode.HALF_UP);
+                descuentoAdelanto = descuentoTotal.multiply(proporcion).setScale(2, RoundingMode.HALF_UP);
+            }
+            
+            // No descontar más del saldo pendiente del adelanto
+            descuentoAdelanto = descuentoAdelanto.min(saldoPendiente);
+            
+            // Actualizar saldo del adelanto
+            BigDecimal nuevoSaldo = saldoPendiente.subtract(descuentoAdelanto);
+            adelanto.setSaldoAdelantoPorDescontar(nuevoSaldo);
+            
+            log.info("Adelanto ID {}: Descuento ${}, Saldo anterior ${}, Nuevo saldo ${}", 
+                     adelanto.getId(), descuentoAdelanto, saldoPendiente, nuevoSaldo);
+            
+            // Si el saldo llegó a cero, marcar como COMPLETADO
+            if (nuevoSaldo.compareTo(BigDecimal.ZERO) <= 0) {
+                adelanto.setEstadoAdelanto(PagoProfesionalObra.ESTADO_ADELANTO_COMPLETADO);
+                log.info("✅ Adelanto ID {} COMPLETADO", adelanto.getId());
+            }
+            
+            // Guardar adelanto actualizado
+            pagoRepository.save(adelanto);
+            
+            // Agregar ID a la lista de adelantos aplicados
+            adelantosAplicadosIds.add(adelanto.getId());
+            descuentoAcumulado = descuentoAcumulado.add(descuentoAdelanto);
+        }
+        
+        // Actualizar el pago regular con la información de adelantos aplicados
+        pagoRegular.setDescuentoAdelantos(descuentoAcumulado);
+        
+        // Convertir lista de IDs a JSON string
+        try {
+            String adelantosIdsJson = new ObjectMapper().writeValueAsString(adelantosAplicadosIds);
+            pagoRegular.setAdelantosAplicadosIds(adelantosIdsJson);
+        } catch (Exception e) {
+            log.error("Error al convertir IDs de adelantos a JSON", e);
+            // Como fallback, guardar como string simple
+            pagoRegular.setAdelantosAplicadosIds(adelantosAplicadosIds.toString());
+        }
+        
+        // Actualizar observaciones del pago regular
+        String observaciones = pagoRegular.getObservaciones();
+        if (observaciones == null) {
+            observaciones = "";
+        }
+        observaciones += String.format(" | 💸 Descuento de adelantos aplicado: $%s (IDs: %s)", 
+                                       descuentoAcumulado, adelantosAplicadosIds);
+        pagoRegular.setObservaciones(observaciones);
+        
+        log.info("✅ Descuento total de adelantos aplicado: ${}", descuentoAcumulado);
+    }
+}
