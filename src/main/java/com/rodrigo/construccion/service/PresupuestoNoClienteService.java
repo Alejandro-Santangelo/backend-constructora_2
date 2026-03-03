@@ -686,6 +686,13 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         PresupuestoNoCliente presupuesto = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Presupuesto no cliente no encontrado"));
 
+        // Forzar carga de la obra (relación LAZY) para que esté disponible en el JSON
+        if (presupuesto.getObra() != null) {
+            presupuesto.getObra().getId(); // Esto inicializa el proxy lazy
+            log.debug("📤 Obra cargada para presupuesto {}: obraId={}", 
+                presupuesto.getId(), presupuesto.getObra().getId());
+        }
+
         // Forzar carga de items de calculadora y sus relaciones
         for (ItemCalculadoraPresupuesto item : presupuesto.getItemsCalculadora()) {
             // Cargar profesionales desglosados
