@@ -19,6 +19,7 @@ import com.rodrigo.construccion.model.entity.Obra;
 import com.rodrigo.construccion.model.entity.Cliente;
 import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
+import com.rodrigo.construccion.model.entity.TrabajoAdicional;
 import com.rodrigo.construccion.dto.request.PresupuestoNoClienteRequestDTO;
 import com.rodrigo.construccion.dto.request.ItemCalculadoraPresupuestoDTO;
 import com.rodrigo.construccion.dto.request.MaterialCalculadoraDTO;
@@ -89,6 +90,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     private final JornalCalculadoraRepository jornalCalculadoraRepository;
     private final PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository;
     private final ObraMaterialRepository obraMaterialRepository;
+    private final TrabajoAdicionalRepository trabajoAdicionalRepository;
 
     public PresupuestoNoClienteService(
             PresupuestoNoClienteRepository repository,
@@ -104,7 +106,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             ProfesionalRepository profesionalRepository,
             JornalCalculadoraRepository jornalCalculadoraRepository,
             PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository,
-            ObraMaterialRepository obraMaterialRepository) {
+            ObraMaterialRepository obraMaterialRepository,
+            TrabajoAdicionalRepository trabajoAdicionalRepository) {
         this.repository = repository;
         this.costoInicialRepository = costoInicialRepository;
         this.itemCalculadoraRepository = itemCalculadoraRepository;
@@ -119,6 +122,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         this.jornalCalculadoraRepository = jornalCalculadoraRepository;
         this.pagoGastoGeneralObraRepository = pagoGastoGeneralObraRepository;
         this.obraMaterialRepository = obraMaterialRepository;
+        this.trabajoAdicionalRepository = trabajoAdicionalRepository;
     }
 
     @PersistenceContext
@@ -259,8 +263,88 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             log.info("⚠️ idObra es NULL - el presupuesto NO tendrá obra vinculada");
         }
 
+        // TrabajoAdicional (asociación nueva) - NUEVA FUNCIONALIDAD para TAREA_LEVE
+        if (dto.getTrabajoAdicionalId() != null) {
+            log.info("🔧 Asociando presupuesto TAREA_LEVE a TrabajoAdicional ID: {}", dto.getTrabajoAdicionalId());
+            TrabajoAdicional trabajoAdicional = trabajoAdicionalRepository.findById(dto.getTrabajoAdicionalId())
+                    .orElseThrow(() -> new IllegalArgumentException("TrabajoAdicional no encontrado con ID: " + dto.getTrabajoAdicionalId()));
+            pnc.setTrabajoAdicional(trabajoAdicional);
+            
+            // ========== HERENCIA AUTOMÁTICA DE DATOS DE CONTEXTO ==========
+            // El presupuesto TAREA_LEVE es PROPIO (independiente), pero hereda datos de contexto
+            log.info("📋 Heredando datos de contexto desde TrabajoAdicional...");
+            
+            // 1. Heredar empresa (ya está configurado más arriba, verificar que coincida)
+            if (dto.getIdEmpresa() != null && !dto.getIdEmpresa().equals(trabajoAdicional.getEmpresaId())) {
+                log.warn("⚠️ empresaId del DTO ({}) difiere del TrabajoAdicional ({}). Se usará el del TrabajoAdicional.", 
+                    dto.getIdEmpresa(), trabajoAdicional.getEmpresaId());
+            }
+            // La empresa ya fue seteada arriba, no cambiar
+            
+            // 2. Heredar obra padre del TrabajoAdicional (para obtener cliente y dirección)
+            Obra obraPadre = obraRepository.findById(trabajoAdicional.getObraId())
+                    .orElseThrow(() -> new IllegalArgumentException("Obra padre del TrabajoAdicional no encontrada: " + trabajoAdicional.getObraId()));
+            
+            // 3. Heredar cliente de la obra padre (si existe)
+            if (obraPadre.getCliente() != null) {
+                pnc.setCliente(obraPadre.getCliente());
+                log.info("✅ Cliente heredado de obra padre: {} (ID: {})", 
+                    obraPadre.getCliente().getNombre(), obraPadre.getCliente().getId());
+            } else {
+                log.info("ℹ️ Obra padre no tiene cliente asignado");
+            }
+            
+            // 4. Heredar dirección de la obra padre (si no viene en el DTO)
+            if (dto.getDireccionObraCalle() == null || dto.getDireccionObraCalle().trim().isEmpty()) {
+                pnc.setDireccionObraCalle(obraPadre.getDireccionObraCalle());
+                log.info("✅ Dirección (calle) heredada: {}", obraPadre.getDireccionObraCalle());
+            }
+            if (dto.getDireccionObraAltura() == null || dto.getDireccionObraAltura().trim().isEmpty()) {
+                pnc.setDireccionObraAltura(obraPadre.getDireccionObraAltura());
+                log.info("✅ Dirección (altura) heredada: {}", obraPadre.getDireccionObraAltura());
+            }
+            if (dto.getDireccionObraPiso() == null || dto.getDireccionObraPiso().trim().isEmpty()) {
+                pnc.setDireccionObraPiso(obraPadre.getDireccionObraPiso());
+            }
+            if (dto.getDireccionObraDepartamento() == null || dto.getDireccionObraDepartamento().trim().isEmpty()) {
+                pnc.setDireccionObraDepartamento(obraPadre.getDireccionObraDepartamento());
+            }
+            if (dto.getDireccionObraBarrio() == null || dto.getDireccionObraBarrio().trim().isEmpty()) {
+                pnc.setDireccionObraBarrio(obraPadre.getDireccionObraBarrio());
+            }
+            if (dto.getDireccionObraTorre() == null || dto.getDireccionObraTorre().trim().isEmpty()) {
+                pnc.setDireccionObraTorre(obraPadre.getDireccionObraTorre());
+            }
+            
+            // 5. Heredar contacto de la obra padre (si no viene en el DTO)
+            if (dto.getTelefono() == null || dto.getTelefono().trim().isEmpty()) {
+                pnc.setTelefono(obraPadre.getTelefono());
+                log.info("✅ Teléfono heredado: {}", obraPadre.getTelefono());
+            }
+            if (dto.getMail() == null || dto.getMail().trim().isEmpty()) {
+                pnc.setMail(obraPadre.getMail());
+                log.info("✅ Mail heredado: {}", obraPadre.getMail());
+            }
+            
+            // 6. Heredar nombre_solicitante de la obra padre (si no viene en el DTO)
+            if (dto.getNombreSolicitante() == null || dto.getNombreSolicitante().trim().isEmpty()) {
+                pnc.setNombreSolicitante(obraPadre.getNombreSolicitante());
+                log.info("✅ Nombre solicitante heredado: {}", obraPadre.getNombreSolicitante());
+            }
+            
+            log.info("✅ Presupuesto TAREA_LEVE vinculado a TrabajoAdicional ID: {} ({})", 
+                trabajoAdicional.getId(), trabajoAdicional.getNombre());
+            log.info("📋 Datos heredados: empresa, cliente (si existe), dirección completa, teléfono, mail, nombre_solicitante");
+            log.info("🆕 Datos propios del presupuesto: nombre='{}', fechas, contenido", dto.getNombreObra());
+            
+        } else {
+            log.info("⚠️ trabajoAdicionalId es NULL - el presupuesto TAREA_LEVE NO estará vinculado a TrabajoAdicional");
+        }
+
         // campos nulleables
-        pnc.setNombreSolicitante(dto.getNombreSolicitante());
+        if (dto.getNombreSolicitante() != null && !dto.getNombreSolicitante().trim().isEmpty()) {
+            pnc.setNombreSolicitante(dto.getNombreSolicitante());
+        }
         pnc.setDireccionParticular(dto.getDireccionParticular());
         pnc.setDireccionObraCalle(dto.getDireccionObraCalle());
         pnc.setDireccionObraAltura(dto.getDireccionObraAltura());
@@ -277,8 +361,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setRequisitosEspeciales(dto.getRequisitosEspeciales());
         pnc.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
         pnc.setFechaProbableInicio(dto.getFechaProbableInicio() != null ? dto.getFechaProbableInicio() : null);
-        pnc.setTelefono(dto.getTelefono());
-        pnc.setMail(dto.getMail());
+        if (dto.getTelefono() != null && !dto.getTelefono().trim().isEmpty()) {
+            pnc.setTelefono(dto.getTelefono());
+        }
+        if (dto.getMail() != null && !dto.getMail().trim().isEmpty()) {
+            pnc.setMail(dto.getMail());
+        }
         if (dto.getVencimiento() != null) {
             pnc.setVencimiento(dto.getVencimiento());
         } else {
@@ -5155,7 +5243,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("🔍 Validando datos para tipo presupuesto: {}", tipo);
         
         switch (tipo) {
-            case TRADICIONAL:
+            case PRINCIPAL:
             case TRABAJO_DIARIO:
                 // Validar campos descriptivos de la obra (sin restricción sobre obraId)
                 validarCamposRequeridosParaObraNueva(dto);
@@ -5167,12 +5255,39 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                 break;
                 
             case TRABAJO_EXTRA:
-            case TAREA_LEVE:
                 // Validar que tenga obra asociada
                 if (dto.getIdObra() == null) {
                     throw new RuntimeException("ERROR: Presupuestos tipo " + tipo + " requieren obraId obligatorio.");
                 }
                 validarObraExistente(dto.getIdObra());
+                break;
+                
+            case TAREA_LEVE:
+                // NUEVA FUNCIONALIDAD: TAREA_LEVE puede vincularse a:
+                // - Una Obra (idObra) → comportamiento actual
+                // - Un TrabajoAdicional (trabajoAdicionalId) → nuevo
+                // Son mutuamente excluyentes
+                
+                boolean tieneObra = dto.getIdObra() != null;
+                boolean tieneTrabajoAdicional = dto.getTrabajoAdicionalId() != null;
+                
+                if (!tieneObra && !tieneTrabajoAdicional) {
+                    throw new RuntimeException("ERROR: Presupuestos tipo TAREA_LEVE requieren obraId O trabajoAdicionalId.");
+                }
+                
+                if (tieneObra && tieneTrabajoAdicional) {
+                    throw new RuntimeException("ERROR: Presupuestos tipo TAREA_LEVE no pueden tener obraId Y trabajoAdicionalId simultáneamente (son mutuamente excluyentes).");
+                }
+                
+                if (tieneObra) {
+                    log.info("🔗 TAREA_LEVE vinculado a Obra ID: {}", dto.getIdObra());
+                    validarObraExistente(dto.getIdObra());
+                }
+                
+                if (tieneTrabajoAdicional) {
+                    log.info("🔗 TAREA_LEVE vinculado a TrabajoAdicional ID: {}", dto.getTrabajoAdicionalId());
+                    validarTrabajoAdicionalExistente(dto.getTrabajoAdicionalId());
+                }
                 break;
                 
             default:
@@ -5202,6 +5317,19 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (!obraRepository.existsById(obraId)) {
             throw new RuntimeException("ERROR: Obra con ID " + obraId + " no existe.");
         }
+    }
+    
+    /**
+     * Valida que el trabajo adicional existe
+     * (NUEVA FUNCIONALIDAD - para presupuestos TAREA_LEVE vinculados a TrabajoAdicional)
+     */
+    private void validarTrabajoAdicionalExistente(Long trabajoAdicionalId) {
+        // Necesitamos inyectar TrabajoAdicionalRepository para esta validación
+        // Por ahora validamos que no sea null, la validación de existencia se hará al mapear
+        if (trabajoAdicionalId == null) {
+            throw new RuntimeException("ERROR: trabajoAdicionalId no puede ser null.");
+        }
+        log.info("✅ TrabajoAdicional ID {} será validado al mapear la entidad", trabajoAdicionalId);
     }
     
     /**

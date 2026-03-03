@@ -79,7 +79,7 @@ public enum TipoOrigen {
             return OBRA_INDEPENDIENTE;
         }
         switch (tipoPresupuesto) {
-            case TRADICIONAL:           return OBRA_PRINCIPAL;
+            case PRINCIPAL:             return OBRA_PRINCIPAL;
             case TRABAJO_DIARIO:        return OBRA_TRABAJO_DIARIO;
             case TRABAJO_EXTRA:         return TRABAJO_EXTRA;
             case TAREA_LEVE:            return TRABAJO_ADICIONAL;

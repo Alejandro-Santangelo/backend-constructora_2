@@ -122,6 +122,22 @@ public class TrabajoAdicionalRequestDTO {
      */
     private Long trabajoExtraId;
 
+    /**
+     * ID del trabajo adicional padre (opcional - NUEVA FUNCIONALIDAD)
+     * Permite crear jerarquías anidadas de trabajos adicionales.
+     * - null: trabajo adicional raíz (sin padre adicional)
+     * - valor: trabajo adicional hijo de otro trabajo adicional
+     * 
+     * Cuando se especifica, hereda automáticamente del padre:
+     * - obraId
+     * - empresaId
+     * - trabajoExtraId (si el padre lo tiene)
+     * 
+     * IMPORTANTE: No puede tener valores en trabajoExtraId Y trabajoAdicionalPadreId simultáneamente.
+     * Si se especifica trabajoAdicionalPadreId, trabajoExtraId debe ser null.
+     */
+    private Long trabajoAdicionalPadreId;
+
     @NotNull(message = "El ID de la empresa es obligatorio")
     private Long empresaId;
 }

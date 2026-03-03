@@ -84,6 +84,12 @@ public class TrabajoAdicionalResponseDTO {
 
     private Long trabajoExtraId;
 
+    /**
+     * ID del trabajo adicional padre (si este es un trabajo adicional hijo)
+     * null si es un trabajo adicional raíz
+     */
+    private Long trabajoAdicionalPadreId;
+
     private Long empresaId;
 
     private String estado;
@@ -97,4 +103,11 @@ public class TrabajoAdicionalResponseDTO {
      */
     @Builder.Default
     private List<TrabajoAdicionalProfesionalDTO> profesionales = new ArrayList<>();
+
+    /**
+     * Lista de trabajos adicionales hijos (si este es un trabajo adicional padre)
+     * null o vacía si no tiene hijos
+     */
+    @Builder.Default
+    private List<TrabajoAdicionalResponseDTO> trabajosAdicionalesHijos = new ArrayList<>();
 }

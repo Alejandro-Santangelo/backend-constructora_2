@@ -111,7 +111,7 @@ public class PresupuestoNoCliente {
     
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_presupuesto", nullable = false, length = 50)
-    private TipoPresupuesto tipoPresupuesto = TipoPresupuesto.TRADICIONAL;
+    private TipoPresupuesto tipoPresupuesto = TipoPresupuesto.PRINCIPAL;
     
     @Column(name = "modo_presupuesto", nullable = false, length = 50)
     private String modoPresupuesto = "TRADICIONAL";
@@ -456,6 +456,19 @@ public class PresupuestoNoCliente {
     @JsonIgnoreProperties({"presupuestosNoCliente", "hibernateLazyInitializer", "handler"})
     private Obra obra;
 
+    /**
+     * Relación con TrabajoAdicional (NUEVA FUNCIONALIDAD)
+     * Para presupuestos tipo TAREA_LEVE, pueden vincularse a:
+     * - Una Obra (comportamiento actual): obra_id tiene valor, trabajo_adicional_id es NULL
+     * - Un TrabajoAdicional (nuevo): trabajo_adicional_id tiene valor, obra_id es NULL
+     * 
+     * IMPORTANTE: obra_id y trabajo_adicional_id son mutuamente excluyentes para TAREA_LEVE
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "trabajo_adicional_id")
+    @JsonIgnoreProperties({"presupuestosTareasLeves", "hibernateLazyInitializer", "handler"})
+    private TrabajoAdicional trabajoAdicional;
+
     // Relación con cliente (opcional - puede ser NULL si aún no es cliente formal)
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "cliente_id")
@@ -703,6 +716,15 @@ public class PresupuestoNoCliente {
     @JsonProperty("obraId")
     public Long getObraId() {
         return this.obra != null ? this.obra.getId() : null;
+    }
+
+    /**
+     * Getter para serializar trabajo_adicional_id en el JSON de respuesta.
+     * El frontend necesita este campo para presupuestos TAREA_LEVE vinculados a trabajos adicionales.
+     */
+    @JsonProperty("trabajoAdicionalId")
+    public Long getTrabajoAdicionalId() {
+        return this.trabajoAdicional != null ? this.trabajoAdicional.getId() : null;
     }
 
     /**

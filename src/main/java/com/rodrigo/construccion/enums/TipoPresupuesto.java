@@ -18,14 +18,15 @@ public enum TipoPresupuesto {
      * Estado inicial: BORRADOR → cliente aprueba → se genera la obra
      * Campos requeridos: nombreObra, direccionObraCalle, direccionObraAltura
      */
-    @JsonAlias("PRESUPUESTO_PRINCIPAL")
-    TRADICIONAL,
+    @JsonAlias({"PRESUPUESTO_PRINCIPAL", "TRADICIONAL"})
+    PRINCIPAL,
 
     /**
      * Presupuesto Trabajo Diario
      * Alias frontend: PRESUPUESTO_TRABAJO_DIARIO
-     * Estado inicial: APROBADO (auto-aprobado) → obra se genera inmediatamente
+     * Estado inicial: BORRADOR → cliente aprueba → se genera la obra
      * Campos requeridos: nombreObra, direccionObraCalle, direccionObraAltura
+     * NOTA: Tiene el mismo flujo que PRINCIPAL (requiere aprobación manual)
      */
     @JsonAlias("PRESUPUESTO_TRABAJO_DIARIO")
     TRABAJO_DIARIO,
@@ -65,13 +66,14 @@ public enum TipoPresupuesto {
      */
     public PresupuestoEstado getEstadoPorDefecto() {
         switch (this) {
-            case TRABAJO_DIARIO:
             case TRABAJOS_SEMANALES:
                 return PresupuestoEstado.APROBADO;
+            case PRINCIPAL:
+            case TRABAJO_DIARIO:
             case TAREA_LEVE:
             case TRABAJO_EXTRA:
-            case TRADICIONAL:
             default:
+                // PRINCIPAL y TRABAJO_DIARIO arrancan en BORRADOR: requieren aprobación manual
                 // TAREA_LEVE arranca en BORRADOR: el usuario puede editarlo antes de marcarlo TERMINADO
                 return PresupuestoEstado.BORRADOR;
         }
@@ -83,7 +85,7 @@ public enum TipoPresupuesto {
      * @return true si requiere aprobación, false en caso contrario
      */
     public boolean requiereAprobacionCliente() {
-        return this == TRADICIONAL || this == TRABAJO_EXTRA;
+        return this == PRINCIPAL || this == TRABAJO_DIARIO || this == TRABAJO_EXTRA;
     }
     
     /**
@@ -92,8 +94,9 @@ public enum TipoPresupuesto {
      * @return true si se aprueba automáticamente, false en caso contrario
      */
     public boolean seApruebaAutomaticamente() {
-        // TAREA_LEVE ya NO se auto-aprueba: tiene flujo BORRADOR → TERMINADO
-        return this == TRABAJO_DIARIO || this == TRABAJOS_SEMANALES;
+        // Solo TRABAJOS_SEMANALES se auto-aprueba (legacy)
+        // TRABAJO_DIARIO ahora requiere aprobación manual como PRINCIPAL
+        return this == TRABAJOS_SEMANALES;
     }
     
     /**
@@ -111,8 +114,9 @@ public enum TipoPresupuesto {
      * @return true si debe crear obra inmediatamente al crear presupuesto
      */
     public boolean creaObraInmediatamente() {
+        // PRINCIPAL y TRABAJO_DIARIO NO crean obra al POST - esperan aprobación manual
         // TAREA_LEVE NO crea obra al POST - la crea al aprobar (cambiar estado a TERMINADO)
-        return this == TRABAJO_DIARIO;
+        return false;
     }
     
     /**
@@ -140,7 +144,8 @@ public enum TipoPresupuesto {
         }
         switch (value.trim().toUpperCase()) {
             // Aliases semánticos del frontend
-            case "PRESUPUESTO_PRINCIPAL":      return TRADICIONAL;
+            case "PRESUPUESTO_PRINCIPAL":      return PRINCIPAL;
+            case "TRADICIONAL":                return PRINCIPAL;  // Backward compatibility
             case "PRESUPUESTO_TRABAJO_DIARIO": return TRABAJO_DIARIO;
             case "PRESUPUESTO_ADICIONAL_OBRA": return TRABAJO_EXTRA;
             case "PRESUPUESTO_TAREA_LEVE":     return TAREA_LEVE;

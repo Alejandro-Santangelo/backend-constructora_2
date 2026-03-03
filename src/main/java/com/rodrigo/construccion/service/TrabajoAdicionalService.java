@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -38,11 +39,16 @@ public class TrabajoAdicionalService {
     public TrabajoAdicionalResponseDTO crear(TrabajoAdicionalRequestDTO requestDTO) {
         log.info("Creando trabajo adicional: {}", requestDTO.getNombre());
 
-        // Validar constraint: debe tener obra_id O trabajo_extra_id, pero no ambos
-        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId());
+        // Validar constraint: obraId obligatorio, trabajoExtraId y trabajoAdicionalPadreId excluyentes
+        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), 
+                                           requestDTO.getTrabajoAdicionalPadreId());
 
         // Validar que la obra o trabajo extra existe y pertenece a la empresa
         validarObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), requestDTO.getEmpresaId());
+        
+        // Validar trabajo adicional padre si existe (NUEVA FUNCIONALIDAD)
+        validarTrabajoAdicionalPadre(requestDTO.getTrabajoAdicionalPadreId(), 
+                                     requestDTO.getObraId(), requestDTO.getEmpresaId());
 
         // Validar profesionales registrados (si los hay)
         validarProfesionalesRegistrados(requestDTO.getProfesionales());
@@ -91,6 +97,7 @@ public class TrabajoAdicionalService {
                 .observaciones(requestDTO.getObservaciones())
                 .obraId(requestDTO.getObraId())
                 .trabajoExtraId(requestDTO.getTrabajoExtraId())
+                .trabajoAdicionalPadreId(requestDTO.getTrabajoAdicionalPadreId())
                 .empresaId(requestDTO.getEmpresaId())
                 .estado("PENDIENTE")
                 .build();
@@ -176,10 +183,15 @@ public class TrabajoAdicionalService {
         }
 
         // Validar constraint
-        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId());
+        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), 
+                                           requestDTO.getTrabajoAdicionalPadreId());
 
         // Validar obra/trabajo extra
         validarObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), requestDTO.getEmpresaId());
+        
+        // Validar trabajo adicional padre si existe  
+        validarTrabajoAdicionalPadre(requestDTO.getTrabajoAdicionalPadreId(), 
+                                     requestDTO.getObraId(), requestDTO.getEmpresaId());
 
         // Validar profesionales registrados
         validarProfesionalesRegistrados(requestDTO.getProfesionales());
@@ -227,6 +239,7 @@ public class TrabajoAdicionalService {
         trabajoAdicional.setObservaciones(requestDTO.getObservaciones());
         trabajoAdicional.setObraId(requestDTO.getObraId());
         trabajoAdicional.setTrabajoExtraId(requestDTO.getTrabajoExtraId());
+        trabajoAdicional.setTrabajoAdicionalPadreId(requestDTO.getTrabajoAdicionalPadreId());
 
         // Compatibilidad: extraer desglose si el frontend lo envió embebido en observaciones
         extraerDesgloseDeObservaciones(trabajoAdicional);
@@ -284,16 +297,23 @@ public class TrabajoAdicionalService {
 
     /**
      * Validar que obraId esté presente (siempre obligatorio)
-     * trabajoExtraId es opcional
+     * trabajoExtraId y trabajoAdicionalPadreId son opcionales pero excluyentes
      */
-    private void validarConstraintObraOTrabajoExtra(Long obraId, Long trabajoExtraId) {
+    private void validarConstraintObraOTrabajoExtra(Long obraId, Long trabajoExtraId, Long trabajoAdicionalPadreId) {
         if (obraId == null) {
             throw new TrabajoAdicionalValidationException(
                     "El ID de la obra es obligatorio. Todo trabajo adicional debe pertenecer a una obra");
         }
         
-        // trabajoExtraId es opcional, no requiere validación aquí
-        log.debug("Constraint validado - obraId: {}, trabajoExtraId: {}", obraId, trabajoExtraId);
+        // NUEVA VALIDACIÓN: trabajoExtraId y trabajoAdicionalPadreId son mutuamente excluyentes
+        if (trabajoExtraId != null && trabajoAdicionalPadreId != null) {
+            throw new TrabajoAdicionalValidationException(
+                    "Un trabajo adicional no puede tener trabajoExtraId y trabajoAdicionalPadreId simultáneamente. " +
+                    "Debe ser hijo de un trabajo extra O de otro trabajo adicional, no de ambos.");
+        }
+        
+        log.debug("Constraint validado - obraId: {}, trabajoExtraId: {}, trabajoAdicionalPadreId: {}", 
+                  obraId, trabajoExtraId, trabajoAdicionalPadreId);
     }
 
     /**
@@ -331,6 +351,50 @@ public class TrabajoAdicionalService {
         }
     }
 
+    /**
+     * Validar que el trabajo adicional padre existe y pertenece a la misma obra y empresa
+     * NUEVA FUNCIONALIDAD: Validación para jerarquías anidadas de trabajos adicionales
+     */
+    private void validarTrabajoAdicionalPadre(Long trabajoAdicionalPadreId, Long obraId, Long empresaId) {
+        if (trabajoAdicionalPadreId == null) {
+            return; // No hay padre, validación no necesaria
+        }
+
+        // Validar que el trabajo adicional padre existe
+        TrabajoAdicional trabajoAdicionalPadre = trabajoAdicionalRepository.findById(trabajoAdicionalPadreId)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Trabajo adicional padre no encontrado con ID: " + trabajoAdicionalPadreId));
+
+        // Validar que pertenece a la misma obra
+        if (!trabajoAdicionalPadre.getObraId().equals(obraId)) {
+            throw new TrabajoAdicionalValidationException(
+                    String.format("El trabajo adicional padre (ID: %d) no pertenece a la obra (ID: %d). " +
+                            "El trabajo adicional padre pertenece a la obra ID: %d", 
+                            trabajoAdicionalPadreId, obraId, trabajoAdicionalPadre.getObraId()));
+        }
+
+        // Validar que pertenece a la misma empresa
+        if (!trabajoAdicionalPadre.getEmpresaId().equals(empresaId)) {
+            throw new TrabajoAdicionalValidationException(
+                    String.format("El trabajo adicional padre (ID: %d) no pertenece a la empresa (ID: %d)", 
+                            trabajoAdicionalPadreId, empresaId));
+        }
+
+        // Validar que el padre no es un trabajo hijo de otro (evitar anidaciones profundas excesivas)
+        // Opcional: puedes comentar esta validación si quieres permitir múltiples niveles de anidación
+        if (trabajoAdicionalPadre.getTrabajoAdicionalPadreId() != null) {
+            log.warn("ADVERTENCIA: Se está creando un trabajo adicional hijo de otro trabajo hijo. " +
+                     "Esto puede crear jerarquías complejas. TrabajoAdicionalPadre ID: {}", trabajoAdicionalPadreId);
+            // Si quieres prohibirlo, descomenta la siguiente línea:
+            // throw new TrabajoAdicionalValidationException(
+            //     "No se permite crear trabajos adicionales hijos de otros trabajos hijos. " +
+            //     "El padre debe ser un trabajo adicional raíz.");
+        }
+
+        log.debug("Trabajo adicional padre {} validado correctamente para obra {} y empresa {}", 
+                  trabajoAdicionalPadreId, obraId, empresaId);
+    }
+
     private void validarProfesionalesRegistrados(List<TrabajoAdicionalProfesionalDTO> profesionales) {
         if (profesionales == null || profesionales.isEmpty()) {
             return;
@@ -366,6 +430,15 @@ public class TrabajoAdicionalService {
         List<TrabajoAdicionalProfesionalDTO> profesionalesDTO = trabajoAdicional.getProfesionales().stream()
                 .map(this::mapearProfesionalADTO)
                 .collect(Collectors.toList());
+
+        // Mapear hijos de forma ligera (solo primer nivel, sin recursión profunda)
+        List<TrabajoAdicionalResponseDTO> hijosDTO = new ArrayList<>();
+        if (trabajoAdicional.getTrabajosAdicionalesHijos() != null && 
+            !trabajoAdicional.getTrabajosAdicionalesHijos().isEmpty()) {
+            hijosDTO = trabajoAdicional.getTrabajosAdicionalesHijos().stream()
+                    .map(this::mapearAResponseDTOLigero) // Mapeo ligero sin hijos para evitar recursión infinita
+                    .collect(Collectors.toList());
+        }
 
         return TrabajoAdicionalResponseDTO.builder()
                 .id(trabajoAdicional.getId())
@@ -411,6 +484,7 @@ public class TrabajoAdicionalService {
                 .observaciones(trabajoAdicional.getObservaciones())
                 .obraId(trabajoAdicional.getObraId())
                 .trabajoExtraId(trabajoAdicional.getTrabajoExtraId())
+                .trabajoAdicionalPadreId(trabajoAdicional.getTrabajoAdicionalPadreId())
                 .empresaId(trabajoAdicional.getEmpresaId())
                 .estado(trabajoAdicional.getEstado())
                 .fechaCreacion(trabajoAdicional.getFechaCreacion() != null 
@@ -418,6 +492,69 @@ public class TrabajoAdicionalService {
                 .fechaActualizacion(trabajoAdicional.getFechaActualizacion() != null 
                         ? trabajoAdicional.getFechaActualizacion().format(DATE_TIME_FORMATTER) : null)
                 .profesionales(profesionalesDTO)
+                .trabajosAdicionalesHijos(hijosDTO)
+                .build();
+    }
+
+    /**
+     * Mapeo ligero de trabajo adicional hijo (sin incluir sus propios hijos para evitar recursión infinita)
+     * NUEVA FUNCIONALIDAD: Soporte para jerarquías anidadas
+     */
+    private TrabajoAdicionalResponseDTO mapearAResponseDTOLigero(TrabajoAdicional trabajoAdicional) {
+        List<TrabajoAdicionalProfesionalDTO> profesionalesDTO = trabajoAdicional.getProfesionales().stream()
+                .map(this::mapearProfesionalADTO)
+                .collect(Collectors.toList());
+
+        return TrabajoAdicionalResponseDTO.builder()
+                .id(trabajoAdicional.getId())
+                .nombre(trabajoAdicional.getNombre())
+                .importe(trabajoAdicional.getImporte())
+                .importeJornales(trabajoAdicional.getImporteJornales())
+                .importeMateriales(trabajoAdicional.getImporteMateriales())
+                .importeGastosGenerales(trabajoAdicional.getImporteGastosGenerales())
+                .importeHonorarios(trabajoAdicional.getImporteHonorarios())
+                .tipoHonorarios(trabajoAdicional.getTipoHonorarios())
+                .importeMayoresCostos(trabajoAdicional.getImporteMayoresCostos())
+                .tipoMayoresCostos(trabajoAdicional.getTipoMayoresCostos())
+                .honorarioJornales(trabajoAdicional.getHonorarioJornales())
+                .tipoHonorarioJornales(trabajoAdicional.getTipoHonorarioJornales())
+                .honorarioMateriales(trabajoAdicional.getHonorarioMateriales())
+                .tipoHonorarioMateriales(trabajoAdicional.getTipoHonorarioMateriales())
+                .honorarioGastosGenerales(trabajoAdicional.getHonorarioGastosGenerales())
+                .tipoHonorarioGastosGenerales(trabajoAdicional.getTipoHonorarioGastosGenerales())
+                .honorarioMayoresCostos(trabajoAdicional.getHonorarioMayoresCostos())
+                .tipoHonorarioMayoresCostos(trabajoAdicional.getTipoHonorarioMayoresCostos())
+                .descuentoJornales(trabajoAdicional.getDescuentoJornales())
+                .tipoDescuentoJornales(trabajoAdicional.getTipoDescuentoJornales())
+                .descuentoMateriales(trabajoAdicional.getDescuentoMateriales())
+                .tipoDescuentoMateriales(trabajoAdicional.getTipoDescuentoMateriales())
+                .descuentoGastosGenerales(trabajoAdicional.getDescuentoGastosGenerales())
+                .tipoDescuentoGastosGenerales(trabajoAdicional.getTipoDescuentoGastosGenerales())
+                .descuentoMayoresCostos(trabajoAdicional.getDescuentoMayoresCostos())
+                .tipoDescuentoMayoresCostos(trabajoAdicional.getTipoDescuentoMayoresCostos())
+                .descuentoHonorarioJornales(trabajoAdicional.getDescuentoHonorarioJornales())
+                .tipoDescuentoHonorarioJornales(trabajoAdicional.getTipoDescuentoHonorarioJornales())
+                .descuentoHonorarioMateriales(trabajoAdicional.getDescuentoHonorarioMateriales())
+                .tipoDescuentoHonorarioMateriales(trabajoAdicional.getTipoDescuentoHonorarioMateriales())
+                .descuentoHonorarioGastosGenerales(trabajoAdicional.getDescuentoHonorarioGastosGenerales())
+                .tipoDescuentoHonorarioGastosGenerales(trabajoAdicional.getTipoDescuentoHonorarioGastosGenerales())
+                .descuentoHonorarioMayoresCostos(trabajoAdicional.getDescuentoHonorarioMayoresCostos())
+                .tipoDescuentoHonorarioMayoresCostos(trabajoAdicional.getTipoDescuentoHonorarioMayoresCostos())
+                .diasNecesarios(trabajoAdicional.getDiasNecesarios())
+                .fechaInicio(trabajoAdicional.getFechaInicio())
+                .descripcion(trabajoAdicional.getDescripcion())
+                .observaciones(trabajoAdicional.getObservaciones())
+                .obraId(trabajoAdicional.getObraId())
+                .trabajoExtraId(trabajoAdicional.getTrabajoExtraId())
+                .trabajoAdicionalPadreId(trabajoAdicional.getTrabajoAdicionalPadreId())
+                .empresaId(trabajoAdicional.getEmpresaId())
+                .estado(trabajoAdicional.getEstado())
+                .fechaCreacion(trabajoAdicional.getFechaCreacion() != null 
+                        ? trabajoAdicional.getFechaCreacion().format(DATE_TIME_FORMATTER) : null)
+                .fechaActualizacion(trabajoAdicional.getFechaActualizacion() != null 
+                        ? trabajoAdicional.getFechaActualizacion().format(DATE_TIME_FORMATTER) : null)
+                .profesionales(profesionalesDTO)
+                .trabajosAdicionalesHijos(new ArrayList<>()) // No incluir hijos para evitar recursión
                 .build();
     }
 
@@ -523,8 +660,11 @@ public class TrabajoAdicionalService {
         log.info("🔧 Creando trabajo adicional como BORRADOR...");
         
         // Validaciones básicas (menos estrictas que la creación normal)
-        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId());
+        validarConstraintObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), 
+                                           requestDTO.getTrabajoAdicionalPadreId());
         validarObraOTrabajoExtra(requestDTO.getObraId(), requestDTO.getTrabajoExtraId(), requestDTO.getEmpresaId());
+        validarTrabajoAdicionalPadre(requestDTO.getTrabajoAdicionalPadreId(), 
+                                     requestDTO.getObraId(), requestDTO.getEmpresaId());
 
         // Crear entidad principal con estado BORRADOR
         TrabajoAdicional trabajoAdicional = TrabajoAdicional.builder()
@@ -569,6 +709,7 @@ public class TrabajoAdicionalService {
                 .fechaInicio(requestDTO.getFechaInicio())
                 .obraId(requestDTO.getObraId())
                 .trabajoExtraId(requestDTO.getTrabajoExtraId())
+                .trabajoAdicionalPadreId(requestDTO.getTrabajoAdicionalPadreId())
                 .empresaId(requestDTO.getEmpresaId())
                 .estado(TrabajoAdicional.ESTADO_BORRADOR) // Específicamente como borrador
                 .build();

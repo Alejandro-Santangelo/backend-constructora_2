@@ -20,8 +20,11 @@ public class PresupuestoNoClienteRequestDTO {
     @Schema(description = "ID del cliente asociado al presupuesto (opcional)", example = "1")
     private Long idCliente;
 
-    @Schema(description = "ID de la obra asociada al presupuesto", example = "1")
+    @Schema(description = "ID de la obra asociada al presupuesto (opcional para tipo TAREA_LEVE)", example = "1")
     private Long idObra;
+    
+    @Schema(description = "ID del trabajo adicional asociado al presupuesto (NUEVA FUNCIONALIDAD - solo para tipo TAREA_LEVE)", example = "5")
+    private Long trabajoAdicionalId;
     
     @Schema(description = "Tipo de presupuesto: TRADICIONAL, TRABAJO_DIARIO, TRABAJO_EXTRA, TAREA_LEVE", example = "TRADICIONAL")
     private String tipoPresupuesto;

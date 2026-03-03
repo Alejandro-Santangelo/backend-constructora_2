@@ -52,6 +52,7 @@
   ],
   "obraId": number (SIEMPRE obligatorio - obra padre),
   "trabajoExtraId": number/null (opcional - null: directo de obra, valor: desde trabajo extra),
+  "trabajoAdicionalPadreId": number/null (opcional - NUEVA FUNCIONALIDAD: anidación recursiva),
   "empresaId": number (obligatorio)
 }
 ```
@@ -59,30 +60,42 @@
 #### ⚠️ REGLA CRÍTICA: Constraint de Vinculación
 
 **obraId: SIEMPRE OBLIGATORIO (obra padre)**  
-**trabajoExtraId: OPCIONAL**
+**trabajoExtraId: OPCIONAL**  
+**trabajoAdicionalPadreId: OPCIONAL (NUEVO)**
 
 - `obraId`: Siempre tiene valor - indica la obra padre a la que pertenece el trabajo adicional
 - `trabajoExtraId`: Puede ser:
   - `null`: Trabajo adicional creado **DIRECTAMENTE desde una obra**
   - `número`: Trabajo adicional creado **desde un TRABAJO EXTRA** de esa obra
+- `trabajoAdicionalPadreId`: Puede ser: ⭐ **NUEVA FUNCIONALIDAD**
+  - `null`: Trabajo adicional raíz (sin padre adicional)
+  - `número`: Trabajo adicional **HIJO de otro TRABAJO ADICIONAL**
+
+**⚠️ IMPORTANTE:** `trabajoExtraId` y `trabajoAdicionalPadreId` son **mutuamente excluyentes**.
+No se puede tener valores en ambos campos simultáneamente.
 
 **Jerarquía de Trazabilidad:**
 ```
 Obra Padre (#123) ← obraId SIEMPRE presente
-├── Trabajo Adicional #1 (obraId: 123, trabajoExtraId: null) ← DIRECTO
-├── Trabajo Adicional #2 (obraId: 123, trabajoExtraId: null) ← DIRECTO
+├── Trabajo Adicional #1 (obraId: 123, trabajoExtraId: null, trabajoAdicionalPadreId: null) ← DIRECTO
+├── Trabajo Adicional #2 (obraId: 123, trabajoExtraId: null, trabajoAdicionalPadreId: null) ← DIRECTO
+│   ├── Trabajo Adicional #5 (obraId: 123, trabajoExtraId: null, trabajoAdicionalPadreId: 2) ← HIJO del #2 ⭐ NUEVO
+│   └── Trabajo Adicional #6 (obraId: 123, trabajoExtraId: null, trabajoAdicionalPadreId: 2) ← HIJO del #2 ⭐ NUEVO
 └── Trabajo Extra (#456)
-    ├── Trabajo Adicional #3 (obraId: 123, trabajoExtraId: 456) ← DESDE TRABAJO EXTRA
-    └── Trabajo Adicional #4 (obraId: 123, trabajoExtraId: 456) ← DESDE TRABAJO EXTRA
+    ├── Trabajo Adicional #3 (obraId: 123, trabajoExtraId: 456, trabajoAdicionalPadreId: null) ← DESDE TRABAJO EXTRA
+    │   └── Trabajo Adicional #7 (obraId: 123, trabajoExtraId: null, trabajoAdicionalPadreId: 3) ← HIJO del #3 ⭐ NUEVO
+    └── Trabajo Adicional #4 (obraId: 123, trabajoExtraId: 456, trabajoAdicionalPadreId: null) ← DESDE TRABAJO EXTRA
 ```
 
 **✅ VÁLIDO:**
-- `{ "obraId": 123, "trabajoExtraId": null }` → Trabajo adicional directo de obra
-- `{ "obraId": 123, "trabajoExtraId": 456 }` → Trabajo adicional desde trabajo extra (el trabajo extra #456 debe pertenecer a la obra #123)
+- `{ "obraId": 123, "trabajoExtraId": null, "trabajoAdicionalPadreId": null }` → Directo de obra
+- `{ "obraId": 123, "trabajoExtraId": 456, "trabajoAdicionalPadreId": null }` → Desde trabajo extra
+- `{ "obraId": 123, "trabajoExtraId": null, "trabajoAdicionalPadreId": 100 }` → Hijo de trabajo adicional ⭐ NUEVO
 
 **❌ INVÁLIDO:**
-- `{ "obraId": null, "trabajoExtraId": 456 }` → obraId es obligatorio
-- `{ "obraId": null, "trabajoExtraId": null }` → obraId es obligatorio
+- `{ "obraId": null, "trabajoExtraId": 456, "trabajoAdicionalPadreId": null }` → obraId es obligatorio
+- `{ "obraId": null, "trabajoExtraId": null, "trabajoAdicionalPadreId": null }` → obraId es obligatorio
+- `{ "obraId": 123, "trabajoExtraId": 456, "trabajoAdicionalPadreId": 100 }` → No puede tener ambos ❌ NUEVO
 
 #### Ejemplo 1: Trabajo adicional para OBRA
 
@@ -789,6 +802,212 @@ function validarTrabajoAdicional(formData) {
 - [ ] Agregar botones de cambio de estado (PATCH)
 - [ ] Implementar confirmación antes de eliminar
 - [ ] Probar con Swagger UI primero para verificar estructura de datos
+
+---
+
+## 🔄 ANIDACIÓN DE TRABAJOS ADICIONALES ⭐ NUEVA FUNCIONALIDAD
+
+### Descripción
+Los trabajos adicionales ahora soportan **jerarquías anidadas**, permitiendo que un trabajo adicional pueda tener trabajos adicionales hijos.
+
+### Ejemplo 3: Crear Trabajo Adicional Hijo ⭐ NUEVO
+
+**Paso 1: Crear el trabajo adicional padre**
+```json
+POST /api/trabajos-adicionales
+{
+  "nombre": "Sistema de iluminación LED",
+  "importe": 50000.00,
+  "diasNecesarios": 10,
+  "fechaInicio": "2026-03-15",
+  "descripcion": "Instalación completa de sistema LED",
+  "profesionales": [],
+  "obraId": 45,
+  "trabajoExtraId": null,
+  "trabajoAdicionalPadreId": null,
+  "empresaId": 10
+}
+```
+
+**Response 201 - Trabajo Padre Creado:**
+```json
+{
+  "id": 100,
+  "nombre": "Sistema de iluminación LED",
+  "importe": 50000.00,
+  "obraId": 45,
+  "trabajoExtraId": null,
+  "trabajoAdicionalPadreId": null,
+  "empresaId": 10,
+  "estado": "PENDIENTE",
+  "trabajosAdicionalesHijos": [],
+  "profesionales": []
+}
+```
+
+**Paso 2: Crear trabajo adicional hijo del anterior**
+```json
+POST /api/trabajos-adicionales
+{
+  "nombre": "Paneles LED para cocina",
+  "importe": 15000.00,
+  "diasNecesarios": 3,
+  "fechaInicio": "2026-03-16",
+  "descripcion": "Sub-trabajo: instalación de paneles en cocina",
+  "profesionales": [],
+  "obraId": 45,
+  "trabajoExtraId": null,
+  "trabajoAdicionalPadreId": 100,  // ← HIJO del trabajo adicional #100
+  "empresaId": 10
+}
+```
+
+**Response 201 - Trabajo Hijo Creado:**
+```json
+{
+  "id": 101,
+  "nombre": "Paneles LED para cocina",
+  "importe": 15000.00,
+  "obraId": 45,
+  "trabajoExtraId": null,
+  "trabajoAdicionalPadreId": 100,  // ← Indica que es hijo del #100
+  "empresaId": 10,
+  "estado": "PENDIENTE",
+  "trabajosAdicionalesHijos": [],
+  "profesionales": []
+}
+```
+
+**Paso 3: Obtener el padre con sus hijos**
+```http
+GET /api/trabajos-adicionales/100?empresaId=10
+```
+
+**Response 200 - Padre con Hijos:**
+```json
+{
+  "id": 100,
+  "nombre": "Sistema de iluminación LED",
+  "importe": 50000.00,
+  "obraId": 45,
+  "trabajoExtraId": null,
+  "trabajoAdicionalPadreId": null,
+  "empresaId": 10,
+  "estado": "PENDIENTE",
+  "trabajosAdicionalesHijos": [
+    {
+      "id": 101,
+      "nombre": "Paneles LED para cocina",
+      "importe": 15000.00,
+      "trabajoAdicionalPadreId": 100,
+      "trabajosAdicionalesHijos": []  // Solo 1 nivel de profundidad en response
+    }
+  ],
+  "profesionales": []
+}
+```
+
+### Ejemplo 4: Trabajo Adicional Anidado en Trabajo Extra ⭐ NUEVO
+
+**Escenario:** Crear un trabajo adicional hijo de un trabajo adicional que está dentro de un trabajo extra.
+
+```json
+POST /api/trabajos-adicionales
+{
+  "nombre": "Sub-instalación de gabinetes base",
+  "importe": 5000.00,
+  "diasNecesarios": 2,
+  "fechaInicio": "2026-03-18",
+  "descripcion": "Detalle de gabinetes base de cocina",
+  "profesionales": [],
+  "obraId": 45,
+  "trabajoExtraId": null,
+  "trabajoAdicionalPadreId": 50,  // ← Padre es un trabajo adicional que está en un trabajo extra
+  "empresaId": 10
+}
+```
+
+**Jerarquía resultante:**
+```
+Obra #45
+└── Trabajo Extra #78
+    └── Trabajo Adicional #50 "Instalación de gabinetes"
+        └── Trabajo Adicional #102 "Sub-instalación de gabinetes base" ⭐ NUEVO
+```
+
+### Testing cURL - Anidación ⭐ NUEVO
+
+**Crear trabajo adicional hijo:**
+```bash
+curl -X POST http://localhost:8080/api/trabajos-adicionales \
+  -H "Content-Type: application/json" \
+  -d '{
+    "nombre": "Paneles LED para baño",
+    "importe": 8000.00,
+    "diasNecesarios": 2,
+    "fechaInicio": "2026-03-17",
+    "descripcion": "Sub-trabajo: instalación de paneles en baño",
+    "profesionales": [],
+    "obraId": 45,
+    "trabajoExtraId": null,
+    "trabajoAdicionalPadreId": 100,
+    "empresaId": 10
+  }'
+```
+
+### Validaciones de Anidación
+
+**❌ Error: trabajoExtraId y trabajoAdicionalPadreId simultáneos**
+```json
+{
+  "obraId": 45,
+  "trabajoExtraId": 78,
+  "trabajoAdicionalPadreId": 100,  // ← ERROR: No puede tener ambos
+  "empresaId": 10
+}
+```
+
+**Response 400 Bad Request:**
+```json
+{
+  "error": "Bad Request",
+  "message": "Un trabajo adicional no puede tener trabajoExtraId y trabajoAdicionalPadreId simultáneamente. Debe ser hijo de un trabajo extra O de otro trabajo adicional, no de ambos."
+}
+```
+
+**❌ Error: Padre no existe**
+```json
+{
+  "obraId": 45,
+  "trabajoAdicionalPadreId": 99999,  // ← No existe
+  "empresaId": 10
+}
+```
+
+**Response 404 Not Found:**
+```json
+{
+  "error": "Not Found",
+  "message": "Trabajo adicional padre no encontrado con ID: 99999"
+}
+```
+
+**❌ Error: Padre de diferente obra**
+```json
+{
+  "obraId": 99,  // ← Obra diferente al padre
+  "trabajoAdicionalPadreId": 100,  // ← Padre pertenece a obra #45
+  "empresaId": 10
+}
+```
+
+**Response 400 Bad Request:**
+```json
+{
+  "error": "Bad Request",
+  "message": "El trabajo adicional padre (ID: 100) no pertenece a la obra (ID: 99). El trabajo adicional padre pertenece a la obra ID: 45"
+}
+```
 
 ---
 
