@@ -10,6 +10,7 @@ import com.rodrigo.construccion.model.entity.PagoProfesionalObra;
 import com.rodrigo.construccion.model.entity.PagoConsolidado;
 import com.rodrigo.construccion.model.entity.PagoGastoGeneralObra;
 import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
+import com.rodrigo.construccion.model.entity.ProfesionalObra;
 import com.rodrigo.construccion.repository.CobroObraRepository;
 import com.rodrigo.construccion.repository.GastoObraProfesionalRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
@@ -98,19 +99,11 @@ public class ObraFinancieroService implements IObraFinancieroService {
         resumen.setCantidadCobrosRealizados((int) cantidadCobrosRealizados);
 
         // ========== PAGOS A PROFESIONALES ==========
-        // Obtener todos los profesionales de esta obra (por dirección)
+        // Obtener todos los profesionales de ESTA OBRA ESPECÍFICA (no por dirección)
+        // CORRECCIÓN: Filtrar por obra ID para evitar duplicación entre obras en la misma dirección
         Long empresaId = TenantContext.getTenantId();
-        List<Long> profesionalesIds = profesionalObraRepository
-                .findByDireccionObra(
-                    obra.getDireccionObraCalle(),
-                    obra.getDireccionObraAltura(),
-                    obra.getDireccionObraPiso(),
-                    obra.getDireccionObraDepartamento(),
-                    empresaId
-                )
-                .stream()
-                .map(p -> p.getId())
-                .toList();
+        List<ProfesionalObra> profesionalesObra = profesionalObraRepository
+                .findByObraIdAndEmpresaIdWithRelations(obraId, empresaId);
 
         BigDecimal totalPagadoProfesionales = BigDecimal.ZERO;
         BigDecimal totalPagosSemanales = BigDecimal.ZERO;
@@ -118,8 +111,8 @@ public class ObraFinancieroService implements IObraFinancieroService {
         BigDecimal totalPremiosBonos = BigDecimal.ZERO;
         BigDecimal adelantosPendientesDescuento = BigDecimal.ZERO;
 
-        for (Long profesionalId : profesionalesIds) {
-            List<PagoProfesionalObra> pagos = pagoRepository.findByProfesionalObraId(profesionalId);
+        for (ProfesionalObra profesionalObra : profesionalesObra) {
+            List<PagoProfesionalObra> pagos = pagoRepository.findByProfesionalObraId(profesionalObra.getId());
             
             for (PagoProfesionalObra pago : pagos) {
                 if (PagoProfesionalObra.ESTADO_PAGADO.equals(pago.getEstado())) {
@@ -181,8 +174,8 @@ public class ObraFinancieroService implements IObraFinancieroService {
 
         // ========== GASTOS DE CAJA CHICA ==========
         BigDecimal totalGastosCajaChica = BigDecimal.ZERO;
-        for (Long profesionalId : profesionalesIds) {
-            List<GastoObraProfesional> gastos = gastoRepository.findByProfesionalObraId(profesionalId, empresaId);
+        for (ProfesionalObra profesionalObra : profesionalesObra) {
+            List<GastoObraProfesional> gastos = gastoRepository.findByProfesionalObraId(profesionalObra.getId(), empresaId);
             for (GastoObraProfesional gasto : gastos) {
                 totalGastosCajaChica = totalGastosCajaChica.add(gasto.getMonto());
             }

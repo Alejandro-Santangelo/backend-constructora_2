@@ -4,7 +4,7 @@ import com.rodrigo.construccion.dto.request.RetiroPersonalRequestDTO;
 import com.rodrigo.construccion.dto.response.*;
 import com.rodrigo.construccion.model.entity.RetiroPersonal;
 import com.rodrigo.construccion.repository.AsignacionCobroObraRepository;
-import com.rodrigo.construccion.repository.CobroObraRepository;
+import com.rodrigo.construccion.repository.CobroEmpresaRepository;
 import com.rodrigo.construccion.repository.RetiroPersonalRepository;
 import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
 import com.rodrigo.construccion.repository.PagoConsolidadoRepository;
@@ -27,7 +27,7 @@ import java.util.stream.Collectors;
 public class RetiroPersonalService {
 
     private final RetiroPersonalRepository retiroPersonalRepository;
-    private final CobroObraRepository cobroObraRepository;
+    private final CobroEmpresaRepository cobroEmpresaRepository;
     private final AsignacionCobroObraRepository asignacionCobroObraRepository;
     private final PagoProfesionalObraRepository pagoProfesionalObraRepository;
     private final PagoConsolidadoRepository pagoConsolidadoRepository;
@@ -35,29 +35,17 @@ public class RetiroPersonalService {
 
     /**
      * CRÍTICO: Calcular saldo disponible para retiros
-     * Fórmula: totalCobrado - totalPagado - totalRetirado
+     * Fórmula: totalCobrado - totalRetirado
+     * NOTA: Los PAGOS a profesionales/materiales NO se restan del saldo de retiros personales.
+     *       Solo se consideran: cobros del cliente menos retiros personales previos.
      */
     @Transactional(readOnly = true)
     public BigDecimal calcularSaldoDisponible(Long empresaId) {
-        // Total cobrado (solo estado COBRADO)
-        BigDecimal totalCobrado = cobroObraRepository.sumMontoByEmpresaIdAndEstado(
-            empresaId, "COBRADO"
-        );
+        // Total cobrado (de tabla cobros_empresa, sin filtrar por estado ANULADO)
+        BigDecimal totalCobrado = cobroEmpresaRepository.calcularTotalCobradoByEmpresa(empresaId);
         if (totalCobrado == null) {
             totalCobrado = BigDecimal.ZERO;
         }
-
-        // Total pagado = honorarios + materiales/gastos + trabajos extra (solo estado PAGADO)
-        BigDecimal totalHonorarios = pagoProfesionalObraRepository.calcularTotalPagadoByEmpresa(empresaId);
-        if (totalHonorarios == null) totalHonorarios = BigDecimal.ZERO;
-        
-        BigDecimal totalMaterialesGastos = pagoConsolidadoRepository.calcularTotalPagadoByEmpresa(empresaId);
-        if (totalMaterialesGastos == null) totalMaterialesGastos = BigDecimal.ZERO;
-        
-        BigDecimal totalTrabajosExtra = pagoTrabajoExtraObraRepository.calcularTotalPagadoByEmpresa(empresaId);
-        if (totalTrabajosExtra == null) totalTrabajosExtra = BigDecimal.ZERO;
-        
-        BigDecimal totalPagado = totalHonorarios.add(totalMaterialesGastos).add(totalTrabajosExtra);
 
         // Total retirado (solo estado ACTIVO)
         BigDecimal totalRetirado = retiroPersonalRepository.sumMontoByEmpresaIdAndEstado(
@@ -67,7 +55,8 @@ public class RetiroPersonalService {
             totalRetirado = BigDecimal.ZERO;
         }
 
-        return totalCobrado.subtract(totalPagado).subtract(totalRetirado);
+        // Saldo disponible = solo cobrado menos retirado (sin restar pagos operativos)
+        return totalCobrado.subtract(totalRetirado);
     }
 
     /**
@@ -76,12 +65,11 @@ public class RetiroPersonalService {
     @Transactional(readOnly = true)
     public SaldoDisponibleResponseDTO obtenerSaldoDisponibleCompleto(Long empresaId) {
         // Totales
-        BigDecimal totalCobrado = cobroObraRepository.sumMontoByEmpresaIdAndEstado(
-            empresaId, "COBRADO"
-        );
+        BigDecimal totalCobrado = cobroEmpresaRepository.calcularTotalCobradoByEmpresa(empresaId);
         if (totalCobrado == null) totalCobrado = BigDecimal.ZERO;
 
         // Total pagado = honorarios + materiales/gastos + trabajos extra
+        // NOTA: Este total se calcula para informar al frontend, pero NO afecta el saldo de retiros
         BigDecimal totalHonorarios = pagoProfesionalObraRepository.calcularTotalPagadoByEmpresa(empresaId);
         if (totalHonorarios == null) totalHonorarios = BigDecimal.ZERO;
         
@@ -98,27 +86,22 @@ public class RetiroPersonalService {
         );
         if (totalRetirado == null) totalRetirado = BigDecimal.ZERO;
 
-        BigDecimal saldoDisponible = totalCobrado.subtract(totalPagado).subtract(totalRetirado);
+        // Saldo disponible = solo cobrado menos retirado (sin restar pagos operativos)
+        BigDecimal saldoDisponible = totalCobrado.subtract(totalRetirado);
 
         // Desglose detallado
         DesgloseFinancieroDTO desglose = new DesgloseFinancieroDTO();
         
         // Resumen cobros
         ResumenCobrosDTO resumenCobros = new ResumenCobrosDTO();
-        List<Object> allCobros = cobroObraRepository.findByEmpresaId(empresaId).stream()
+        List<Object> allCobros = cobroEmpresaRepository.findByEmpresaId(empresaId).stream()
             .map(c -> (Object) c)
             .toList();
         resumenCobros.setCantidad((long) allCobros.size());
         resumenCobros.setMonto(totalCobrado);
-        resumenCobros.setCobrados(cobroObraRepository.findByEmpresaId(empresaId).stream()
-            .filter(c -> "COBRADO".equals(c.getEstado()))
-            .count());
-        resumenCobros.setPendientes(cobroObraRepository.findByEmpresaId(empresaId).stream()
-            .filter(c -> "PENDIENTE".equals(c.getEstado()))
-            .count());
-        resumenCobros.setAnulados(cobroObraRepository.findByEmpresaId(empresaId).stream()
-            .filter(c -> "ANULADO".equals(c.getEstado()))
-            .count());
+        resumenCobros.setCobrados((long) allCobros.size()); // Todos los cobros no anulados
+        resumenCobros.setPendientes(0L);
+        resumenCobros.setAnulados(0L);
         desglose.setCobros(resumenCobros);
 
         // Resumen asignaciones
