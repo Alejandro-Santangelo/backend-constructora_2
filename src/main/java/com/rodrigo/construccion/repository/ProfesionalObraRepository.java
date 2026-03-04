@@ -191,4 +191,18 @@ public interface ProfesionalObraRepository extends JpaRepository<ProfesionalObra
      */
     @Query("SELECT po FROM ProfesionalObra po WHERE po.profesional.id = :profesionalId AND po.obra.id = :obraId")
     Optional<ProfesionalObra> findByProfesionalIdAndObraId(@Param("profesionalId") Long profesionalId, @Param("obraId") Long obraId);
+
+    /**
+     * Buscar profesionales asignados a una obra específica con eager loading de relaciones
+     * Para sistema de adelantos y pagos - incluye datos del profesional
+     */
+    @Query("SELECT DISTINCT po FROM ProfesionalObra po " +
+           "LEFT JOIN FETCH po.profesional p " +
+           "LEFT JOIN FETCH po.obra o " +
+           "WHERE po.obra.id = :obraId " +
+           "AND po.empresaId = :empresaId " +
+           "ORDER BY p.nombre ASC")
+    List<ProfesionalObra> findByObraIdAndEmpresaIdWithRelations(
+            @Param("obraId") Long obraId,
+            @Param("empresaId") Long empresaId);
 }

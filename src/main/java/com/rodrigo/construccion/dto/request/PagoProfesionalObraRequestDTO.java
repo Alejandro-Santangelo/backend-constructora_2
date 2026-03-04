@@ -85,11 +85,8 @@ public class PagoProfesionalObraRequestDTO {
      */
     private BigDecimal montoOriginalAdelanto;
 
-    /**
-     * Array de IDs de adelantos que se descontaron en este pago regular.
-     * Formato JSON string: "[1, 5, 8]" o puede venir como List<Long>
-     */
-    private String adelantosAplicadosIds;
+    // NOTA: adelantosAplicadosIds se maneja automáticamente mediante tabla relacional
+    // No se envía desde el frontend
 
     /**
      * Fecha de referencia de la semana del adelanto

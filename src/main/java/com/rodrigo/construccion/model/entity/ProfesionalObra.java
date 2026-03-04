@@ -53,6 +53,18 @@ public class ProfesionalObra {
     @PositiveOrZero(message = "El valor por hora debe ser mayor o igual a cero")
     @Column(name = "importe_jornal", precision = 10, scale = 2)
     private BigDecimal valorHoraAsignado;
+    
+    @Column(name = "cantidad_jornales")
+    private Integer cantidadJornales;
+    
+    @Column(name = "importe_jornal", precision = 15, scale = 2, insertable = false, updatable = false)
+    private BigDecimal importeJornal;
+    
+    @Column(name = "jornales_utilizados")
+    private Integer jornalesUtilizados;
+    
+    @Column(name = "observaciones", columnDefinition = "TEXT")
+    private String observaciones;
 
     @Column(name = "estado")
     private String estado;

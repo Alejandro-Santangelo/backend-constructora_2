@@ -9,6 +9,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.List;
 
 @Getter
 @Setter
@@ -74,9 +75,10 @@ public class PagoProfesionalObraResponseDTO {
     private BigDecimal montoOriginalAdelanto;
 
     /**
-     * Array de IDs de adelantos que se descontaron en este pago regular.
+     * IDs de adelantos que fueron descontados en este pago regular.
+     * Obtenidos desde tabla relacional pago_adelantos_aplicados.
      */
-    private String adelantosAplicadosIds;
+    private List<Long> adelantosAplicadosIds;
 
     /**
      * Fecha de referencia de la semana del adelanto

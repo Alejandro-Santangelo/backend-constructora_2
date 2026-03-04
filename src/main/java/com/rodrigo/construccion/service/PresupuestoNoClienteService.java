@@ -91,6 +91,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     private final PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository;
     private final ObraMaterialRepository obraMaterialRepository;
     private final TrabajoAdicionalRepository trabajoAdicionalRepository;
+    private final ProfesionalObraService profesionalObraService;
 
     public PresupuestoNoClienteService(
             PresupuestoNoClienteRepository repository,
@@ -107,7 +108,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             JornalCalculadoraRepository jornalCalculadoraRepository,
             PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository,
             ObraMaterialRepository obraMaterialRepository,
-            TrabajoAdicionalRepository trabajoAdicionalRepository) {
+            TrabajoAdicionalRepository trabajoAdicionalRepository,
+            ProfesionalObraService profesionalObraService) {
         this.repository = repository;
         this.costoInicialRepository = costoInicialRepository;
         this.itemCalculadoraRepository = itemCalculadoraRepository;
@@ -123,6 +125,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         this.pagoGastoGeneralObraRepository = pagoGastoGeneralObraRepository;
         this.obraMaterialRepository = obraMaterialRepository;
         this.trabajoAdicionalRepository = trabajoAdicionalRepository;
+        this.profesionalObraService = profesionalObraService;
     }
 
     @PersistenceContext
@@ -3131,6 +3134,13 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                         : profesional.getValorHoraDefault();
                 asignacion.setValorHoraAsignado(valorHora);
 
+                // 🔧 FIX: Guardar cantidad de jornales e importe jornal para cálculos financieros
+                asignacion.setCantidadJornales(profCalc.getCantidadJornales() != null 
+                        ? profCalc.getCantidadJornales().intValue() 
+                        : 0);
+                asignacion.setImporteJornal(valorHora);
+                asignacion.setJornalesUtilizados(0); // Inicializar en 0
+
                 // Guardar asignación
                 ProfesionalObra asignacionGuardada = profesionalObraRepository.save(asignacion);
                 asignacionesCreadas++;
@@ -5451,6 +5461,54 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             log.error("❌ Error al crear obra automáticamente para presupuesto {}: {}", presupuesto.getId(), e.getMessage());
             throw new RuntimeException("Error al crear obra automáticamente: " + e.getMessage());
         }
+    }
+
+    /**
+     * Obtiene profesionales con datos financieros calculados de un presupuesto.
+     * Si el presupuesto está vinculado a una obra (global), busca los profesionales 
+     * en asignaciones_profesional_obra con sus totales pagados, adelantos y saldos.
+     * 
+     * @param presupuestoId ID del presupuesto
+     * @param empresaId ID de la empresa (multi-tenant)
+     * @return Lista de profesionales con datos financieros completos
+     * @throws ResourceNotFoundException si el presupuesto no existe o no está vinculado a obra
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO> obtenerProfesionalesFinancierosPorPresupuesto(
+            Long presupuestoId, Long empresaId) {
+        
+        log.info("🔍 Obteniendo profesionales financieros para presupuestoId={}, empresaId={}", presupuestoId, empresaId);
+        
+        // 1. Obtener el presupuesto
+        PresupuestoNoCliente presupuesto = repository.findById(presupuestoId)
+            .orElseThrow(() -> new ResourceNotFoundException("Presupuesto no encontrado con ID: " + presupuestoId));
+        
+        // 2. Validar que pertenece a la empresa
+        if (!presupuesto.getEmpresa().getId().equals(empresaId)) {
+            throw new ResourceNotFoundException("El presupuesto no pertenece a la empresa especificada");
+        }
+        
+        // 3. Validar que está vinculado a una obra
+        if (presupuesto.getObra() == null) {
+            log.warn("⚠️ Presupuesto {} no está vinculado a ninguna obra", presupuestoId);
+            throw new ResourceNotFoundException(
+                "El presupuesto no está vinculado a ninguna obra. " +
+                "Los profesionales de presupuestos globales se encuentran en la configuración de la obra."
+            );
+        }
+        
+        Long obraId = presupuesto.getObra().getId();
+        log.info("✅ Presupuesto vinculado a obra ID: {}", obraId);
+        
+        // 4. Obtener profesionales con datos financieros usando el servicio especializado
+        List<com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO> profesionales = 
+            profesionalObraService.obtenerProfesionalesConDatosFinancieros(empresaId, obraId);
+        
+        log.info("📊 Encontrados {} profesionales con datos financieros para presupuesto {}", 
+            profesionales.size(), presupuestoId);
+        
+        return profesionales;
     }
 
 }

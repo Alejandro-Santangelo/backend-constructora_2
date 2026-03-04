@@ -49,6 +49,9 @@ public class AsignarProfesionalRequest {
     @Schema(description = "Valor por hora asignado para esta obra específica", example = "25000")
     public Double valorHoraAsignado;
 
+    @Schema(description = "Cantidad de jornales asignados (opcional, por defecto 0)", example = "20")
+    public Integer cantidadJornales;
+
     @Schema(description = "Estado de la asignación", example = "true", defaultValue = "true")
     public Boolean activo = true;
 

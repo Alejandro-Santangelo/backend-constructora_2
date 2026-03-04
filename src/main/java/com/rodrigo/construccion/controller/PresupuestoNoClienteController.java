@@ -1,6 +1,7 @@
 package com.rodrigo.construccion.controller;
 
 import com.rodrigo.construccion.dto.response.AprobarPresupuestoResponse;
+import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.ItemCalculadoraPresupuesto;
 import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
 import com.rodrigo.construccion.dto.request.PresupuestoNoClienteRequestDTO;
@@ -921,6 +922,49 @@ public class PresupuestoNoClienteController {
             log.error("❌ Error obteniendo honorarios por obras: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                 .body(new ErrorResponse("Error al obtener honorarios: " + e.getMessage()));
+        }
+    }
+    
+    /**
+     * Obtener profesionales con datos financieros de un presupuesto.
+     * Diseñado específicamente para el sistema de adelantos.
+     * 
+     * Cuando un presupuesto está vinculado a una obra (presupuesto global),
+     * los profesionales están en asignaciones_profesional_obra, no en el presupuesto.
+     * Este endpoint resuelve automáticamente esa búsqueda y devuelve datos financieros completos.
+     */
+    @GetMapping("/{presupuestoId}/profesionales-financieros")
+    @Operation(summary = "Obtener profesionales con datos financieros de un presupuesto", 
+               description = "ESPECÍFICO PARA SISTEMA DE ADELANTOS: Obtiene profesionales asignados a la obra " +
+                            "del presupuesto con datos financieros completos (totales pagados, adelantos, saldos). " +
+                            "Si el presupuesto es global, busca los profesionales en asignaciones_profesional_obra. " +
+                            "Devuelve: ID asignación, nombre, tipo, precio total, jornales, totales pagados, " +
+                            "adelantos activos, saldo pendiente, límite de adelanto y disponibilidad.")
+    public ResponseEntity<?> obtenerProfesionalesFinancierosPorPresupuesto(
+            @PathVariable @Parameter(description = "ID del presupuesto", required = true) Long presupuestoId,
+            @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
+            @RequestParam Long empresaId) {
+        
+        log.info("🔍 GET /presupuestos-no-cliente/{}/profesionales-financieros?empresaId={}", 
+            presupuestoId, empresaId);
+        
+        try {
+            List<com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO> profesionales = 
+                service.obtenerProfesionalesFinancierosPorPresupuesto(presupuestoId, empresaId);
+            
+            log.info("✅ Devolviendo {} profesionales con datos financieros", profesionales.size());
+            
+            return ResponseEntity.ok(profesionales);
+            
+        } catch (ResourceNotFoundException e) {
+            log.warn("⚠️ {}", e.getMessage());
+            return ResponseEntity.status(404)
+                .body(new ErrorResponse(e.getMessage()));
+                
+        } catch (Exception e) {
+            log.error("❌ Error obteniendo profesionales financieros: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(new ErrorResponse("Error al obtener profesionales: " + e.getMessage()));
         }
     }
 }

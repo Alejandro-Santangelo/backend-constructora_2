@@ -7,6 +7,7 @@ import com.rodrigo.construccion.dto.response.ListaProfesionalesResponse;
 import com.rodrigo.construccion.dto.response.AsignacionProfesionalResponse;
 import com.rodrigo.construccion.dto.response.DisponibilidadProfesionalResponse;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
+import com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
 import com.rodrigo.construccion.service.IProfesionalObraService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -151,6 +152,19 @@ public class ProfesionalObraController {
                         @RequestParam Long obraId) {
                 List<ProfesionalResponseDTO> profesionales = profesionalObraService
                                 .obtenerProfesionalesPorObraYEmpresa(empresaId, obraId);
+                return ResponseEntity.ok(profesionales);
+        }
+
+        @GetMapping("/profesionales-por-obra/financiero")
+        @Operation(summary = "Listar profesionales con datos financieros completos", 
+                   description = "RECOMENDADO PARA SISTEMA DE ADELANTOS: Devuelve profesionales asignados a una obra con datos financieros completos: " +
+                                "ID asignación, nombre, tipo, precio total, cantidad jornales, precio jornal, totales pagados, adelantos y saldo pendiente. " +
+                                "Requiere empresaId y obraId.")
+        public ResponseEntity<List<ProfesionalObraFinancieroDTO>> obtenerProfesionalesConDatosFinancieros(
+                        @Parameter(description = "ID de la empresa", required = true) @RequestParam Long empresaId,
+                        @Parameter(description = "ID de la obra", required = true) @RequestParam Long obraId) {
+                List<ProfesionalObraFinancieroDTO> profesionales = profesionalObraService
+                                .obtenerProfesionalesConDatosFinancieros(empresaId, obraId);
                 return ResponseEntity.ok(profesionales);
         }
 

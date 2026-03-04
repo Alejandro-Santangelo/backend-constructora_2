@@ -16,6 +16,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -140,11 +141,11 @@ public class PagoProfesionalObra {
     private BigDecimal montoOriginalAdelanto = BigDecimal.ZERO;
 
     /**
-     * Array de IDs de adelantos que se descontaron en este pago regular.
-     * Formato JSON: [1, 5, 8]
+     * Relación 100% relacional: Adelantos que fueron aplicados/descontados en este pago.
+     * Reemplaza la antigua columna JSONB adelantos_aplicados_ids.
      */
-    @Column(name = "adelantos_aplicados_ids", columnDefinition = "jsonb")
-    private String adelantosAplicadosIds;
+    @OneToMany(mappedBy = "pago", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    private List<PagoAdelantoAplicado> adelantosAplicados = new ArrayList<>();
 
     /**
      * Fecha de referencia de la semana del adelanto
@@ -197,9 +198,15 @@ public class PagoProfesionalObra {
     // Campos adicionales
     @Column(name = "concepto", length = 500)
     private String concepto;
+    
+    @Column(name = "motivo", length = 500)
+    private String motivo;
 
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;
+    
+    @Column(name = "aprobado_por", length = 255)
+    private String aprobadoPor;
 
     @Column(name = "motivo_anulacion", columnDefinition = "TEXT")
     private String motivoAnulacion;
@@ -272,7 +279,15 @@ public class PagoProfesionalObra {
     }
 
     public boolean tieneAdelantosAplicados() {
-        return this.adelantosAplicadosIds != null && !this.adelantosAplicadosIds.isEmpty();
+        return this.adelantosAplicados != null && !this.adelantosAplicados.isEmpty();
+    }
+
+    /**
+     * Agregar un adelanto aplicado a este pago
+     */
+    public void agregarAdelantoAplicado(PagoProfesionalObra adelanto, BigDecimal montoDescontado) {
+        PagoAdelantoAplicado relacion = new PagoAdelantoAplicado(this, adelanto, montoDescontado);
+        this.adelantosAplicados.add(relacion);
     }
 
     public boolean esPremio() {

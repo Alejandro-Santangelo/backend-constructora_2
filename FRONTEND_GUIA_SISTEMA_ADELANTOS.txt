@@ -1,0 +1,797 @@
+================================================================================
+GUÍA COMPLETA DE INTEGRACIÓN FRONTEND - SISTEMA DE ADELANTOS
+Backend Spring Boot - API REST
+Fecha: 4 de marzo de 2026
+================================================================================
+
+ÍNDICE:
+1. ENDPOINTS DISPONIBLES
+2. ENDPOINT: OBTENER PROFESIONALES CON DATOS FINANCIEROS
+3. ENDPOINTS CRUD DE ADELANTOS (11 endpoints)
+4. VALIDACIONES Y REGLAS DE NEGOCIO
+5. CÓDIGOS DE ERROR Y MANEJO
+6. FLUJO COMPLETO DE USO
+
+================================================================================
+1. ENDPOINTS DISPONIBLES
+================================================================================
+
+BASE URL: http://localhost:8080/api
+
+PROFESIONALES CON DATOS FINANCIEROS:
+- GET /api/profesionales-obras/profesionales-por-obra/financiero
+
+ADELANTOS (CRUD COMPLETO):
+- POST   /api/adelantos                                    → Crear adelanto
+- GET    /api/adelantos/{id}                               → Obtener por ID
+- GET    /api/adelantos                                    → Listar por empresa
+- PUT    /api/adelantos/{id}                               → Actualizar adelanto
+- DELETE /api/adelantos/{id}                               → Cancelar/anular
+- GET    /api/adelantos/profesional/{profesionalObraId}    → Todos del profesional
+- GET    /api/adelantos/profesional/{id}/pendientes        → Solo pendientes
+- GET    /api/adelantos/profesional/{id}/historial         → Historial completo
+- GET    /api/adelantos/obra/{obraId}                      → Por obra
+- GET    /api/adelantos/profesional/{id}/total-pendiente   → Total pendiente
+- POST   /api/adelantos/profesional/{id}/validar-disponibilidad → Validar antes crear
+
+================================================================================
+2. ENDPOINT: OBTENER PROFESIONALES CON DATOS FINANCIEROS
+================================================================================
+
+📍 PROPÓSITO: Obtener lista de profesionales asignados a una obra con todos sus
+datos financieros para mostrar en pantalla de adelantos.
+
+📍 MÉTODO: GET
+📍 URL: /api/profesionales-obras/profesionales-por-obra/financiero
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+   - obraId (Long, obligatorio): ID de la obra
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/profesionales-obras/profesionales-por-obra/financiero?empresaId=1&obraId=5
+
+📍 RESPONSE (200 OK):
+[
+  {
+    "id": 123,
+    "profesionalObraId": 123,
+    "profesionalId": 45,
+    "nombre": "Juan Carlos Pérez",
+    "nombreCompleto": "Juan Carlos Pérez",
+    "tipoProfesional": "Oficial Albañil",
+    "tipo": "Oficial Albañil",
+    "rolEnObra": "Oficial",
+    "cantidadJornales": 20,
+    "precioJornal": 15000.00,
+    "jornal": 15000.00,
+    "importeJornal": 15000.00,
+    "precioTotal": 300000.00,
+    "precio": 300000.00,
+    "montoTotal": 300000.00,
+    "jornalesUtilizados": 5,
+    "fechaInicio": "2024-01-15",
+    "fechaFin": "2024-02-15",
+    "estado": "activo",
+    "modalidad": "jornales",
+    "observaciones": "Trabajador experimentado",
+    "totalPagado": 75000.00,
+    "totalPagos": 3,
+    "saldoPendiente": 225000.00,
+    "porcentajePagado": 25.00,
+    "totalAdelantos": 50000.00,
+    "totalAdelantosActivos": 50000.00,
+    "adelantosPendientes": 1,
+    "limiteAdelanto": 150000.00,
+    "adelantoDisponible": 100000.00,
+    "puedeOtorgarAdelanto": true,
+    "empresaId": 1,
+    "obraId": 5,
+    "nombreObra": "Obra Central",
+    "direccionObra": "Av. Principal 123",
+    "email": "juan.perez@email.com",
+    "telefono": "+54 11 1234-5678",
+    "cuit": "20-12345678-9"
+  }
+]
+
+📍 CAMPOS IMPORTANTES PARA ADELANTOS:
+- profesionalObraId: Usar para crear el adelanto
+- precioTotal/montoTotal: Monto total asignado al profesional
+- totalPagado: Total ya pagado
+- saldoPendiente: Saldo pendiente de pago
+- totalAdelantos: Total de adelantos otorgados
+- totalAdelantosActivos: Adelantos que aún no están totalmente descontados
+- limiteAdelanto: Máximo que puede adelantarse (50% del total)
+- adelantoDisponible: Cuánto más se puede adelantar
+- puedeOtorgarAdelanto: true/false si se puede otorgar más adelanto
+
+================================================================================
+3. ENDPOINTS CRUD DE ADELANTOS
+================================================================================
+
+--------------------------------------------------------------------------------
+3.1. CREAR ADELANTO
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: POST
+📍 URL: /api/adelantos
+📍 HEADERS:
+   Content-Type: application/json
+
+📍 REQUEST BODY:
+{
+  "profesionalObraId": 123,           // Obligatorio - ID de la asignación
+  "empresaId": 1,                     // Obligatorio - ID de la empresa
+  "monto": 50000.00,                  // Obligatorio - Monto del adelanto (mínimo 1.00)
+  "fechaPago": "2024-03-15",          // Opcional - Default: hoy
+  "periodoAdelanto": "1_SEMANA",      // Opcional - Valores: 1_SEMANA, 2_SEMANAS, 1_MES, OBRA_COMPLETA
+  "motivo": "Adelanto por emergencia médica",  // Opcional - max 500 caracteres
+  "observaciones": "Se descontará en 4 pagos",  // Opcional - max 1000 caracteres
+  "metodoPago": "efectivo",           // Opcional - efectivo, transferencia, cheque
+  "numeroComprobante": "ADL-2024-001", // Opcional - max 100 caracteres
+  "presupuestoNoClienteId": 45,       // Opcional - ID presupuesto asociado
+  "aprobadoPor": "Miguel Rodríguez"   // Opcional - max 255 caracteres
+}
+
+📍 VALIDACIONES AUTOMÁTICAS:
+- Profesional-obra debe existir y pertenecer a la empresa
+- Profesional debe estar activo
+- Monto debe ser positivo (mínimo 1.00)
+- No puede exceder el 50% del total asignado
+- Debe haber saldo disponible suficiente
+- No superar el límite de adelantos activos
+
+📍 RESPONSE (201 CREATED):
+{
+  "id": 789,
+  "profesionalObraId": 123,
+  "profesionalId": 45,
+  "nombreProfesional": "Juan Carlos Pérez",
+  "tipoProfesional": "Oficial Albañil",
+  "obraId": 67,
+  "nombreObra": "Obra Central",
+  "empresaId": 1,
+  "montoOriginal": 50000.00,
+  "saldoPendiente": 50000.00,
+  "montoDescontado": 0.00,
+  "fechaPago": "2024-03-15",
+  "periodoAdelanto": "1_SEMANA",
+  "estado": "ACTIVO",
+  "motivo": "Adelanto por emergencia médica",
+  "observaciones": "Se descontará en 4 pagos",
+  "metodoPago": "efectivo",
+  "numeroComprobante": "ADL-2024-001",
+  "aprobadoPor": "Miguel Rodríguez",
+  "fechaCreacion": "2024-03-15T10:30:00",
+  "fechaModificacion": "2024-03-15T10:30:00",
+  "porcentajeDescontado": 0.00,
+  "completamenteDescontado": false,
+  "presupuestoNoClienteId": 45,
+  "emailProfesional": "juan.perez@email.com",
+  "telefonoProfesional": "+54 11 1234-5678",
+  "cuitProfesional": "20-12345678-9",
+  "advertencia": null,
+  "excedeLimiteRecomendado": false
+}
+
+📍 RESPONSE (201 CREATED) - CON ADVERTENCIA CUANDO EXCEDE 50%:
+{
+  "id": 790,
+  "profesionalObraId": 123,
+  "nombreProfesional": "Juan Carlos Pérez",
+  "montoOriginal": 180000.00,
+  "saldoPendiente": 180000.00,
+  "estado": "ACTIVO",
+  ...
+  "advertencia": "⚠️ ADVERTENCIA: El total de adelantos activos ($180,000.00) excede el límite recomendado del 50% ($150,000.00). Exceso: $30,000.00 (60.00% del total asignado).",
+  "excedeLimiteRecomendado": true
+}
+
+📍 ERRORES POSIBLES:
+- 400 BAD REQUEST: Validaciones fallidas
+  Ejemplos:
+  * "El monto excede el límite máximo de adelantos permitido"
+  * "No hay saldo disponible suficiente para otorgar este adelanto"
+  * "El profesional-obra no está activo"
+- 404 NOT FOUND: "Profesional-obra no encontrado con ID: X"
+
+--------------------------------------------------------------------------------
+3.2. OBTENER ADELANTO POR ID
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos/{id}
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos/789?empresaId=1
+
+📍 RESPONSE (200 OK):
+{
+  "id": 789,
+  "profesionalObraId": 123,
+  "profesionalId": 45,
+  "nombreProfesional": "Juan Carlos Pérez",
+  "tipoProfesional": "Oficial Albañil",
+  "obraId": 67,
+  "nombreObra": "Obra Central",
+  "empresaId": 1,
+  "montoOriginal": 50000.00,
+  "saldoPendiente": 30000.00,
+  "montoDescontado": 20000.00,
+  "fechaPago": "2024-03-15",
+  "periodoAdelanto": "1_SEMANA",
+  "estado": "ACTIVO",
+  "motivo": "Adelanto por emergencia médica",
+  "observaciones": "Se descontará en 4 pagos",
+  "metodoPago": "efectivo",
+  "numeroComprobante": "ADL-2024-001",
+  "aprobadoPor": "Miguel Rodríguez",
+  "fechaCreacion": "2024-03-15T10:30:00",
+  "fechaModificacion": "2024-03-20T15:45:00",
+  "porcentajeDescontado": 40.00,
+  "completamenteDescontado": false,
+  "presupuestoNoClienteId": 45,
+  "emailProfesional": "juan.perez@email.com",
+  "telefonoProfesional": "+54 11 1234-5678",
+  "cuitProfesional": "20-12345678-9"
+}
+
+📍 ERRORES:
+- 404: Adelanto no encontrado
+- 400: El pago no es un adelanto o no pertenece a la empresa
+
+--------------------------------------------------------------------------------
+3.3. LISTAR ADELANTOS POR EMPRESA
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos?empresaId=1
+
+📍 RESPONSE (200 OK):
+[
+  {
+    "id": 789,
+    "profesionalObraId": 123,
+    "nombreProfesional": "Juan Carlos Pérez",
+    "estado": "ACTIVO",
+    "montoOriginal": 50000.00,
+    "saldoPendiente": 30000.00,
+    "porcentajeDescontado": 40.00,
+    ...
+  },
+  {
+    "id": 790,
+    "profesionalObraId": 124,
+    "nombreProfesional": "María González",
+    "estado": "COMPLETADO",
+    "montoOriginal": 30000.00,
+    "saldoPendiente": 0.00,
+    "porcentajeDescontado": 100.00,
+    ...
+  }
+]
+
+📍 NOTA: Retorna TODOS los adelantos (ACTIVOS, COMPLETADOS, CANCELADOS)
+
+--------------------------------------------------------------------------------
+3.4. ACTUALIZAR ADELANTO
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: PUT
+📍 URL: /api/adelantos/{id}
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+📍 HEADERS:
+   Content-Type: application/json
+
+📍 REQUEST BODY (todos los campos son opcionales):
+{
+  "motivoAdicional": "Actualización del motivo",
+  "observaciones": "Nuevas observaciones agregadas",
+  "aprobadoPor": "Carlos Fernández"
+}
+
+📍 RESPONSE (200 OK): Mismo formato que obtener por ID
+
+📍 ERRORES:
+- 404: Adelanto no encontrado
+- 400: Estado no permite modificación (cancelado)
+
+📍 NOTA: Solo se pueden actualizar campos limitados (no el monto ni el estado)
+
+--------------------------------------------------------------------------------
+3.5. CANCELAR/ANULAR ADELANTO
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: DELETE
+📍 URL: /api/adelantos/{id}
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+DELETE http://localhost:8080/api/adelantos/789?empresaId=1
+
+📍 RESPONSE (200 OK):
+{
+  "mensaje": "Adelanto cancelado exitosamente",
+  "adelanto": {
+    "id": 789,
+    "estado": "CANCELADO",
+    "saldoPendiente": 0.00,
+    ...
+  }
+}
+
+📍 ERRORES:
+- 400: "No se puede cancelar un adelanto que ya tiene descuentos aplicados"
+- 404: Adelanto no encontrado
+
+📍 NOTA: Solo se pueden cancelar adelantos sin descuentos aplicados
+
+--------------------------------------------------------------------------------
+3.6. LISTAR ADELANTOS DE UN PROFESIONAL
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos/profesional/{profesionalObraId}
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos/profesional/123?empresaId=1
+
+📍 RESPONSE (200 OK): Array de adelantos (todos los estados)
+
+--------------------------------------------------------------------------------
+3.7. LISTAR ADELANTOS PENDIENTES DE UN PROFESIONAL
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos/profesional/{profesionalObraId}/pendientes
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos/profesional/123/pendientes?empresaId=1
+
+📍 RESPONSE (200 OK): Array de adelantos solo con estado ACTIVO
+
+📍 USO: Mostrar en dashboard cuántos adelantos tiene pendientes el profesional
+
+--------------------------------------------------------------------------------
+3.8. HISTORIAL COMPLETO DE ADELANTOS
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos/profesional/{profesionalObraId}/historial
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos/profesional/123/historial?empresaId=1
+
+📍 RESPONSE (200 OK): Array de adelantos ordenado por fecha descendente
+
+📍 USO: Pantalla de historial/auditoría de adelantos del profesional
+
+--------------------------------------------------------------------------------
+3.9. LISTAR ADELANTOS POR OBRA
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos/obra/{obraId}
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos/obra/67?empresaId=1
+
+📍 RESPONSE (200 OK): Array de adelantos de todos los profesionales de la obra
+
+📍 USO: Reportes por obra, ver todos los adelantos otorgados en esa obra
+
+--------------------------------------------------------------------------------
+3.10. CALCULAR TOTAL PENDIENTE DE DESCUENTO
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: GET
+📍 URL: /api/adelantos/profesional/{profesionalObraId}/total-pendiente
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+
+📍 EJEMPLO REQUEST:
+GET http://localhost:8080/api/adelantos/profesional/123/total-pendiente?empresaId=1
+
+📍 RESPONSE (200 OK):
+{
+  "profesionalObraId": 123,
+  "totalAdelantosPendientes": 80000.00,
+  "cantidadAdelantosPendientes": 2,
+  "adelantos": [
+    {
+      "id": 789,
+      "montoOriginal": 50000.00,
+      "saldoPendiente": 50000.00
+    },
+    {
+      "id": 790,
+      "montoOriginal": 40000.00,
+      "saldoPendiente": 30000.00
+    }
+  ]
+}
+
+📍 USO: Dashboard resumen, validaciones antes de crear nuevo adelanto
+
+--------------------------------------------------------------------------------
+3.11. VALIDAR DISPONIBILIDAD PARA ADELANTO
+--------------------------------------------------------------------------------
+
+📍 MÉTODO: POST
+📍 URL: /api/adelantos/profesional/{profesionalObraId}/validar-disponibilidad
+📍 QUERY PARAMS:
+   - empresaId (Long, obligatorio): ID de la empresa
+   - monto (BigDecimal, obligatorio): Monto que se desea adelantar
+
+📍 EJEMPLO REQUEST:
+POST http://localhost:8080/api/adelantos/profesional/123/validar-disponibilidad?empresaId=1&monto=60000.00
+
+📍 RESPONSE (200 OK):
+{
+  "disponible": true,
+  "mensaje": "El adelanto de $60000.00 es válido",
+  "montoSolicitado": 60000.00,
+  "montoTotalAsignado": 300000.00,
+  "totalAdelantos": 50000.00,
+  "limiteMaximo": 150000.00,
+  "saldoDisponible": 90000.00
+}
+
+📍 RESPONSE (400 BAD REQUEST) - cuando NO es válido:
+{
+  "disponible": false,
+  "mensaje": "El monto solicitado excede el límite máximo de adelantos",
+  "montoSolicitado": 120000.00,
+  "montoTotalAsignado": 300000.00,
+  "totalAdelantos": 50000.00,
+  "limiteMaximo": 150000.00,
+  "saldoDisponible": 100000.00
+}
+
+📍 USO: Llamar ANTES de mostrar el formulario de crear adelanto para validar
+        y mostrar información útil al usuario
+
+================================================================================
+4. VALIDACIONES Y REGLAS DE NEGOCIO
+================================================================================
+
+🆕 IMPORTANTE: LÍMITE DEL 50% ES SOLO ADVERTENCIA (NO RESTRICTIVO)
+- El límite del 50% es RECOMENDADO, no obligatorio
+- Si se excede, el adelanto SE CREA IGUAL pero incluye advertencia
+- Campos de respuesta:
+  * "excedeLimiteRecomendado": true/false
+  * "advertencia": Mensaje explicativo si excede
+- El frontend debe MOSTRAR LA ADVERTENCIA pero PERMITIR continuar
+- Ejemplo: "⚠️ Este adelanto excede el 50% recomendado. ¿Desea continuar?"
+
+REGLA 1: LÍMITE RECOMENDADO DE ADELANTOS (NO RESTRICTIVO)
+- Límite recomendado: 50% del monto total asignado al profesional
+- Cálculo: limiteRecomendado = (cantidadJornales × precioJornal) × 0.5
+- Si se excede: Se agrega advertencia pero NO se bloquea
+- Usuario puede otorgar adelantos mayores al 50% si es necesario
+
+REGLA 2: SALDO DISPONIBLE (RESTRICTIVO)
+- Debe haber saldo pendiente de pago suficiente
+- Cálculo: saldoDisponible = montoTotal - totalPagado - totalAdelantosActivos
+- El nuevo adelanto no puede superar el saldo disponible
+
+REGLA 3: ESTADO DEL PROFESIONAL
+- Solo se pueden otorgar adelantos a profesionales con estado "activo"
+
+REGLA 4: DESCUENTO AUTOMÁTICO (FIFO)
+- Los adelantos se descuentan automáticamente en futuros pagos semanales
+- Método FIFO: First In, First Out (primero otorgado, primero descontado)
+- El backend maneja esto automáticamente al crear pagos semanales
+
+REGLA 5: ESTADOS DE ADELANTOS
+- ACTIVO: Adelanto otorgado, aún tiene saldo pendiente por descontar
+- COMPLETADO: Adelanto totalmente descontado en pagos
+- CANCELADO: Adelanto anulado (solo si no tiene descuentos aplicados)
+
+REGLA 6: MULTI-TENANCY
+- Todos los endpoints requieren empresaId
+- Solo se pueden ver/modificar adelantos de la propia empresa
+
+================================================================================
+5. CÓDIGOS DE ERROR Y MANEJO
+================================================================================
+
+200 OK - Operación exitosa
+201 CREATED - Adelanto creado exitosamente
+204 NO CONTENT - Actualización sin contenido de respuesta
+
+400 BAD REQUEST - Errores de validación:
+  * "El monto es obligatorio"
+  * "El monto debe ser mayor a cero"
+  * "No hay saldo disponible suficiente" (ÚNICO BLOQUEO por monto)
+  * "El profesional-obra no está activo"
+  * "No se puede cancelar un adelanto con descuentos aplicados"
+  * "El pago con ID X no es un adelanto"
+  * "El adelanto no pertenece a la empresa especificada"
+  
+📍 NOTA: Ya NO se bloquea por exceder el 50%, solo se advierte
+
+404 NOT FOUND - Recurso no encontrado:
+  * "Adelanto no encontrado con ID: X"
+  * "Profesional-obra no encontrado con ID: X"
+  * "Empresa no encontrada con ID: X"
+
+500 INTERNAL SERVER ERROR - Error del servidor
+
+📍 FORMATO DE RESPUESTA DE ERROR:
+{
+  "timestamp": "2024-03-15T10:30:00",
+  "status": 400,
+  "error": "Bad Request",
+  "message": "El monto excede el límite máximo de adelantos permitido",
+  "path": "/api/adelantos"
+}
+
+================================================================================
+6. FLUJO COMPLETO DE USO
+================================================================================
+
+FLUJO RECOMENDADO PARA CREAR UN ADELANTO:
+
+PASO 1: CARGAR LISTA DE PROFESIONALES
+────────────────────────────────────────
+GET /api/profesionales-obras/profesionales-por-obra/financiero?empresaId=1&obraId=5
+
+→ Mostrar tabla con:
+  - Nombre profesional
+  - Tipo
+  - Monto total asignado
+  - Saldo pendiente
+  - Adelantos activos
+  - Adelanto disponible
+  - Botón "Otorgar adelanto" (solo si puedeOtorgarAdelanto === true)
+CALCULAR Y MOSTRAR ADVERTENCIA SI EXCEDE 50%
+────────────────────────────────────────────────────────────
+Al hacer click en "Otorgar adelanto", validar en frontend:
+
+// Obtener datos del profesional seleccionado
+const limiteRecomendado = profesional.limiteAdelanto; // 50% del total
+const totalAdelantosActuales = profesional.totalAdelantosActivos;
+const montoIngresado = parseFloat(inputMonto.value);
+
+// Calcular si excederá
+const totalConNuevo = totalAdelantosActuales + montoIngresado;
+const excede = totalConNuevo > limiteRecomendado;
+
+if (excede) {
+  const exceso = totalConNuevo - limiteRecomendado;
+  mostrarAdvertencia(
+    `⚠️ ADVERTENCIA: El total de adelantos ($${totalConNuevo.toFixed(2)}) ` +
+    `excederá el límite recomendado del 50% ($${limiteRecomendado.toFixed(2)}). ` +
+    `Exceso: $${exceso.toFixed(2)}. ¿Desea continuar?`
+  );
+  // Permitir confirmar y continuar
+}
+
+→ Usuario puede confirmar
+   * Verificar response.excedeLimiteRecomendado
+   * Si es true: Mostrar response.advertencia en banner de advertencia
+   * Mostrar mensaje: "✅ Adelanto creado exitosamente"
+   * Si tiene advertencia, agregar: "⚠️ " + response.advertencia
+→ Si 400: Mostrar error de validación (solo saldo insuficiente o inactivo)lario con información de límites
+
+PASO 3: CREAR ADELANTO
+────────────────────────
+Usuario completa formulario y envía:
+POST /api/adelantos
+Body: {
+  "profesionalObraId": 123,
+  "empresaId": 1,
+  "monto": 50000.00,
+  "motivo": "Emergencia médica",
+  "periodoAdelanto": "1_SEMANA",
+  "metodoPago": "efectivo",
+  "aprobadoPor": "Miguel Rodríguez"
+}
+
+→ Si 201: Adelanto creado, mostrar mensaje de éxito
+→ Si 400: Mostrar error de validación
+
+PASO 4: MOSTRAR ADELANTOS ACTIVOS
+───────────────────────────────────
+GET /api/adelantos/profesional/123/pendientes?empresaId=1
+
+→ Mostrar tabla con adelantos activos del profesional
+→ Incluir: monto original, saldo pendiente, porcentaje descontado
+
+PASO 5: VER HISTORIAL (OPCIONAL)
+──────────────────────────────────
+GET /api/adelantos/profesional/123/historial?empresaId=1
+
+→ Mostrar todos los adelantos históricos
+→ Filtrar por estado si es necesario
+
+PASO 6: REPORTES POR OBRA
+──────────────────────────
+GET /api/adelantos/obra/5?empresaId=1
+
+→ Mostrar todos los adelantos de la obra
+→ Agrupar por profesional, estado, etc.
+
+================================================================================
+NOTAS IMPORTANTES PARA EL FRONTEND
+================================================================================
+
+1. FORMATO DE FECHAS:
+   - Enviar: "YYYY-MM-DD" (ISO 8601 fecha)
+   - Recibir: "YYYY-MM-DDTHH:mm:ss" (ISO 8601 fecha-hora)
+
+2. FORMATO DE NÚMEROS:
+   - BigDecimal se envía/recibe como número (no string)
+   - Usar 2 decimales para montos: 50000.00
+
+3. VALIDACIONES EN FRONTEND:
+   - Validar monto > 0 antes de enviar
+   - Validar que empresaId y profesionalObraId existan
+   - Mostrar saldo disponible al usuario
+   - Si excede el 50%: MOSTRAR ADVERTENCIA pero PERMITIR continuar
+   - Ejemplo de flujo con advertencia:
+     * Usuario ingresa monto que excede 50%
+     * Frontend muestra: "⚠️ Este adelanto excede el 50% recomendado. Total: $X, Límite recomendado: $Y. ¿Confirma?"
+     * Usuario puede confirmar y crear el adelanto
+   - Después de crear, si response.excedeLimiteRecomendado === true:
+     * Mostrar response.advertencia en banner amarillo/naranja
+     * Badge de advertencia en la lista de adelantos
+
+4. MANEJO DE ERRORES:
+   - Capturar respuestas 400 y mostrar message del backend
+   - 404: Mostrar "Recurso no encontrado"
+   - 500: Mostrar "Error del servidor, intente más tarde"
+
+5. ACTUALIZACIÓN DE DATOS:
+   - Después de crear adelanto, recargar lista de profesionales
+   - Actualizar totales y saldos en tiempo real
+
+6. ESTADOS VISUALES:
+   - ACTIVO: Badge verde
+   - ACTIVO CON ADVERTENCIA (excedeLimiteRecomendado=true): Badge amarillo/naranja con icono ⚠️
+   - COMPLETADO: Badge azul
+   - CANCELADO: Badge rojo
+
+7. CAMPOS CON ALIAS:
+   Los siguientes campos tienen alias por compatibilidad:
+   - id / profesionalObraId
+   - nombre / nombreCompleto
+   - tipo / tipoProfesional
+   - precioJornal / jornal / importeJornal
+   - precioTotal / precio / montoTotal
+   
+   Usar cualquiera de ellos según convenga
+
+8. VALORES PARA PERÍODO ADELANTO:
+   - "1_SEMANA"
+   - "2_SEMANAS"
+   - "1_MES"
+   - "OBRA_COMPLETA"
+
+9. VALORES PARA MÉTODO PAGO:
+   - "efectivo"
+   - "transferencia"
+   - "cheque"
+
+10. SEGURIDAD:
+    - Siempre enviar empresaId en todas las peticiones
+    - Backend valida multi-tenancy automáticamente
+
+================================================================================
+EJEMPLO COMPLETO DE COMPONENTE REACT/ANGULAR/VUE
+================================================================================
+
+// EJEMPLO PSEUDOCÓDIGO
+
+// 1. Cargar profesionales al montar componente
+async function cargarProfesionales(empresaId, obraId) {
+  const response = await fetch(
+    `/api/profesionales-obras/profesionales-por-obra/financiero?empresaId=${empresaId}&obraId=${obraId}`
+  );
+  const profesionales = await response.json();
+  return profesionales;
+}
+
+// 2. Validar antes de mostrar formulario
+async function validarDisponibilidad(profesionalObraId, empresaId, monto) {
+  const response = await fetch(
+    `/api/adelantos/profesional/${profesionalObraId}/validar-disponibilidad?empresaId=${empresaId}&monto=${monto}`,
+    { method: 'POST' }
+  );
+  const validacion = await response.json();
+  if (!validacion.disponible) {
+    alert(validacion.mensaje);
+    return false;
+  }
+  return true;
+}
+
+// 3. Crear adelanto
+async function crearAdelanto(adelantoData) {
+  const response = await fetch('/api/adelantos', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(adelantoData)
+  });
+  
+  if (response.status === 201) {
+    const adelanto = await response.json();
+    
+    // Verificar si hay advertencia
+    if (adelanto.excedeLimiteRecomendado) {
+      mostrarAdvertencia(adelanto.advertencia);
+      // Ejemplo: Alert/Toast amarillo con icono ⚠️
+      // "⚠️ Adelanto creado pero excede el 50% recomendado"
+    } else {
+      mostrarExito(`Adelanto creado: ID ${adelanto.id}`);
+    }
+    
+    return adelanto;
+  } else if (response.status === 400) {
+    const error = await response.json();
+    mostrarError(`Error: ${error.message}`);
+    return null;
+  }
+}
+
+// Función auxiliar para mostrar advertencia
+function mostrarAdvertencia(mensaje) {
+  // Ejemplo con componente de UI (Toastr, SweetAlert, etc.)
+  // toast.warning(mensaje, { icon: '⚠️', duration: 5000 });
+  console.warn(mensaje);
+  alert('⚠️ ' + mensaje);
+}
+
+// 4. Listar adelantos pendientes
+async function cargarAdelantosPendientes(profesionalObraId, empresaId) {
+  const response = await fetch(
+    `/api/adelantos/profesional/${profesionalObraId}/pendientes?empresaId=${empresaId}`
+  );
+  const adelantos = await response.json();
+  return adelantos;
+}
+
+// USO:
+const profesionales = await cargarProfesionales(1, 5);
+// Mostrar en tabla
+
+// Usuario selecciona profesional y monto
+const esValido = await validarDisponibilidad(123, 1, 50000);
+if (esValido) {
+  const adelanto = await crearAdelanto({
+    profesionalObraId: 123,
+    empresaId: 1,
+    monto: 50000.00,
+    motivo: "Emergencia",
+    metodoPago: "efectivo"
+  });
+}
+
+// Mostrar adelantos
+const pendientes = await cargarAdelantosPendientes(123, 1);
+// Renderizar lista
+
+================================================================================
+FIN DE LA GUÍA
+================================================================================
+
+Para cualquier duda o caso especial, consultar con el equipo de backend.
+Los endpoints están documentados con Swagger en: http://localhost:8080/swagger-ui.html

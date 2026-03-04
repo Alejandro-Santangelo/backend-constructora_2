@@ -12,11 +12,13 @@ import com.rodrigo.construccion.dto.mapper.ProfesionalObraMapper;
 import com.rodrigo.construccion.dto.response.DisponibilidadProfesionalResponse;
 import com.rodrigo.construccion.dto.response.ListaProfesionalesResponse;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
+import com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
 import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.model.entity.Obra;
 import com.rodrigo.construccion.repository.ProfesionalObraRepository;
+import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
 public class ProfesionalObraService implements IProfesionalObraService {
 
     private final ProfesionalObraRepository profesionalObraRepository;
+    private final PagoProfesionalObraRepository pagoRepository;
     private final IEmpresaService empresaService;
     private final ProfesionalObraMapper profesionalObraMapper;
     private final IProfesionalService profesionalService;
@@ -121,10 +124,16 @@ public class ProfesionalObraService implements IProfesionalObraService {
                 asignacion.setRolEnObraEnum(RolEnObra.ROL_OFICIAL);
             }
         }
-        asignacion.setValorHoraAsignado(
-                request.getValorHoraAsignado() != null ? BigDecimal.valueOf(request.getValorHoraAsignado())
-                        : profesional.getValorHoraDefault());
+        BigDecimal valorHora = request.getValorHoraAsignado() != null 
+                ? BigDecimal.valueOf(request.getValorHoraAsignado())
+                : profesional.getValorHoraDefault();
+        asignacion.setValorHoraAsignado(valorHora);
         asignacion.setActivo(request.getActivo() != null ? request.getActivo() : true);
+
+        // 🔧 DATOS FINANCIEROS: Establecer campos requeridos para cálculos de adelantos y pagos
+        asignacion.setImporteJornal(valorHora); // Mismo valor que valorHoraAsignado
+        asignacion.setCantidadJornales(request.getCantidadJornales() != null ? request.getCantidadJornales() : 0);
+        asignacion.setJornalesUtilizados(0); // Inicializar en 0
 
         // 5. Guardar la asignación en la base de datos
         log.info("💾 Guardando asignación en base de datos...");
@@ -395,16 +404,133 @@ public class ProfesionalObraService implements IProfesionalObraService {
     }
 
     /**
-     * Obtener profesionales asignados a una obra de una empresa
-     * TODO: ADAPTAR - Usar búsqueda por dirección
+     * Obtener profesionales asignados a una obra de una empresa (método legacy)
+     * @deprecated Usar obtenerProfesionalesConDatosFinancieros para datos financieros completos
      */
     @Override
+    @Deprecated
     public List<ProfesionalResponseDTO> obtenerProfesionalesPorObraYEmpresa(Long empresaId, Long obraId) {
+        log.warn("Método legacy en uso - Se recomienda usar obtenerProfesionalesConDatosFinancieros");
         empresaService.findEmpresaById(empresaId);
         obraService.findById(obraId);
-        // List<ProfesionalObra> asignaciones = profesionalObraRepository.findByEmpresaIdAndObraId(empresaId, obraId);
-        // return profesionalObraMapper.toProfesionalResponseDTOList(asignaciones);
-        return new ArrayList<>();
+        
+        List<ProfesionalObra> asignaciones = profesionalObraRepository.findByObraIdAndEmpresaIdWithRelations(obraId, empresaId);
+        return asignaciones.stream()
+                .map(po -> {
+                    ProfesionalResponseDTO dto = profesionalMapper.toResponseDTO(po.getProfesional());
+                    return dto;
+                })
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Obtener profesionales asignados a una obra con datos financieros completos
+     * Para sistema de adelantos y pagos
+     */
+    @Override
+    public List<ProfesionalObraFinancieroDTO> obtenerProfesionalesConDatosFinancieros(Long empresaId, Long obraId) {
+        log.info("Obteniendo profesionales con datos financieros para obra {} y empresa {}", obraId, empresaId);
+        
+        // Validar empresa y obra
+        empresaService.findEmpresaById(empresaId);
+        Obra obra = obraService.findById(obraId);
+        
+        // Obtener asignaciones con relaciones cargadas
+        List<ProfesionalObra> asignaciones = profesionalObraRepository.findByObraIdAndEmpresaIdWithRelations(obraId, empresaId);
+        
+        log.info("Encontradas {} asignaciones para la obra", asignaciones.size());
+        
+        // Mapear a DTOs con datos financieros
+        return asignaciones.stream()
+                .map(po -> mapearAProfesionalFinancieroDTO(po, obra))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * Mapear ProfesionalObra a DTO con datos financieros calculados
+     */
+    private ProfesionalObraFinancieroDTO mapearAProfesionalFinancieroDTO(ProfesionalObra po, Obra obra) {
+        ProfesionalObraFinancieroDTO dto = new ProfesionalObraFinancieroDTO();
+        
+        // IDs
+        dto.setId(po.getId());
+        dto.setProfesionalObraId(po.getId());
+        dto.setProfesionalId(po.getProfesionalId());
+        dto.setEmpresaId(po.getEmpresaId());
+        dto.setObraId(po.getIdObra());
+        
+        // Datos del profesional
+        Profesional profesional = po.getProfesional();
+        if (profesional != null) {
+            String nombre = profesional.getNombre();
+            dto.setNombre(nombre);
+            dto.setNombreCompleto(nombre);
+            
+            String tipo = profesional.getTipoProfesional();
+            dto.setTipoProfesional(tipo);
+            dto.setTipo(tipo);
+            
+            dto.setEmail(profesional.getEmail());
+            dto.setTelefono(profesional.getTelefono());
+            dto.setEspecialidad(profesional.getEspecialidad());
+            dto.setCuit(profesional.getCuit());
+            dto.setCategoria(profesional.getCategoria());
+        }
+        
+        // Datos de la obra
+        dto.setNombreObra(obra.getNombre());
+        
+        // Datos de la asignación
+        dto.setRolEnObra(po.getRolEnObra());
+        dto.setFechaInicio(po.getFechaDesde());
+        dto.setFechaFin(po.getFechaHasta());
+        dto.setEstado(po.getEstado());
+        dto.setModalidad(po.getModalidad());
+        dto.setObservaciones(po.getObservaciones());
+        
+        // Datos financieros de jornales
+        Integer cantidadJornales = po.getCantidadJornales();
+        BigDecimal importeJornal = po.getImporteJornal();
+        Integer jornalesUtilizados = po.getJornalesUtilizados();
+        
+        dto.setCantidadJornales(cantidadJornales != null ? cantidadJornales : 0);
+        dto.setJornalesUtilizados(jornalesUtilizados != null ? jornalesUtilizados : 0);
+        
+        // Precio por jornal (3 aliases)
+        BigDecimal precioJornal = importeJornal != null ? importeJornal : BigDecimal.ZERO;
+        dto.setPrecioJornal(precioJornal);
+        dto.setJornal(precioJornal);
+        dto.setImporteJornal(precioJornal);
+        
+        // Precio total = cantidadJornales × precioJornal (3 aliases)
+        BigDecimal precioTotal = BigDecimal.ZERO;
+        if (cantidadJornales != null && cantidadJornales > 0 && importeJornal != null) {
+            precioTotal = importeJornal.multiply(new BigDecimal(cantidadJornales));
+        }
+        dto.setPrecioTotal(precioTotal);
+        dto.setPrecio(precioTotal);
+        dto.setMontoTotal(precioTotal);
+        
+        // Calcular totales de pagos
+        try {
+            BigDecimal totalPagado = pagoRepository.calcularTotalPagadoByProfesional(po.getId());
+            dto.setTotalPagado(totalPagado != null ? totalPagado : BigDecimal.ZERO);
+            
+            // Total de adelantos
+            BigDecimal totalAdelantos = pagoRepository.calcularAdelantosPendientesDescuento(po.getId());
+            dto.setTotalAdelantos(totalAdelantos != null ? totalAdelantos : BigDecimal.ZERO);
+            
+            // Saldo pendiente = precioTotal - totalPagado
+            BigDecimal saldoPendiente = precioTotal.subtract(totalPagado != null ? totalPagado : BigDecimal.ZERO);
+            dto.setSaldoPendiente(saldoPendiente);
+        } catch (Exception e) {
+            log.warn("Error calculando datos financieros para profesional {}: {}", po.getId(), e.getMessage());
+            dto.setTotalPagado(BigDecimal.ZERO);
+            dto.setTotalAdelantos(BigDecimal.ZERO);
+            dto.setSaldoPendiente(precioTotal);
+        }
+        
+        return dto;
     }
 
     /**
@@ -698,6 +824,11 @@ public class ProfesionalObraService implements IProfesionalObraService {
                     asignacion.setRolEnObra(tipoProfesional.rolEnObra);
                     asignacion.setValorHoraAsignado(tipoProfesional.valorHoraSugerido);
                     asignacion.setActivo(true);
+
+                    // 🔧 DATOS FINANCIEROS: Campos requeridos para sistema de adelantos
+                    asignacion.setImporteJornal(tipoProfesional.valorHoraSugerido);
+                    asignacion.setCantidadJornales(0); // Se actualizará después
+                    asignacion.setJornalesUtilizados(0);
 
                     ProfesionalObra asignacionGuardada = profesionalObraRepository.save(asignacion);
                     asignacionesCreadas.add(asignacionGuardada);

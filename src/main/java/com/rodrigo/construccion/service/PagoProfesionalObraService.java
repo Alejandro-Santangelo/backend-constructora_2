@@ -5,9 +5,11 @@ import com.rodrigo.construccion.dto.response.PagoProfesionalObraResponseDTO;
 import com.rodrigo.construccion.model.entity.AsignacionProfesionalObra;
 import com.rodrigo.construccion.model.entity.PagoProfesionalObra;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
+import com.rodrigo.construccion.model.entity.PagoAdelantoAplicado;
 import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
 import com.rodrigo.construccion.repository.ProfesionalObraRepository;
+import com.rodrigo.construccion.repository.PagoAdelantoAplicadoRepository;
 import com.rodrigo.construccion.config.TenantContext;
 
 import lombok.RequiredArgsConstructor;
@@ -32,6 +34,7 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
     private final PagoProfesionalObraRepository pagoRepository;
     private final ProfesionalObraRepository profesionalObraRepository;
     private final AsignacionProfesionalObraRepository asignacionRepository;
+    private final PagoAdelantoAplicadoRepository pagoAdelantoAplicadoRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -377,9 +380,8 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
             pago.setMontoOriginalAdelanto(request.getMontoOriginalAdelanto());
         }
         
-        if (request.getAdelantosAplicadosIds() != null) {
-            pago.setAdelantosAplicadosIds(request.getAdelantosAplicadosIds());
-        }
+        // NOTA: adelantosAplicadosIds ahora se maneja mediante tabla relacional
+        // No hay campo en el request para setear
         
         if (request.getSemanaReferencia() != null) {
             pago.setSemanaReferencia(request.getSemanaReferencia());
@@ -461,7 +463,15 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         response.setEstadoAdelanto(pago.getEstadoAdelanto());
         response.setSaldoAdelantoPorDescontar(pago.getSaldoAdelantoPorDescontar());
         response.setMontoOriginalAdelanto(pago.getMontoOriginalAdelanto());
-        response.setAdelantosAplicadosIds(pago.getAdelantosAplicadosIds());
+        
+        // Obtener IDs de adelantos aplicados desde tabla relacional
+        if (pago.getAdelantosAplicados() != null && !pago.getAdelantosAplicados().isEmpty()) {
+            List<Long> idsAplicados = pago.getAdelantosAplicados().stream()
+                .map(paa -> paa.getAdelanto().getId())
+                .collect(Collectors.toList());
+            response.setAdelantosAplicadosIds(idsAplicados);
+        }
+        
         response.setSemanaReferencia(pago.getSemanaReferencia());
 
         return response;
@@ -629,7 +639,15 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
             // Guardar adelanto actualizado
             pagoRepository.save(adelanto);
             
-            // Agregar ID a la lista de adelantos aplicados
+            // ✅ GUARDAR EN TABLA RELACIONAL (Reemplaza JSONB)
+            PagoAdelantoAplicado pagoAdelantoAplicado = new PagoAdelantoAplicado(
+                pagoRegular, 
+                adelanto, 
+                descuentoAdelanto
+            );
+            pagoAdelantoAplicadoRepository.save(pagoAdelantoAplicado);
+            
+            // Agregar ID a la lista para las observaciones
             adelantosAplicadosIds.add(adelanto.getId());
             descuentoAcumulado = descuentoAcumulado.add(descuentoAdelanto);
         }
@@ -637,15 +655,7 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         // Actualizar el pago regular con la información de adelantos aplicados
         pagoRegular.setDescuentoAdelantos(descuentoAcumulado);
         
-        // Convertir lista de IDs a JSON string
-        try {
-            String adelantosIdsJson = new ObjectMapper().writeValueAsString(adelantosAplicadosIds);
-            pagoRegular.setAdelantosAplicadosIds(adelantosIdsJson);
-        } catch (Exception e) {
-            log.error("Error al convertir IDs de adelantos a JSON", e);
-            // Como fallback, guardar como string simple
-            pagoRegular.setAdelantosAplicadosIds(adelantosAplicadosIds.toString());
-        }
+        // ✅ YA NO SE USA JSONB - La información está en tabla relacional pago_adelantos_aplicados
         
         // Actualizar observaciones del pago regular
         String observaciones = pagoRegular.getObservaciones();

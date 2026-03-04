@@ -275,10 +275,16 @@ public class ObraService implements IObraService {
             asignacion.setDireccionObraDepartamento(obra.getDireccionObraDepartamento());
             asignacion.setEmpresaId(obra.getEmpresaId());
             asignacion.setFechaDesde(LocalDate.now());
-            asignacion.setValorHoraAsignado(profForm.getValorHora());
+            BigDecimal valorHora = profForm.getValorHora();
+            asignacion.setValorHoraAsignado(valorHora);
             asignacion.setActivo(true);
             asignacion.setMontoAsignado(BigDecimal.ZERO);
             asignacion.setSaldoDisponible(BigDecimal.ZERO);
+
+            // 🔧 DATOS FINANCIEROS: Campos críticos para adelantos y pagos
+            asignacion.setImporteJornal(valorHora);
+            asignacion.setCantidadJornales(profForm.getCantidadJornales() != null ? profForm.getCantidadJornales() : 0);
+            asignacion.setJornalesUtilizados(0);
 
             profesionalObraRepository.save(asignacion);
         }
