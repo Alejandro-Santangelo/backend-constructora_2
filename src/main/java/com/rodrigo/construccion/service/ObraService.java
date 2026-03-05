@@ -525,6 +525,7 @@ public class ObraService implements IObraService {
                             PresupuestoNoClienteSimpleDTO presupuestoDTO = new PresupuestoNoClienteSimpleDTO();
                             presupuestoDTO.setId(presupuesto.getId());
                             presupuestoDTO.setEsPresupuestoTrabajoExtra(presupuesto.getEsPresupuestoTrabajoExtra());
+                            presupuestoDTO.setTipoPresupuesto(presupuesto.getTipoPresupuesto());
                             presupuestoDTO.setObraId(presupuesto.getObra() != null ? presupuesto.getObra().getId() : null);
                             presupuestoDTO.setNombreObra(presupuesto.getNombreObra());
                             presupuestoDTO.setEstado(presupuesto.getEstado());
@@ -990,6 +991,9 @@ public class ObraService implements IObraService {
         dto.nombre = obra.getNombre();
         dto.estado = EstadoObra.fromDisplayName(obra.getEstado());
         dto.clienteId = obra.getCliente() != null ? obra.getCliente().getId() : null;
+        dto.tipoPresupuesto = obra.getTipoPresupuesto();
+        dto.esObraTrabajoExtra = obra.getEsObraTrabajoExtra();
+        dto.obraOrigenId = obra.getObraOrigenId();
         return dto;
     }
     
@@ -1055,6 +1059,7 @@ public class ObraService implements IObraService {
         dto.setEmpresaId(obra.getEmpresaId());
         dto.setEsObraManual(obra.getEsObraManual());
         dto.setEsObraTrabajoExtra(obra.getEsObraTrabajoExtra());
+        dto.setTipoPresupuesto(obra.getTipoPresupuesto());
         dto.setFechaCreacion(obra.getFechaCreacion());
         
         // Datos del cliente

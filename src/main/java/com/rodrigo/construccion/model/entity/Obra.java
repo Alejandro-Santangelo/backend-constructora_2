@@ -54,6 +54,10 @@ public class Obra {
     @Column(name = "tipo_origen", length = 50)
     private TipoOrigen tipoOrigen;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "tipo_presupuesto", length = 20)
+    private TipoPresupuesto tipoPresupuesto;
+
     @Column(name = "nombre", nullable = false, length = 200)
     private String nombre;
 

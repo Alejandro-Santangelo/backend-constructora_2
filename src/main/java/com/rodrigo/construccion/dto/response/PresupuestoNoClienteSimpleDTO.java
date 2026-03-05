@@ -3,6 +3,7 @@ package com.rodrigo.construccion.dto.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rodrigo.construccion.enums.PresupuestoEstado;
+import com.rodrigo.construccion.enums.TipoPresupuesto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -28,6 +29,9 @@ public class PresupuestoNoClienteSimpleDTO {
 
     @Schema(description = "Indica si es un presupuesto de trabajo extra", example = "true")
     private Boolean esPresupuestoTrabajoExtra;
+
+    @Schema(description = "Tipo de presupuesto", example = "PRINCIPAL")
+    private TipoPresupuesto tipoPresupuesto;
 
     @Schema(description = "ID de la obra asociada", example = "10")
     private Long obraId;

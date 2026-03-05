@@ -627,6 +627,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("📊 Totales mapeados del frontend: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
                 dto.getTotalPresupuesto(), dto.getTotalHonorarios(), dto.getTotalPresupuestoConHonorarios());
 
+        // ========== VALIDAR COHERENCIA DE TOTALES ==========
+        validarCoherenciaTotales(pnc);
+
         log.info("🔍 DEBUG DESPUÉS DE MAPEO - Valor en entity antes de guardar: {}",
                 pnc.getHonorariosConfiguracionPresupuestoValor());
 
@@ -1559,6 +1562,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (dto.getTotalConDescuentos() != null) {
             pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
         }
+
+        // ========== VALIDAR COHERENCIA DE TOTALES ==========
+        validarCoherenciaTotales(pnc);
 
         // ========== NO recalcular si los totales vienen del frontend ==========
         // Si el DTO trae los totales, no recalcular aquí para evitar perder el valor correcto
@@ -4971,8 +4977,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // 1. Nombre de la obra
         obra.setNombre(presupuesto.getNombreObra());
 
-        // 2. Sincronizar si es trabajo extra y guardar referencia a obra origen
-        obra.setEsObraTrabajoExtra(presupuesto.getEsPresupuestoTrabajoExtra() != null ? presupuesto.getEsPresupuestoTrabajoExtra() : false);
+        // 2. Sincronizar tipo de presupuesto (PRINCIPAL, TAREA_LEVE, TRABAJO_EXTRA)
+        obra.setTipoPresupuesto(presupuesto.getTipoPresupuesto());
+        log.info("🏷️ Tipo de presupuesto copiado a obra: {}", presupuesto.getTipoPresupuesto());
+
+        // 3. Sincronizar es_obra_trabajo_extra AUTOMÁTICAMENTE desde tipo_presupuesto (evita inconsistencias)
+        obra.setEsObraTrabajoExtra(com.rodrigo.construccion.enums.TipoPresupuesto.TRABAJO_EXTRA.equals(presupuesto.getTipoPresupuesto()));
         
         // Si es trabajo extra, guardar la referencia a la obra principal
         if (Boolean.TRUE.equals(presupuesto.getEsPresupuestoTrabajoExtra()) && presupuesto.getObra() != null) {
@@ -4980,7 +4990,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             log.info("🔗 Trabajo Extra: Vinculando obra nueva a obra origen ID: {}", presupuesto.getObra().getId());
         }
 
-        // 3. Dirección completa (7 campos)
+        // 4. Dirección completa (7 campos)
         obra.setDireccionObraCalle(presupuesto.getDireccionObraCalle());
         obra.setDireccionObraAltura(presupuesto.getDireccionObraAltura());
         obra.setDireccionObraPiso(presupuesto.getDireccionObraPiso());
@@ -4988,10 +4998,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         obra.setDireccionObraBarrio(presupuesto.getDireccionObraBarrio());
         obra.setDireccionObraTorre(presupuesto.getDireccionObraTorre());
 
-        // 4. Fechas
+        // 5. Fechas
         obra.setFechaInicio(presupuesto.getFechaProbableInicio());
 
-        // 5. Calcular fecha fin (fechaInicio + tiempoEstimadoTerminacion días hábiles)
+        // 6. Calcular fecha fin (fechaInicio + tiempoEstimadoTerminacion días hábiles)
         if (presupuesto.getFechaProbableInicio() != null && presupuesto.getTiempoEstimadoTerminacion() != null) {
             LocalDate fechaFin = calcularFechaFin(
                     presupuesto.getFechaProbableInicio(),
@@ -5002,7 +5012,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             obra.setFechaFin(null);
         }
 
-        // 6. Presupuesto estimado
+        // 7. Presupuesto estimado
         BigDecimal montoTotal = null;
 
         // Intentar obtener de totalGeneral (Double)
@@ -5026,13 +5036,14 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         obra.setPresupuestoEstimado(montoTotal);
 
-        // 7. Estado (lógica especial)
+        // 8. Estado (lógica especial)
         sincronizarEstado(presupuesto, obra);
 
-        // 8. Referencia al presupuesto
+        // 9. Referencia al presupuesto
         obra.setPresupuestoNoClienteId(presupuesto.getId());
 
         log.debug("   - nombre: {}", obra.getNombre());
+        log.debug("   - tipoPresupuesto: {}", obra.getTipoPresupuesto());
         log.debug("   - dirección: {} {}", obra.getDireccionObraCalle(), obra.getDireccionObraAltura());
         log.debug("   - fechaInicio: {}", obra.getFechaInicio());
         log.debug("   - fechaFin: {}", obra.getFechaFin());
@@ -5509,6 +5520,63 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             profesionales.size(), presupuestoId);
         
         return profesionales;
+    }
+
+    // =========================================================================
+    // VALIDACIÓN DE COHERENCIA DE TOTALES
+    // =========================================================================
+
+    /**
+     * Valida que los totales del presupuesto sean coherentes matemáticamente.
+     * Evita que el frontend envíe cálculos incorrectos que se guarden sin validar.
+     * 
+     * @param presupuesto Presupuesto a validar
+     * @throws IllegalArgumentException si hay inconsistencias en los totales
+     */
+    private void validarCoherenciaTotales(PresupuestoNoCliente presupuesto) {
+        java.math.BigDecimal totalPresupuesto = presupuesto.getTotalPresupuesto();
+        java.math.BigDecimal totalHonorarios = presupuesto.getTotalHonorariosCalculado();
+        java.math.BigDecimal totalConHonorarios = presupuesto.getTotalPresupuestoConHonorarios();
+        java.math.BigDecimal totalConDescuentos = presupuesto.getTotalConDescuentos();
+
+        // Permitir valores null
+        if (totalPresupuesto == null || totalHonorarios == null || totalConHonorarios == null) {
+            log.warn("⚠️ Algunos totales son null, omitiendo validación: base={}, honorarios={}, total={}",
+                    totalPresupuesto, totalHonorarios, totalConHonorarios);
+            return;
+        }
+
+        // Validar que totalPresupuestoConHonorarios = totalPresupuesto + totalHonorarios
+        java.math.BigDecimal sumaEsperada = totalPresupuesto.add(totalHonorarios);
+        java.math.BigDecimal diferencia = sumaEsperada.subtract(totalConHonorarios).abs();
+        java.math.BigDecimal tolerancia = new java.math.BigDecimal("0.01"); // Tolerancia de 1 centavo
+
+        if (diferencia.compareTo(tolerancia) > 0) {
+            String error = String.format(
+                "❌ ERROR DE CÁLCULO: Total con honorarios no coincide. " +
+                "Esperado: %s + %s = %s, pero se recibió: %s (diferencia: %s)",
+                totalPresupuesto, totalHonorarios, sumaEsperada, totalConHonorarios, diferencia
+            );
+            log.error(error);
+            throw new IllegalArgumentException(
+                "Total con honorarios incorrecto. Esperado: $" + sumaEsperada + ", recibido: $" + totalConHonorarios
+            );
+        }
+
+        // Validar que totalConDescuentos <= totalConHonorarios (si existe)
+        if (totalConDescuentos != null && totalConDescuentos.compareTo(totalConHonorarios) > 0) {
+            String error = String.format(
+                "❌ ERROR DE CÁLCULO: Total con descuentos (%s) es mayor que total sin descuentos (%s)",
+                totalConDescuentos, totalConHonorarios
+            );
+            log.error(error);
+            throw new IllegalArgumentException(
+                "Total con descuentos no puede ser mayor que total sin descuentos"
+            );
+        }
+
+        log.info("✅ Validación de totales OK: Base=%s + Honorarios=%s = Total=%s (Descuentos=%s)",
+                totalPresupuesto, totalHonorarios, totalConHonorarios, totalConDescuentos);
     }
 
 }
