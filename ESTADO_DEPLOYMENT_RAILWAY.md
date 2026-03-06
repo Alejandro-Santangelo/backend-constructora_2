@@ -62,13 +62,47 @@ SSL: Requerido (sslmode=require)
 
 ## 🔧 ÚLTIMOS FIXES - 6 de Marzo 2026
 
-### Fix: Empresas no cargaban en producción
-**Problema:** Modal mostraba "No hay contratistas registrados" en lugar de las 3 empresas existentes
+### Fix 1: Frontend no podía acceder al backend (CORS bloqueando peticiones)
+**Problema:** Modal mostraba "No hay contratistas registrados" - Error "Failed to fetch" en consola
+
+**Diagnóstico:**
+1. ✅ Backend funcionando: `curl https://backend-constructora2-production.up.railway.app/api/empresas/simple` devolvía 3 empresas
+2. ✅ Frontend configurado: `empresasSlice.js` llamaba a la URL correcta del backend
+3. ❌ Petición bloqueada: OPTIONS request devolvía **403 Prohibido**
+
+**Causa raíz:** 
+- `CorsConfig.java` solo tenía configurados orígenes localhost (desarrollo)
+- **NO incluía** `https://frontend-constructora2-production.up.railway.app`
+- Spring Security bloqueaba todas las peticiones del frontend de producción
+
+**Solución aplicada:**
+1. Modificar `CorsConfig.java` para incluir frontend Railway en allowed origins
+2. Agregar logging para ver qué orígenes están configurados al iniciar
+3. Mantener configuración de desarrollo (localhost) + agregar producción (Railway)
+
+**Código fix:**
+```java
+String[] allowedOrigins = new String[] {
+    "http://localhost:3000", // desarrollo
+    // ... otros puertos localhost
+    "https://frontend-constructora2-production.up.railway.app" // PRODUCCIÓN
+};
+```
+
+**Commits:**
+- `252fd71` - Fix: Agregar frontend Railway a CORS allowed origins
+
+**Estado:** ✅ Deploying - Railway está rebuildeando el backend (ETA: 2-3 minutos)
+
+---
+
+### Fix 2: Empresas no cargaban - Rutas relativas no funcionaban
+**Problema:** Frontend llamaba a `/api/empresas/simple` que resolvía al dominio incorrecto
 
 **Causa raíz:** 
 - El `empresasSlice.js` usaba `fetch('/api/empresas/simple')` con ruta relativa
-- En desarrollo funcionaba (proxy de Vite)
-- En producción fallaba (resolvía a dominio del frontend en lugar del backend)
+- En desarrollo funcionaba (proxy de Vite redirige a localhost:8080)
+- En producción fallaba (resolvía a `frontend-constructora2-production.up.railway.app/api/...` ❌)
 
 **Solución aplicada:**
 1. Configurar detección automática de entorno en `empresasSlice.js`
@@ -79,7 +113,7 @@ SSL: Requerido (sslmode=require)
 - `94ea017` - Fix: Hardcodear URL backend Railway en producción (api.js)
 - `170ca75` - Fix: Configurar URL backend Railway en empresasSlice para producción
 
-**Estado:** ✅ Deploying - Railway está rebuildeando el frontend
+**Estado:** ✅ COMPLETADO - Frontend ya deployed con este fix
 
 ---
 
