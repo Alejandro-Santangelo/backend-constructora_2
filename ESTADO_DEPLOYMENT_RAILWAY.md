@@ -1,4 +1,4 @@
-# Estado del Deployment en Railway - 5 de Marzo 2026
+# Estado del Deployment en Railway - 6 de Marzo 2026
 
 ## ✅ COMPLETADO
 
@@ -7,8 +7,15 @@
 - ✅ Proyecto: "powerful-encouragement" / Entorno: "production"
 - ✅ PostgreSQL deployado en Railway
 - ✅ Base de datos `construccion_app_v3` creada e importada con datos completos
+- ✅ Backend deployado exitosamente en Railway
+- ✅ Frontend deployado exitosamente en Railway
 
-### 2. Base de Datos Railway PostgreSQL
+### 2. URLs de Producción
+- **Backend:** https://backend-constructora2-production.up.railway.app
+- **Frontend:** https://frontend-constructora2-production.up.railway.app
+- **Database:** caboose.proxy.rlwy.net:16821
+
+### 3. Base de Datos Railway PostgreSQL
 **Credenciales de Conexión:**
 ```
 Host: caboose.proxy.rlwy.net
@@ -19,45 +26,96 @@ Password: HYOJMbsvtyqHmrszxCBiqPSIOEkDIBdi
 SSL: Requerido (sslmode=require)
 ```
 
-**Datos Importados:**
+**Datos de Producción:**
+- 3 empresas: "Gisel", "Construcciones srl.", "TNT"
 - 6 obras
 - 8 presupuestos
 - 28 clientes
 - 33+ tablas con estructura completa
 
-### 3. Configuración del Backend
+### 4. Configuración del Backend
 - ✅ Archivo `application-prod.properties` creado con configuración de Railway
-- ✅ Configuración committeada y pusheada a GitHub (rama: `cacho`)
-- ✅ Archivo `nixpacks.toml` creado y corregido para Java 17
+- ✅ CORS configurado con URL del frontend Railway
+- ✅ Archivo `nixpacks.toml` creado para Java 17
+- ✅ Endpoint GET /api/empresas/simple funcionando correctamente
 
-**Commits realizados:**
-1. `22d28f8` - Add Railway production config
-2. `26a8191` - Add Railway nixpacks config for Java 17
-3. `6f767e7` - Fix nixpacks.toml for Java 17
+### 5. Configuración del Frontend
+- ✅ api.js configurado con URL hardcodeada del backend Railway en producción
+- ✅ empresasSlice.js corregido para usar URL del backend Railway
+- ✅ Variables de entorno VITE_API_URL configuradas en Railway
+- ✅ Build de producción con Railpack
 
-### 4. Variables de Entorno Configuradas
+### 6. Variables de Entorno Configuradas
+**Backend:**
 - ✅ `NIXPACKS_JDK_VERSION = 17`
 - ✅ `SPRING_PROFILES_ACTIVE = prod`
 
-### 5. Repositorios GitHub
+**Frontend:**
+- ✅ `VITE_API_URL = https://backend-constructora2-production.up.railway.app`
+
+### 7. Repositorios GitHub
 - Backend: https://github.com/Alejandro-Santangelo/backend-constructora_2
 - Frontend: https://github.com/Alejandro-Santangelo/frontend-constructora_2
-- **Rama activa:** `cacho` (NO main)
+- **Rama activa:** `main`
 
 ---
 
-## ⚠️ PROBLEMA ACTUAL
+## 🔧 ÚLTIMOS FIXES - 6 de Marzo 2026
+
+### Fix: Empresas no cargaban en producción
+**Problema:** Modal mostraba "No hay contratistas registrados" en lugar de las 3 empresas existentes
+
+**Causa raíz:** 
+- El `empresasSlice.js` usaba `fetch('/api/empresas/simple')` con ruta relativa
+- En desarrollo funcionaba (proxy de Vite)
+- En producción fallaba (resolvía a dominio del frontend en lugar del backend)
+
+**Solución aplicada:**
+1. Configurar detección automática de entorno en `empresasSlice.js`
+2. Usar URL hardcodeada del backend Railway en producción: `https://backend-constructora2-production.up.railway.app`
+3. Agregar logging extensivo para debugging
+
+**Commits:**
+- `94ea017` - Fix: Hardcodear URL backend Railway en producción (api.js)
+- `170ca75` - Fix: Configurar URL backend Railway en empresasSlice para producción
+
+**Estado:** ✅ Deploying - Railway está rebuildeando el frontend
+
+---
+
+## 📝 NOTAS TÉCNICAS
+
+### Arquitectura Frontend/Backend en Railway
+- Railway deoploya frontend y backend en **dominios separados**
+- Frontend: Sitio estático deployado con Railpack
+- Backend: API Spring Boot deployado con Nixpacks
+- **Requiere URLs hardcodeadas:** Las rutas relativas no funcionan en producción
+
+### Detección de Entorno
+```javascript
+const isProduction = import.meta.env.MODE === 'production';
+const API_BASE_URL = isProduction ? 'https://backend-constructora2-production.up.railway.app' : '';
+```
+
+### Terminología UI
+- **Interno:** Sistema maneja "empresas"
+- **Visual:** Usuario ve "contratistas"
+- Decisión de UX intencional para claridad del usuario final
+
+---
+
+## ⚠️ PROBLEMA ANTERIOR (RESUELTO)
 
 ### Error de Build en Railway
-**Estado:** Build falló - JAVA_HOME no definido correctamente
+**Estado:** ✅ RESUELTO - Backend deployado exitosamente
 
-**Último error:**
+**Error anterior:**
 ```
 Error: JAVA_HOME is not defined correctly.
 We cannot execute /usr/local/bin/java
 ```
 
-**Causa:** Railway no está detectando automáticamente el último commit con la corrección del `nixpacks.toml`
+**Solución:** Rollback a deployment estable anterior ("Fix: Actualizar CORS con URL del frontend Railway")
 
 ---
 
