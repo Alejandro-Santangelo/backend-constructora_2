@@ -2,7 +2,7 @@
 nixPkgs = ["jdk17"]
 
 [phases.build]
-cmds = ["./mvnw clean install -DskipTests"]
+cmds = ["./mvnw clean package -DskipTests"]
 
 [start]
-cmd = "./mvnw spring-boot:run"
+cmd = "java -jar target/*.jar"
