@@ -229,5 +229,28 @@ curl https://[tu-backend-url]/actuator/health
 
 ---
 
-**Última actualización:** 5 de Marzo 2026, 21:00hs
-**Estado general:** 🟡 Backend pendiente de redeploy exitoso | ✅ Database OK | ⏸️ Frontend no deployado
+**Última actualización:** 6 de Marzo 2026, 17:55hs
+**Estado general:** 🟡 Backend pendiente de redeploy | ✅ Database SINCRONIZADA | ⏸️ Frontend no deployado
+
+---
+
+## ✅ BD RAILWAY ACTUALIZADA (6 de Marzo 17:50hs)
+
+### Sincronización completada:
+- ✅ Backup local exportado: `backup_local_20260306_175042.dump` (19.4 MB)
+- ✅ BD Railway limpiada y restaurada con datos locales
+- ✅ **6 obras** sincronizadas
+- ✅ **Nuevas columnas validadas**:
+  - `tipo_origen` ✓
+  - `tipo_presupuesto` ✓
+  - `honorario_jornales_obra` ✓
+  - `descuento_materiales_obra` ✓
+  - (+ 20 columnas más de honorarios/descuentos)
+
+### Estados actualizados:
+- **Obras:** APROBADO, TERMINADO
+- **Presupuestos:** APROBADO, BORRADOR, TERMINADO
+
+---
+
+## 🔄 PRÓXIMO PASO CRÍTICO: Redeploy Backend
