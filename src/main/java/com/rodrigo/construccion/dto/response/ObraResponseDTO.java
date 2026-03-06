@@ -3,6 +3,7 @@ package com.rodrigo.construccion.dto.response;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.rodrigo.construccion.enums.EstadoObra;
+import com.rodrigo.construccion.enums.TipoOrigen;
 import com.rodrigo.construccion.enums.TipoPresupuesto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
@@ -32,6 +33,11 @@ public class ObraResponseDTO {
 
     @Schema(description = "Tipo de presupuesto/obra", example = "PRINCIPAL")
     private TipoPresupuesto tipoPresupuesto;
+
+    @Schema(description = "Tipo/origen de la obra - identifica cómo fue generada", 
+            example = "OBRA_PRINCIPAL",
+            allowableValues = {"OBRA_PRINCIPAL", "OBRA_TRABAJO_DIARIO", "TRABAJO_EXTRA", "TRABAJO_ADICIONAL", "OBRA_INDEPENDIENTE"})
+    private TipoOrigen tipoOrigen;
 
     @Schema(description = "ID de la obra principal/padre (si es trabajo extra)", example = "100")
     @JsonProperty("obraPadreId") // Alias para el frontend, valor real: obraOrigenId

@@ -379,40 +379,60 @@ public class ObraService implements IObraService {
 
     /**
      * Sincroniza el estado de la obra con el presupuesto vinculado.
+     * SINCRONIZACIÓN BIDIRECCIONAL: Obra → Presupuesto
      * Ahora que los enums están sincronizados, la conversión es directa por nombre.
      */
-    private void sincronizarEstadoObraConPresupuesto(Obra obra, EstadoObra estadoObra) {
-        // Buscar el presupuesto vinculado a esta obra
-        List<com.rodrigo.construccion.model.entity.PresupuestoNoCliente> presupuestos =
-                presupuestoNoClienteRepository.findByObra_IdOrderByNumeroVersionDesc(obra.getId());
-
-        if (presupuestos.isEmpty()) {
-            return; // No hay presupuesto vinculado, no hacer nada
+    private void sincronizarEstadoObraConPresupuesto(Obra obra, EstadoObra nuevoEstadoObra) {
+        // OPCIÓN 1: Buscar presupuesto por presupuestoNoClienteId (más directo)
+        com.rodrigo.construccion.model.entity.PresupuestoNoCliente presupuesto = null;
+        
+        if (obra.getPresupuestoNoClienteId() != null) {
+            presupuesto = presupuestoNoClienteRepository.findById(obra.getPresupuestoNoClienteId())
+                    .orElse(null);
         }
-
-        // Obtener el presupuesto más reciente (primero de la lista ordenada DESC)
-        com.rodrigo.construccion.model.entity.PresupuestoNoCliente presupuesto = presupuestos.get(0);
+        
+        // OPCIÓN 2: Si no tiene presupuestoNoClienteId, buscar por relación bidireccional
+        if (presupuesto == null) {
+            List<com.rodrigo.construccion.model.entity.PresupuestoNoCliente> presupuestos =
+                    presupuestoNoClienteRepository.findByObra_IdOrderByNumeroVersionDesc(obra.getId());
+            
+            if (presupuestos.isEmpty()) {
+                log.debug("ℹ️ Obra {} no tiene presupuesto vinculado - sin sincronización", obra.getId());
+                return;
+            }
+            
+            // Obtener el presupuesto más reciente (primero de la lista ordenada DESC)
+            presupuesto = presupuestos.get(0);
+        }
 
         // Convertir estado de obra a presupuesto (conversión directa por nombre)
         try {
             com.rodrigo.construccion.enums.PresupuestoEstado nuevoEstadoPresupuesto =
-                    com.rodrigo.construccion.enums.PresupuestoEstado.valueOf(estadoObra.name());
+                    com.rodrigo.construccion.enums.PresupuestoEstado.valueOf(nuevoEstadoObra.name());
 
-            if (presupuesto.getEstado() != nuevoEstadoPresupuesto) {
+            com.rodrigo.construccion.enums.PresupuestoEstado estadoPresupuestoActual = presupuesto.getEstado();
+
+            // Solo actualizar si el estado cambió
+            if (estadoPresupuestoActual != nuevoEstadoPresupuesto) {
                 presupuesto.setEstado(nuevoEstadoPresupuesto);
                 presupuestoNoClienteRepository.save(presupuesto);
 
-                org.slf4j.LoggerFactory.getLogger(ObraService.class).info(
-                        "🔄 Estado sincronizado: Obra {} ({}) → Presupuesto {} ({})",
-                        obra.getId(), estadoObra.getDisplayName(),
-                        presupuesto.getId(), nuevoEstadoPresupuesto.getDisplayValue()
-                );
+                log.info("🔄 SINCRONIZACIÓN Obra→Presupuesto: Obra {} ({}) → Presupuesto {} ({} → {})",
+                        obra.getId(), nuevoEstadoObra.getDisplayName(),
+                        presupuesto.getId(),
+                        estadoPresupuestoActual != null ? estadoPresupuestoActual.getDisplayValue() : "NULL",
+                        nuevoEstadoPresupuesto.getDisplayValue());
+            } else {
+                log.debug("✓ Estados ya sincronizados - Obra {} y Presupuesto {} ambos en estado {}",
+                        obra.getId(), presupuesto.getId(), nuevoEstadoPresupuesto.getDisplayValue());
             }
         } catch (IllegalArgumentException e) {
-            org.slf4j.LoggerFactory.getLogger(ObraService.class).warn(
-                    "⚠️ No se pudo sincronizar estado de obra {} a presupuesto: estado {} no existe en PresupuestoEstado",
-                    obra.getId(), estadoObra.name()
-            );
+            log.warn("⚠️ No se pudo sincronizar estado de obra {} a presupuesto: estado {} no existe en PresupuestoEstado - Error: {}",
+                    obra.getId(), nuevoEstadoObra.name(), e.getMessage());
+        } catch (Exception e) {
+            log.error("❌ ERROR al sincronizar estado Obra {} → Presupuesto {}: {} - Stack: {}",
+                    obra.getId(), presupuesto != null ? presupuesto.getId() : "NULL",
+                    e.getMessage(), e.getClass().getSimpleName());
         }
     }
 

@@ -3247,25 +3247,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             }
         }
         
-        // 6. 🔄 SINCRONIZACIÓN AUTOMÁTICA: Si el presupuesto tiene obra asociada, sincronizar estado
-        if (presupuestoGuardado.getObra() != null) {
-            try {
-                Obra obra = obraRepository.findById(presupuestoGuardado.getObra().getId())
-                        .orElse(null);
-                if (obra != null) {
-                    // Convertir estado de presupuesto a estado de obra
-                    com.rodrigo.construccion.enums.EstadoObra estadoObra = convertirEstadoPresupuestoAObra(estado);
-                    obra.setEstado(estadoObra);
-                    obraRepository.save(obra);
-                    log.info("✅ Estado sincronizado: Presupuesto {} → Obra {} (estado: {})",
-                            presupuestoGuardado.getId(), obra.getId(), estadoObra.getDisplayName());
-                }
-            } catch (Exception e) {
-                log.error("❌ Error al sincronizar estado con obra {}: {}",
-                        presupuestoGuardado.getObra() != null ? presupuestoGuardado.getObra().getId() : null, e.getMessage());
-                // No lanzar excepción para no interrumpir el flujo principal
-            }
-        }
+        // 6. 🔄 SINCRONIZACIÓN BIDIRECCIONAL: Si el presupuesto tiene obra asociada, sincronizar estado
+        sincronizarEstadoPresupuestoConObra(presupuestoGuardado, estado);
 
         return presupuestoGuardado;
     }
@@ -3400,6 +3383,51 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
      */
     private com.rodrigo.construccion.enums.EstadoObra convertirEstadoPresupuestoAObra(com.rodrigo.construccion.enums.PresupuestoEstado estadoPresupuesto) {
         return com.rodrigo.construccion.enums.EstadoObra.fromPresupuestoEstado(estadoPresupuesto);
+    }
+
+    /**
+     * Sincroniza el estado del presupuesto con su obra asociada.
+     * SINCRONIZACIÓN BIDIRECCIONAL: Presupuesto → Obra
+     */
+    private void sincronizarEstadoPresupuestoConObra(PresupuestoNoCliente presupuesto, com.rodrigo.construccion.enums.PresupuestoEstado nuevoEstado) {
+        if (presupuesto.getObra() == null) {
+            log.debug("ℹ️ Presupuesto {} no tiene obra asociada - sin sincronización", presupuesto.getId());
+            return;
+        }
+
+        try {
+            Obra obra = obraRepository.findById(presupuesto.getObra().getId())
+                    .orElse(null);
+            
+            if (obra == null) {
+                log.warn("⚠️ Obra {} no encontrada para presupuesto {} - sincronización omitida",
+                        presupuesto.getObra().getId(), presupuesto.getId());
+                return;
+            }
+
+            // Convertir estado de presupuesto a estado de obra
+            com.rodrigo.construccion.enums.EstadoObra nuevoEstadoObra = convertirEstadoPresupuestoAObra(nuevoEstado);
+            com.rodrigo.construccion.enums.EstadoObra estadoObraActual = obra.getEstadoEnum();
+
+            // Solo actualizar si el estado cambió
+            if (estadoObraActual != nuevoEstadoObra) {
+                obra.setEstado(nuevoEstadoObra);
+                obraRepository.save(obra);
+                log.info("🔄 SINCRONIZACIÓN Presupuesto→Obra: Presupuesto {} ({}) → Obra {} ({} → {})",
+                        presupuesto.getId(), nuevoEstado.getDisplayValue(),
+                        obra.getId(), estadoObraActual != null ? estadoObraActual.getDisplayName() : "NULL",
+                        nuevoEstadoObra.getDisplayName());
+            } else {
+                log.debug("✓ Estados ya sincronizados - Presupuesto {} y Obra {} ambos en estado {}",
+                        presupuesto.getId(), obra.getId(), nuevoEstadoObra.getDisplayName());
+            }
+        } catch (Exception e) {
+            log.error("❌ ERROR al sincronizar estado Presupuesto {} → Obra {}: {} - Stack: {}",
+                    presupuesto.getId(),
+                    presupuesto.getObra() != null ? presupuesto.getObra().getId() : "NULL",
+                    e.getMessage(), e.getClass().getSimpleName());
+            // No lanzar excepción para no interrumpir el flujo principal
+        }
     }
 
     public java.util.List<PresupuestoNoCliente> busquedaAvanzada(
@@ -5427,6 +5455,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
             // Configuración según tipo de presupuesto
             nuevaObra.setPresupuestoOriginalId(presupuesto.getId());
+            nuevaObra.setPresupuestoNoClienteId(presupuesto.getId()); // ⭐ Relación bidireccional
             nuevaObra.setTipoOrigen(com.rodrigo.construccion.enums.TipoOrigen.fromTipoPresupuesto(presupuesto.getTipoPresupuesto()));
 
             // ⚡ TAREA_LEVE: vincular a obra padre (puede ser Obra Principal o Sub-Obra de TRABAJO_EXTRA)
@@ -5442,18 +5471,67 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             // Cliente y empresa
             nuevaObra.setCliente(presupuesto.getCliente());
             nuevaObra.setEmpresaId(presupuesto.getEmpresa().getId());
-
-            // Estado: Sincronizado con el presupuesto (APROBADO, TERMINADO, etc.)
-            com.rodrigo.construccion.enums.EstadoObra estadoObra = 
-                com.rodrigo.construccion.enums.EstadoObra.fromPresupuestoEstado(presupuesto.getEstado());
-            nuevaObra.setEstado(estadoObra);
-            log.info("🔄 Obra creada con estado: {} (sincronizado con presupuesto)", estadoObra);
             nuevaObra.setFechaInicio(presupuesto.getFechaProbableInicio());
 
-            // Presupuestos financieros
+            // Estado: Usar método sincronizarEstado() para lógica consistente
+            // (considera fecha de inicio y estados custom)
+            sincronizarEstado(presupuesto, nuevaObra);
+            log.info("🔄 Obra creada con estado: {} (sincronizado con presupuesto)", nuevaObra.getEstadoEnum());
+
+            // ========== MAPEO COMPLETO DE IMPORTES FINANCIEROS ==========
+            // Total presupuesto estimado
             if (presupuesto.getTotalPresupuesto() != null) {
                 nuevaObra.setPresupuestoEstimado(presupuesto.getTotalPresupuesto());
             }
+
+            // Importes base (convertir Double a BigDecimal)
+            if (presupuesto.getTotalProfesionales() != null) {
+                nuevaObra.setPresupuestoJornales(BigDecimal.valueOf(presupuesto.getTotalProfesionales()));
+            }
+            if (presupuesto.getTotalMateriales() != null) {
+                nuevaObra.setPresupuestoMateriales(BigDecimal.valueOf(presupuesto.getTotalMateriales()));
+            }
+            
+            // Honorarios globales (configuración de presupuesto)
+            nuevaObra.setPresupuestoHonorarios(presupuesto.getHonorariosConfiguracionPresupuestoValor());
+            nuevaObra.setTipoHonorarioPresupuesto(presupuesto.getHonorariosConfiguracionPresupuestoTipo());
+            
+            // Mayores costos globales (convertir Double a BigDecimal)
+            if (presupuesto.getMayoresCostosConfiguracionPresupuestoValor() != null) {
+                nuevaObra.setPresupuestoMayoresCostos(BigDecimal.valueOf(presupuesto.getMayoresCostosConfiguracionPresupuestoValor()));
+            }
+            nuevaObra.setTipoMayoresCostosPresupuesto(presupuesto.getMayoresCostosConfiguracionPresupuestoTipo());
+
+            // Honorarios individuales por categoría
+            nuevaObra.setHonorarioJornalesObra(presupuesto.getHonorariosJornalesValor());
+            nuevaObra.setTipoHonorarioJornalesObra(presupuesto.getHonorariosJornalesTipo());
+            nuevaObra.setHonorarioMaterialesObra(presupuesto.getHonorariosMaterialesValor());
+            nuevaObra.setTipoHonorarioMaterialesObra(presupuesto.getHonorariosMaterialesTipo());
+            // Gastos generales y mayores costos no tienen equivalente directo en presupuesto
+
+            // Descuentos sobre importes base por categoría
+            nuevaObra.setDescuentoJornalesObra(presupuesto.getDescuentosJornalesValor());
+            nuevaObra.setTipoDescuentoJornalesObra(presupuesto.getDescuentosJornalesTipo());
+            nuevaObra.setDescuentoMaterialesObra(presupuesto.getDescuentosMaterialesValor());
+            nuevaObra.setTipoDescuentoMaterialesObra(presupuesto.getDescuentosMaterialesTipo());
+            nuevaObra.setDescuentoMayoresCostosObra(presupuesto.getDescuentosMayoresCostosValor());
+            nuevaObra.setTipoDescuentoMayoresCostosObra(presupuesto.getDescuentosMayoresCostosTipo());
+
+            // Descuentos sobre honorarios por categoría
+            nuevaObra.setDescuentoHonorarioJornalesObra(presupuesto.getDescuentosHonorariosJornalesValor());
+            nuevaObra.setTipoDescuentoHonorarioJornalesObra(presupuesto.getDescuentosHonorariosJornalesTipo());
+            nuevaObra.setDescuentoHonorarioMaterialesObra(presupuesto.getDescuentosHonorariosMaterialesValor());
+            nuevaObra.setTipoDescuentoHonorarioMaterialesObra(presupuesto.getDescuentosHonorariosMaterialesTipo());
+            nuevaObra.setDescuentoHonorarioGastosGeneralesObra(presupuesto.getDescuentosHonorariosGastosGeneralesValor());
+            nuevaObra.setTipoDescuentoHonorarioGastosGeneralesObra(presupuesto.getDescuentosHonorariosGastosGeneralesTipo());
+            nuevaObra.setDescuentoHonorarioMayoresCostosObra(presupuesto.getDescuentosHonorariosValor());
+            nuevaObra.setTipoDescuentoHonorarioMayoresCostosObra(presupuesto.getDescuentosHonorariosTipo());
+
+            log.info("💰 Importes mapeados: total={}, jornales={}, materiales={}, honorarios={}",
+                    nuevaObra.getPresupuestoEstimado(),
+                    nuevaObra.getPresupuestoJornales(),
+                    nuevaObra.getPresupuestoMateriales(),
+                    nuevaObra.getPresupuestoHonorarios());
 
             // Flags
             nuevaObra.setEsObraManual(false);

@@ -5,12 +5,14 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import com.rodrigo.construccion.enums.EstadoObra;
+import com.rodrigo.construccion.enums.TipoOrigen;
 import com.rodrigo.construccion.enums.TipoPresupuesto;
 
 public class ObraSimpleDTO {
     public Long id;
     public Boolean esObraTrabajoExtra;
     public TipoPresupuesto tipoPresupuesto;
+    public TipoOrigen tipoOrigen;
     public Long obraOrigenId;
     public Boolean esObraManual;
     public String nombre;
