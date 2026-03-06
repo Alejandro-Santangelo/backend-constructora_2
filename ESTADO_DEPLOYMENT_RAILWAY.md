@@ -188,6 +188,53 @@ Cuando el deployment sea exitoso:
 
 ---
 
+## 📝 FLUJO DE TRABAJO RECOMENDADO (Git + Railway)
+
+### Desarrollo diario:
+
+**1. Trabajar en rama `cacho` (o crear features):**
+```powershell
+git checkout cacho
+# ... hacer cambios, commits normales ...
+git add .
+git commit -m "Nueva funcionalidad X"
+git push origin cacho  # ← NO despliega a Railway
+```
+
+**2. Cuando quieras desplegar a producción:**
+```powershell
+# Integrar en develop
+git checkout develop
+git pull origin develop
+git merge cacho
+git push origin develop
+
+# Promover a producción (main)
+git checkout main
+git pull origin main
+git merge develop
+git push origin main  # ← ESTO despliega a Railway automáticamente
+
+# Volver a desarrollo
+git checkout cacho
+```
+
+### Comandos rápidos:
+
+**Deploy rápido (si cacho está listo para producción):**
+```powershell
+git checkout develop; git merge cacho; git push origin develop; git checkout main; git merge develop; git push origin main; git checkout cacho
+```
+
+**Rollback (si el deploy falla):**
+```powershell
+git checkout main
+git reset --hard HEAD~1  # Volver al commit anterior
+git push origin main --force  # Railway redeployará versión anterior
+```
+
+---
+
 ## 📝 NOTAS IMPORTANTES
 
 1. **Costo estimado:** $5-10 USD/mes según uso
@@ -229,9 +276,6 @@ curl https://[tu-backend-url]/actuator/health
 
 ---
 
-**Última actualización:** 6 de Marzo 2026, 17:55hs
-**Estado general:** 🟡 Backend pendiente de redeploy | ✅ Database SINCRONIZADA | ⏸️ Frontend no deployado
-
 ---
 
 ## ✅ BD RAILWAY ACTUALIZADA (6 de Marzo 17:50hs)
@@ -250,6 +294,62 @@ curl https://[tu-backend-url]/actuator/health
 ### Estados actualizados:
 - **Obras:** APROBADO, TERMINADO
 - **Presupuestos:** APROBADO, BORRADOR, TERMINADO
+
+### Script de sincronización:
+Archivo: [actualizar-bd-railway.ps1](actualizar-bd-railway.ps1)
+
+**Futuras sincronizaciones:**
+```powershell
+.\actualizar-bd-railway.ps1
+```
+
+---
+
+**Última actualización:** 6 de Marzo 2026, 18:00hs
+**Estado general:** ⚠️ Cambiar configuración Railway a rama main | ✅ Database SINCRONIZADA | ✅ Ramas Git sincronizadas
+
+---
+
+## ✅ RAMAS GIT SINCRONIZADAS (6 de Marzo 18:00hs)
+
+### Merges completados:
+- ✅ `cacho` → `develop` (commit 05a59bf)
+- ✅ `develop` → `main` (commit 05a59bf) 
+- ✅ 65 commits integrados en main
+- ✅ Todas las ramas en GitHub actualizadas
+
+### Estructura de ramas establecida:
+```
+cacho (desarrollo activo) 
+  ↓
+develop (integración)
+  ↓  
+main (PRODUCCIÓN - Railway)
+```
+
+---
+
+## ⚠️ ACCIÓN REQUERIDA: Cambiar Railway a rama MAIN
+
+**IMPORTANTE:** Railway todavía está configurado para desplegar desde `cacho`.  
+Necesitas cambiar la configuración en Railway Dashboard.
+
+### Pasos en Railway:
+
+1. **Ir a Railway Dashboard:** https://railway.com/dashboard
+2. **Navegar:** proyecto "powerful-encouragement" → servicio "backend-constructora_2"
+3. **Settings** → **Source** 
+4. **Cambiar rama:**
+   - De: `cacho` 
+   - A: `main` ✓
+5. **Guardar cambios**
+
+Esto forzará un **redeploy automático desde main** con:
+- ✅ Código estable (todos los commits integrados)
+- ✅ Configuración nixpacks.toml corregida
+- ✅ application-prod.properties configurado
+
+**Tiempo de deploy:** 5-10 minutos
 
 ---
 
