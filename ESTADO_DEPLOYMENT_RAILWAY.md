@@ -446,3 +446,76 @@ Esto forzará un **redeploy automático desde main** con:
 ---
 
 ## 🔄 PRÓXIMO PASO CRÍTICO: Redeploy Backend
+
+---
+
+##  PROBLEMA CRÍTICO ACTUAL - 6 Marzo 2026 (23:45)
+
+###  BACKEND CAÍDO - 502 Bad Gateway
+
+**Estado Railway:** COMPLETED  Online  (falso positivo)  
+**Estado Real:** Backend NO responde - Error 502 en todas las peticiones
+
+### Cronología del Problema:
+
+1. **Problema inicial detectado:**
+   - Frontend mostraba "No hay contratistas registrados"
+   - Causa raíz: CORS bloqueaba peticiones del frontend Railway
+   - Backend respondía OK con curl directo
+
+2. **Intento Fix #1:** CorsConfig con lógica compleja
+   - Commit: 252fd71 + c9c047e
+   - Resultado:  Backend crasheó en loop infinito de reinicios
+   
+3. **Intento Fix #2:** CorsConfig simplificado
+   - Commit: 4b45129
+   - Resultado:  Mismo crash
+
+4. **Rollback #1:** "Fix: Actualizar CORS con URL del frontend Railway"
+   - Resultado:  Backend muestra Online pero responde 502
+
+### Commits Problemáticos:
+`
+4b45129  Fix: Simplificar CorsConfig  CRASH
+c9c047e  Docs: Documentar fix CORS  CRASH  
+252fd71  Fix: Agregar frontend Railway a CORS  CRASH
+a4a1b7a  Docs: Actualizar estado  502
+e38047f  Fix: Agregar endpoint GET /api/empresas  502 (SOSPECHOSO)
+63da44c  Fix: Actualizar CORS  502 (deployment activo)
+d5b23ac  Fix: Cambiar a Dockerfile  NO PROBADO (último REMOVED)
+`
+
+### Deployments en Railway HISTORY:
+- COMPLETED (activo): "Fix: Actualizar CORS..."  responde 502
+- REMOVED: "Fix: Simplificar CorsConfig..."  crasheó
+- REMOVED: "Docs: Documentar fix CORS..."  crasheó
+- REMOVED: "Fix: Cambiar a Dockerfile..."  **SIGUIENTE A PROBAR**
+- FAILED: Múltiples deployments anteriores fallidos
+
+### Hipótesis Principal:
+Merge de rama cacho a main trajo código que bloquea el inicio de Spring Boot.  
+Posible culpable: Commit e38047f que agregó endpoint GET /api/empresas
+
+###  PRÓXIMOS PASOS MAÑANA:
+
+**Opción A - Rollback Profundo (RECOMENDADO):**
+1. Hacer rollback a: "Fix: Cambiar a Dockerfile para evitar problemas de nixpacks con Maven Wrapper"
+2. Si funciona: identificar commit exacto que rompió el backend
+3. Si falla: revisar código local
+
+**Opción B - Revert Commits:**
+1. git revert de e38047f hacia adelante
+2. Push a main y esperar rebuild
+
+**Opción C - Diagnóstico Local:**
+1. Revisar commit e38047f localmente
+2. Probar backend local con esos cambios
+3. Identificar causa del hang/crash
+4. Arreglar y deployar versión limpia
+
+###  Estado Frontend:
+-  Frontend funcionando correctamente
+-  Configuración correcta (api.js + empresasSlice.js con URLs hardcodeadas)
+-  No puede conectar porque backend está caído
+
+---
