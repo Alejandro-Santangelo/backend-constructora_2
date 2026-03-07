@@ -1,4 +1,4 @@
-# Estado del Deployment en Railway - 6 de Marzo 2026
+# Estado del Deployment en Railway - 5 de Marzo 2026
 
 ## ✅ COMPLETADO
 
@@ -7,15 +7,8 @@
 - ✅ Proyecto: "powerful-encouragement" / Entorno: "production"
 - ✅ PostgreSQL deployado en Railway
 - ✅ Base de datos `construccion_app_v3` creada e importada con datos completos
-- ✅ Backend deployado exitosamente en Railway
-- ✅ Frontend deployado exitosamente en Railway
 
-### 2. URLs de Producción
-- **Backend:** https://backend-constructora2-production.up.railway.app
-- **Frontend:** https://frontend-constructora2-production.up.railway.app
-- **Database:** caboose.proxy.rlwy.net:16821
-
-### 3. Base de Datos Railway PostgreSQL
+### 2. Base de Datos Railway PostgreSQL
 **Credenciales de Conexión:**
 ```
 Host: caboose.proxy.rlwy.net
@@ -26,130 +19,45 @@ Password: HYOJMbsvtyqHmrszxCBiqPSIOEkDIBdi
 SSL: Requerido (sslmode=require)
 ```
 
-**Datos de Producción:**
-- 3 empresas: "Gisel", "Construcciones srl.", "TNT"
+**Datos Importados:**
 - 6 obras
 - 8 presupuestos
 - 28 clientes
 - 33+ tablas con estructura completa
 
-### 4. Configuración del Backend
+### 3. Configuración del Backend
 - ✅ Archivo `application-prod.properties` creado con configuración de Railway
-- ✅ CORS configurado con URL del frontend Railway
-- ✅ Archivo `nixpacks.toml` creado para Java 17
-- ✅ Endpoint GET /api/empresas/simple funcionando correctamente
+- ✅ Configuración committeada y pusheada a GitHub (rama: `cacho`)
+- ✅ Archivo `nixpacks.toml` creado y corregido para Java 17
 
-### 5. Configuración del Frontend
-- ✅ api.js configurado con URL hardcodeada del backend Railway en producción
-- ✅ empresasSlice.js corregido para usar URL del backend Railway
-- ✅ Variables de entorno VITE_API_URL configuradas en Railway
-- ✅ Build de producción con Railpack
+**Commits realizados:**
+1. `22d28f8` - Add Railway production config
+2. `26a8191` - Add Railway nixpacks config for Java 17
+3. `6f767e7` - Fix nixpacks.toml for Java 17
 
-### 6. Variables de Entorno Configuradas
-**Backend:**
+### 4. Variables de Entorno Configuradas
 - ✅ `NIXPACKS_JDK_VERSION = 17`
 - ✅ `SPRING_PROFILES_ACTIVE = prod`
 
-**Frontend:**
-- ✅ `VITE_API_URL = https://backend-constructora2-production.up.railway.app`
-
-### 7. Repositorios GitHub
+### 5. Repositorios GitHub
 - Backend: https://github.com/Alejandro-Santangelo/backend-constructora_2
 - Frontend: https://github.com/Alejandro-Santangelo/frontend-constructora_2
-- **Rama activa:** `main`
+- **Rama activa:** `cacho` (NO main)
 
 ---
 
-## 🔧 ÚLTIMOS FIXES - 6 de Marzo 2026
-
-### Fix 1: Frontend no podía acceder al backend (CORS bloqueando peticiones)
-**Problema:** Modal mostraba "No hay contratistas registrados" - Error "Failed to fetch" en consola
-
-**Diagnóstico:**
-1. ✅ Backend funcionando: `curl https://backend-constructora2-production.up.railway.app/api/empresas/simple` devolvía 3 empresas
-2. ✅ Frontend configurado: `empresasSlice.js` llamaba a la URL correcta del backend
-3. ❌ Petición bloqueada: OPTIONS request devolvía **403 Prohibido**
-
-**Causa raíz:** 
-- `CorsConfig.java` solo tenía configurados orígenes localhost (desarrollo)
-- **NO incluía** `https://frontend-constructora2-production.up.railway.app`
-- Spring Security bloqueaba todas las peticiones del frontend de producción
-
-**Solución aplicada:**
-1. Modificar `CorsConfig.java` para incluir frontend Railway en allowed origins
-2. Agregar logging para ver qué orígenes están configurados al iniciar
-3. Mantener configuración de desarrollo (localhost) + agregar producción (Railway)
-
-**Código fix:**
-```java
-String[] allowedOrigins = new String[] {
-    "http://localhost:3000", // desarrollo
-    // ... otros puertos localhost
-    "https://frontend-constructora2-production.up.railway.app" // PRODUCCIÓN
-};
-```
-
-**Commits:**
-- `252fd71` - Fix: Agregar frontend Railway a CORS allowed origins
-
-**Estado:** ✅ Deploying - Railway está rebuildeando el backend (ETA: 2-3 minutos)
-
----
-
-### Fix 2: Empresas no cargaban - Rutas relativas no funcionaban
-**Problema:** Frontend llamaba a `/api/empresas/simple` que resolvía al dominio incorrecto
-
-**Causa raíz:** 
-- El `empresasSlice.js` usaba `fetch('/api/empresas/simple')` con ruta relativa
-- En desarrollo funcionaba (proxy de Vite redirige a localhost:8080)
-- En producción fallaba (resolvía a `frontend-constructora2-production.up.railway.app/api/...` ❌)
-
-**Solución aplicada:**
-1. Configurar detección automática de entorno en `empresasSlice.js`
-2. Usar URL hardcodeada del backend Railway en producción: `https://backend-constructora2-production.up.railway.app`
-3. Agregar logging extensivo para debugging
-
-**Commits:**
-- `94ea017` - Fix: Hardcodear URL backend Railway en producción (api.js)
-- `170ca75` - Fix: Configurar URL backend Railway en empresasSlice para producción
-
-**Estado:** ✅ COMPLETADO - Frontend ya deployed con este fix
-
----
-
-## 📝 NOTAS TÉCNICAS
-
-### Arquitectura Frontend/Backend en Railway
-- Railway deoploya frontend y backend en **dominios separados**
-- Frontend: Sitio estático deployado con Railpack
-- Backend: API Spring Boot deployado con Nixpacks
-- **Requiere URLs hardcodeadas:** Las rutas relativas no funcionan en producción
-
-### Detección de Entorno
-```javascript
-const isProduction = import.meta.env.MODE === 'production';
-const API_BASE_URL = isProduction ? 'https://backend-constructora2-production.up.railway.app' : '';
-```
-
-### Terminología UI
-- **Interno:** Sistema maneja "empresas"
-- **Visual:** Usuario ve "contratistas"
-- Decisión de UX intencional para claridad del usuario final
-
----
-
-## ⚠️ PROBLEMA ANTERIOR (RESUELTO)
+## ⚠️ PROBLEMA ACTUAL
 
 ### Error de Build en Railway
-**Estado:** ✅ RESUELTO - Backend deployado exitosamente
+**Estado:** Build falló - JAVA_HOME no definido correctamente
 
-**Error anterior:**
+**Último error:**
 ```
 Error: JAVA_HOME is not defined correctly.
 We cannot execute /usr/local/bin/java
 ```
 
-**Solución:** Rollback a deployment estable anterior ("Fix: Actualizar CORS con URL del frontend Railway")
+**Causa:** Railway no está detectando automáticamente el último commit con la corrección del `nixpacks.toml`
 
 ---
 
@@ -446,76 +354,3 @@ Esto forzará un **redeploy automático desde main** con:
 ---
 
 ## 🔄 PRÓXIMO PASO CRÍTICO: Redeploy Backend
-
----
-
-##  PROBLEMA CRÍTICO ACTUAL - 6 Marzo 2026 (23:45)
-
-###  BACKEND CAÍDO - 502 Bad Gateway
-
-**Estado Railway:** COMPLETED  Online  (falso positivo)  
-**Estado Real:** Backend NO responde - Error 502 en todas las peticiones
-
-### Cronología del Problema:
-
-1. **Problema inicial detectado:**
-   - Frontend mostraba "No hay contratistas registrados"
-   - Causa raíz: CORS bloqueaba peticiones del frontend Railway
-   - Backend respondía OK con curl directo
-
-2. **Intento Fix #1:** CorsConfig con lógica compleja
-   - Commit: 252fd71 + c9c047e
-   - Resultado:  Backend crasheó en loop infinito de reinicios
-   
-3. **Intento Fix #2:** CorsConfig simplificado
-   - Commit: 4b45129
-   - Resultado:  Mismo crash
-
-4. **Rollback #1:** "Fix: Actualizar CORS con URL del frontend Railway"
-   - Resultado:  Backend muestra Online pero responde 502
-
-### Commits Problemáticos:
-`
-4b45129  Fix: Simplificar CorsConfig  CRASH
-c9c047e  Docs: Documentar fix CORS  CRASH  
-252fd71  Fix: Agregar frontend Railway a CORS  CRASH
-a4a1b7a  Docs: Actualizar estado  502
-e38047f  Fix: Agregar endpoint GET /api/empresas  502 (SOSPECHOSO)
-63da44c  Fix: Actualizar CORS  502 (deployment activo)
-d5b23ac  Fix: Cambiar a Dockerfile  NO PROBADO (último REMOVED)
-`
-
-### Deployments en Railway HISTORY:
-- COMPLETED (activo): "Fix: Actualizar CORS..."  responde 502
-- REMOVED: "Fix: Simplificar CorsConfig..."  crasheó
-- REMOVED: "Docs: Documentar fix CORS..."  crasheó
-- REMOVED: "Fix: Cambiar a Dockerfile..."  **SIGUIENTE A PROBAR**
-- FAILED: Múltiples deployments anteriores fallidos
-
-### Hipótesis Principal:
-Merge de rama cacho a main trajo código que bloquea el inicio de Spring Boot.  
-Posible culpable: Commit e38047f que agregó endpoint GET /api/empresas
-
-###  PRÓXIMOS PASOS MAÑANA:
-
-**Opción A - Rollback Profundo (RECOMENDADO):**
-1. Hacer rollback a: "Fix: Cambiar a Dockerfile para evitar problemas de nixpacks con Maven Wrapper"
-2. Si funciona: identificar commit exacto que rompió el backend
-3. Si falla: revisar código local
-
-**Opción B - Revert Commits:**
-1. git revert de e38047f hacia adelante
-2. Push a main y esperar rebuild
-
-**Opción C - Diagnóstico Local:**
-1. Revisar commit e38047f localmente
-2. Probar backend local con esos cambios
-3. Identificar causa del hang/crash
-4. Arreglar y deployar versión limpia
-
-###  Estado Frontend:
--  Frontend funcionando correctamente
--  Configuración correcta (api.js + empresasSlice.js con URLs hardcodeadas)
--  No puede conectar porque backend está caído
-
----

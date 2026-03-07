@@ -7,18 +7,19 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 @Configuration
 public class CorsConfig {
-    
     @Bean
     public WebMvcConfigurer corsConfigurer() {
         return new WebMvcConfigurer() {
             @Override
             public void addCorsMappings(CorsRegistry registry) {
-                System.out.println("🔧 CORS: Configurando orígenes permitidos");
-                
                 registry.addMapping("/**")
                     .allowedOriginPatterns(
-                        "http://localhost:*",
-                        "https://frontend-constructora2-production.up.railway.app"
+                        "http://localhost:3000",
+                        "http://localhost:3001",
+                        "http://localhost:3002",
+                        "http://localhost:3003",
+                        "http://localhost:3004",
+                        "http://localhost:3005"
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                     .allowedHeaders("*")

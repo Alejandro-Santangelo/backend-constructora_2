@@ -25,14 +25,6 @@ public class EmpresaController {
 
     private final IEmpresaService empresaService;
 
-    /* Obtener todas las empresas */
-    @GetMapping
-    @Operation(summary = "Listar todas las empresas", description = "Obtiene la lista completa de todas las empresas activas e inactivas del sistema.")
-    public ResponseEntity<List<EmpresaResponseDTO>> obtenerTodasLasEmpresas() {
-        List<EmpresaResponseDTO> empresas = empresaService.obtenerTodasLasEmpresas();
-        return ResponseEntity.ok(empresas);
-    }
-
     /* Crear una nueva empresa */
     @PostMapping
     @Operation(summary = "Registrar nueva empresa (tenant)", description = "Crea una nueva empresa en el sistema multi-tenant. Cada empresa funciona como un tenant independiente "
