@@ -323,9 +323,11 @@ public class ReporteSistemaService {
     
     /**
      * Ejecuta backup en Railway usando pg_dump directamente
+     * NOTA: Railway no incluye pg_dump en el contenedor por defecto
+     * Se recomienda usar Railway Dashboard o scripts locales
      */
-    private String ejecutarBackupRailway(String databaseUrl) throws IOException, InterruptedException {
-        logger.info("Ejecutando backup en Railway (Linux)");
+    private String ejecutarBackupRailway(String databaseUrl) throws IOException {
+        logger.warn("Backup en Railway requiere pg_dump instalado en el contenedor");
         
         // Crear directorio de backups si no existe
         Path backupDir = Paths.get(directorioBackups);
@@ -334,43 +336,12 @@ public class ReporteSistemaService {
             logger.info("Directorio de backups creado: {}", backupDir);
         }
         
-        // Generar nombre de archivo con timestamp
-        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
-        String nombreArchivo = "backup_railway_" + timestamp + ".sql";
-        Path archivoBackup = backupDir.resolve(nombreArchivo);
-        
-        logger.info("Archivo de backup: {}", archivoBackup);
-        
-        // Ejecutar pg_dump con DATABASE_URL
-        ProcessBuilder pb = new ProcessBuilder(
-            "bash", "-c",
-            "pg_dump \"" + databaseUrl + "\" --no-owner --no-privileges -F p -f \"" + archivoBackup.toString() + "\""
-        );
-        
-        pb.redirectErrorStream(true);
-        Process process = pb.start();
-        
-        // Leer output del proceso
-        StringBuilder output = new StringBuilder();
-        try (java.io.BufferedReader reader = new java.io.BufferedReader(
-                new java.io.InputStreamReader(process.getInputStream()))) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                output.append(line).append("\n");
-                logger.info("pg_dump output: {}", line);
-            }
-        }
-        
-        int exitCode = process.waitFor();
-        
-        if (exitCode == 0) {
-            long tamano = Files.size(archivoBackup);
-            logger.info("Backup ejecutado exitosamente. Tamaño: {} bytes", tamano);
-            return "Backup ejecutado correctamente: " + nombreArchivo + " (" + formatearTamano(tamano) + ")";
-        } else {
-            logger.error("Error al ejecutar pg_dump. Exit code: {}, Output: {}", exitCode, output.toString());
-            throw new RuntimeException("Error al ejecutar pg_dump. Código de salida: " + exitCode + ". Output: " + output.toString());
-        }
+        // Retornar mensaje informativo
+        return "⚠️ Backup automático no disponible en Railway.\n\n" +
+               "Opciones para hacer backup:\n" +
+               "1. Railway Dashboard → PostgreSQL → Backups\n" +
+               "2. Usar scripts locales: backup-railway-completo.ps1\n\n" +
+               "Los scripts locales pueden conectarse a Railway usando DATABASE_URL.";
     }
     
     /**
