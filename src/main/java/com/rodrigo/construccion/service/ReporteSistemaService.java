@@ -38,7 +38,7 @@ public class ReporteSistemaService {
     @Value("${reportes.backup.directorio:db-backups}")
     private String directorioBackups;
     
-    @Value("${spring.datasource.password}")
+    @Value("${spring.datasource.password:#{null}}")
     private String dbPassword;
     
     /**
@@ -274,7 +274,9 @@ public class ReporteSistemaService {
         );
         
         // Configurar variable de entorno para la contraseña de PostgreSQL
-        pb.environment().put("DB_PASSWORD", dbPassword);
+        if (dbPassword != null) {
+            pb.environment().put("DB_PASSWORD", dbPassword);
+        }
         
         pb.redirectErrorStream(true);
         Process process = pb.start();
@@ -384,7 +386,9 @@ public class ReporteSistemaService {
         );
         
         // Configurar variable de entorno para la contraseña de PostgreSQL
-        pb.environment().put("DB_PASSWORD", dbPassword);
+        if (dbPassword != null) {
+            pb.environment().put("DB_PASSWORD", dbPassword);
+        }
         
         pb.redirectErrorStream(true);
         Process process = pb.start();
