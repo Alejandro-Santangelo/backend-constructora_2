@@ -16,6 +16,7 @@ import java.nio.file.attribute.FileTime;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -223,10 +224,48 @@ public class ReporteSistemaService {
     }
     
     /**
-     * Ejecuta manualmente el script de auditoría de PowerShell
+     * Ejecuta manualmente el script de auditoría
+     * Detecta automáticamente si está en Railway (Linux) o local (Windows)
      */
     public String ejecutarAuditoria() throws IOException, InterruptedException {
-        logger.info("Ejecutando script de auditoría manualmente");
+        logger.info("Ejecutando auditoría manualmente");
+        
+        // Detectar si estamos en Railway (variable DATABASE_URL presente)
+        String databaseUrl = System.getenv("DATABASE_URL");
+        boolean esRailway = databaseUrl != null && !databaseUrl.isEmpty();
+        
+        if (esRailway) {
+            return ejecutarAuditoriaRailway(databaseUrl);
+        } else {
+            return ejecutarAuditoriaLocal();
+        }
+    }
+    
+    /**
+     * Ejecuta auditoría en Railway
+     * Por ahora retorna mensaje de funcionalidad no disponible
+     * TODO: Implementar auditoría SQL nativa para Railway
+     */
+    private String ejecutarAuditoriaRailway(String databaseUrl) throws IOException {
+        logger.warn("Auditoría en Railway no implementada aún");
+        
+        // TODO: Cuando se implemente, ejecutar scripts SQL de auditoría
+        // Crear directorio si no existe
+        Path auditoriaDir = Paths.get(directorioAuditorias);
+        if (!Files.exists(auditoriaDir)) {
+            Files.createDirectories(auditoriaDir);
+            logger.info("Directorio de auditorías creado: {}", auditoriaDir);
+        }
+        
+        // Retornar mensaje temporal
+        return "Auditoría automática no disponible en Railway aún. Use las herramientas de monitoreo de Railway Dashboard o contacte al administrador.";
+    }
+    
+    /**
+     * Ejecuta auditoría en local usando PowerShell (Windows)
+     */
+    private String ejecutarAuditoriaLocal() throws IOException, InterruptedException {
+        logger.info("Ejecutando auditoría en local (Windows)");
         
         ProcessBuilder pb = new ProcessBuilder(
             "powershell.exe",
@@ -263,10 +302,80 @@ public class ReporteSistemaService {
     }
     
     /**
-     * Ejecuta manualmente el script de backup de PowerShell
+     * Ejecuta manualmente el backup de la base de datos
+     * Detecta automáticamente si está en Railway (Linux) o local (Windows)
      */
     public String ejecutarBackup() throws IOException, InterruptedException {
-        logger.info("Ejecutando script de backup manualmente");
+        logger.info("Ejecutando backup manualmente");
+        
+        // Detectar si estamos en Railway (variable DATABASE_URL presente)
+        String databaseUrl = System.getenv("DATABASE_URL");
+        boolean esRailway = databaseUrl != null && !databaseUrl.isEmpty();
+        
+        if (esRailway) {
+            return ejecutarBackupRailway(databaseUrl);
+        } else {
+            return ejecutarBackupLocal();
+        }
+    }
+    
+    /**
+     * Ejecuta backup en Railway usando pg_dump directamente
+     */
+    private String ejecutarBackupRailway(String databaseUrl) throws IOException, InterruptedException {
+        logger.info("Ejecutando backup en Railway (Linux)");
+        
+        // Crear directorio de backups si no existe
+        Path backupDir = Paths.get(directorioBackups);
+        if (!Files.exists(backupDir)) {
+            Files.createDirectories(backupDir);
+            logger.info("Directorio de backups creado: {}", backupDir);
+        }
+        
+        // Generar nombre de archivo con timestamp
+        String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+        String nombreArchivo = "backup_railway_" + timestamp + ".sql";
+        Path archivoBackup = backupDir.resolve(nombreArchivo);
+        
+        logger.info("Archivo de backup: {}", archivoBackup);
+        
+        // Ejecutar pg_dump con DATABASE_URL
+        ProcessBuilder pb = new ProcessBuilder(
+            "bash", "-c",
+            "pg_dump \"" + databaseUrl + "\" --no-owner --no-privileges -F p -f \"" + archivoBackup.toString() + "\""
+        );
+        
+        pb.redirectErrorStream(true);
+        Process process = pb.start();
+        
+        // Leer output del proceso
+        StringBuilder output = new StringBuilder();
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(
+                new java.io.InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+                logger.info("pg_dump output: {}", line);
+            }
+        }
+        
+        int exitCode = process.waitFor();
+        
+        if (exitCode == 0) {
+            long tamano = Files.size(archivoBackup);
+            logger.info("Backup ejecutado exitosamente. Tamaño: {} bytes", tamano);
+            return "Backup ejecutado correctamente: " + nombreArchivo + " (" + formatearTamano(tamano) + ")";
+        } else {
+            logger.error("Error al ejecutar pg_dump. Exit code: {}, Output: {}", exitCode, output.toString());
+            throw new RuntimeException("Error al ejecutar pg_dump. Código de salida: " + exitCode + ". Output: " + output.toString());
+        }
+    }
+    
+    /**
+     * Ejecuta backup en local usando PowerShell (Windows)
+     */
+    private String ejecutarBackupLocal() throws IOException, InterruptedException {
+        logger.info("Ejecutando backup en local (Windows)");
         
         ProcessBuilder pb = new ProcessBuilder(
             "powershell.exe",
