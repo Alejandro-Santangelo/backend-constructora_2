@@ -19,7 +19,8 @@ public class CorsConfig {
                         "http://localhost:3002",
                         "http://localhost:3003",
                         "http://localhost:3004",
-                        "http://localhost:3005"
+                        "http://localhost:3005",
+                        "https://frontend-constructora2-production.up.railway.app"
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
                     .allowedHeaders("*")
