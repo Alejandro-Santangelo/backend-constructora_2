@@ -27,6 +27,13 @@ public class TenantFilter extends OncePerRequestFilter {
                                     jakarta.servlet.FilterChain filterChain)
             throws jakarta.servlet.ServletException, java.io.IOException {
         
+        // CORS PREFLIGHT: Dejar pasar OPTIONS sin procesar
+        if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            System.out.println("🔄 CORS PREFLIGHT: OPTIONS " + request.getRequestURI() + " - pasando sin procesar");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         System.out.println("🔍 TenantFilter procesando: " + request.getMethod() + " " + request.getRequestURI());
         
         // Debug: mostrar headers relevantes
