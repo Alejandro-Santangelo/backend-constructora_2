@@ -4,6 +4,7 @@ import jakarta.persistence.EntityManager;
 import org.aspectj.lang.annotation.Aspect;
 import org.aspectj.lang.annotation.Before;
 import org.hibernate.Session;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
 
 /**
@@ -11,9 +12,12 @@ import org.springframework.stereotype.Component;
  * 
  * Este interceptor se ejecuta ANTES de cualquier método de repository,
  * asegurando que el filtro de Hibernate esté activo en la sesión correcta.
+ * 
+ * DESACTIVADO en producción Railway (causa hang en startup con 61 repos)
  */
 @Aspect
 @Component
+@ConditionalOnProperty(name = "app.hibernate-filter-interceptor.enabled", havingValue = "true", matchIfMissing = true)
 public class HibernateFilterInterceptor {
 
     private final EntityManager entityManager;
