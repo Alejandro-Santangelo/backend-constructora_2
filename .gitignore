@@ -22,9 +22,17 @@ release.properties
 # Scripts
 ##########################
 
-# Ignorar todos los .ps1 EXCEPTO backup-bd-construccion-app.ps1
+# Ignorar todos los .ps1 EXCEPTO los scripts esenciales
 *.ps1
 !backup-bd-construccion-app.ps1
+!backup-railway-completo.ps1
+!backup-railway-schema-only.ps1
+!run.ps1
+!run-prod.ps1
+!quick-deploy.ps1
+!fast-deploy.ps1
+!rollback.ps1
+!cleanup.ps1
 
 ##########################
 # Backups Base de Datos
@@ -97,3 +105,10 @@ desktop.ini
 INFORME_*.md
 PLAN_*.md
 FLUJO-TRABAJO-GIT.md
+
+##########################
+# Cleanup
+##########################
+
+# Carpeta temporal de archivos a eliminar
+_to_delete/
