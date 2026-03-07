@@ -1,6 +1,94 @@
-# Estado del Deployment en Railway - 5 de Marzo 2026
+﻿# Estado del Deployment en Railway - 7 de Marzo 2026
 
-## ✅ COMPLETADO
+---
+
+# 🎉 SOLUCIÓN EXITOSA - BACKEND FUNCIONANDO
+
+## ✅ COMMIT QUE SOLUCIONÓ EL PROBLEMA 502
+
+**Commit:** `4ba2d8b` - "Fix CRÍTICO: Desactivar HibernateFilterInterceptor en prod - causa hang AspectJ con 61 repos"
+
+**Fecha:** 7 de Marzo 2026, 9:00 AM
+
+**Estado:** ✅ **BACKEND ONLINE** - Iniciado exitosamente en 66 segundos
+
+---
+
+### 🔍 CAUSA DEL PROBLEMA (Crash loop infinito)
+
+El backend se colgaba **SIEMPRE** después de inicializar JPA EntityManagerFactory:
+
+```
+✅ Initialized JPA EntityManagerFactory for persistence unit 'default'
+✅ Hibernate is in classpath; If applicable, HQL parser will be used.
+❌ [HANG AQUÍ - NUNCA COMPLETABA STARTUP]
+```
+
+**Causas identificadas:**
+
+1. **HibernateFilterInterceptor** (PRINCIPAL):
+   - Usa AspectJ con `@Before("execution(* org.springframework.data.repository.Repository+.*(..))")`
+   - Intenta crear proxies dinámicos para **61 repositorios JPA**
+   - En Railway (recursos limitados) causaba **timeout/hang** durante el startup
+   
+2. **Springdoc/Swagger** (SECUNDARIA):
+   - Escaneo de 61 repositorios + controllers
+   - Consumo adicional de memoria durante startup
+
+3. **@EnableScheduling** (MENOR):
+   - Tareas programadas que se ejecutaban antes de completar startup
+
+---
+
+### ✅ SOLUCIÓN APLICADA
+
+**Archivos modificados:**
+
+1. **`HibernateFilterInterceptor.java`**:
+   ```java
+   @ConditionalOnProperty(
+       name = "app.hibernate-filter-interceptor.enabled", 
+       havingValue = "true", 
+       matchIfMissing = true
+   )
+   ```
+   → Permite desactivarlo con property
+
+2. **`application-prod.properties`**:
+   ```properties
+   # DESACTIVAR HibernateFilterInterceptor (causa hang con 61 repos)
+   app.hibernate-filter-interceptor.enabled=false
+   
+   # SWAGGER/SPRINGDOC DESACTIVADO COMPLETAMENTE
+   springdoc.api-docs.enabled=false
+   springdoc.swagger-ui.enabled=false
+   ```
+
+3. **`ConstruccionBackendApplication.java`**:
+   ```java
+   // @EnableScheduling  // DESACTIVADO temporalmente para Railway
+   ```
+
+---
+
+### 📊 RESULTADO EXITOSO (Logs Railway)
+
+```
+12:04:18 - Starting ConstruccionBackendApplication v1.0.0
+12:04:18 - The following 1 profile is active: "prod"
+12:04:38 - HHH90000025: PostgreSQLDialect does not need to be specified
+12:05:19 - spring.jpa.open-in-view is enabled by default
+12:05:22 - Started ConstruccionBackendApplication in 66.136 seconds ✅
+✅ ========================================
+✅ BACKEND INICIADO EXITOSAMENTE!
+✅ ========================================
+```
+
+**URL Backend:** https://backend-constructora2-production.up.railway.app
+
+---
+
+## ✅ HISTORIAL COMPLETADO
 
 ### 1. Infraestructura Railway
 - ✅ Cuenta Railway creada (usuario: Alejandro-Santangelo)
@@ -305,8 +393,52 @@ Archivo: [actualizar-bd-railway.ps1](actualizar-bd-railway.ps1)
 
 ---
 
-**Última actualización:** 6 de Marzo 2026, 18:00hs
-**Estado general:** ⚠️ Cambiar configuración Railway a rama main | ✅ Database SINCRONIZADA | ✅ Ramas Git sincronizadas
+**Última actualización:** 7 de Marzo 2026, 9:06 AM  
+**Estado general:** ✅ **BACKEND ONLINE Y FUNCIONANDO** | ⚠️ Pendiente fix CORS para frontend
+
+---
+
+## ⚠️ SIGUIENTE PASO: CONFIGURAR CORS PARA FRONTEND RAILWAY
+
+### Problema actual:
+El frontend Railway (`https://frontend-constructora2-production.up.railway.app`) **NO puede conectar** al backend porque:
+
+**CorsConfig.java** solo permite:
+```java
+.allowedOriginPatterns(
+    "http://localhost:3000",
+    "http://localhost:3001",
+    // ... otros localhost
+)
+```
+
+**Error en consola del frontend:**
+```
+❌ EMPRESAS: Error en fetchAllEmpresas: TypeError: Failed to fetch
+```
+
+### ✅ Solución pendiente:
+
+Modificar `src/main/java/com/rodrigo/construccion/config/CorsConfig.java`:
+
+```java
+.allowedOriginPatterns(
+    "http://localhost:3000",
+    "http://localhost:3001",
+    "http://localhost:3002",
+    "http://localhost:3003",
+    "http://localhost:3004",
+    "http://localhost:3005",
+    "https://frontend-constructora2-production.up.railway.app"  // ← AGREGAR ESTA LÍNEA
+)
+```
+
+Luego: `git commit` → `git push origin main` → Railway redespliegue automáticamente (2-3 min)
+
+---
+
+**Estado anterior:** 6 de Marzo 2026, 18:00hs  
+**Estado general anterior:** ⚠️ Cambiar configuración Railway a rama main | ✅ Database SINCRONIZADA | ✅ Ramas Git sincronizadas
 
 ---
 
