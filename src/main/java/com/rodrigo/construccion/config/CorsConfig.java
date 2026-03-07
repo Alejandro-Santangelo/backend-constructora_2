@@ -16,13 +16,8 @@ public class CorsConfig {
                 System.out.println("🔧 CORS: Configurando orígenes permitidos");
                 
                 registry.addMapping("/**")
-                    .allowedOrigins(
-                        "http://localhost:3000",
-                        "http://localhost:3001",
-                        "http://localhost:3002",
-                        "http://localhost:3003",
-                        "http://localhost:3004",
-                        "http://localhost:3005",
+                    .allowedOriginPatterns(
+                        "http://localhost:*",
                         "https://frontend-constructora2-production.up.railway.app"
                     )
                     .allowedMethods("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS")
