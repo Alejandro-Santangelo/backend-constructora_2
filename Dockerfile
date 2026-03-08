@@ -23,5 +23,12 @@ COPY --from=build /app/target/*.jar app.jar
 # Exponer el puerto
 EXPOSE 8080
 
-# Ejecutar la aplicación
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# Ejecutar la aplicación con límites de memoria y perfil prod
+# Railway plan: 1GB RAM → JVM max 512MB (deja espacio para overhead)
+ENTRYPOINT ["java", \
+    "-Xmx512m", \
+    "-Xms256m", \
+    "-XX:+UseContainerSupport", \
+    "-XX:MaxRAMPercentage=75.0", \
+    "-Dspring.profiles.active=prod", \
+    "-jar", "app.jar"]
