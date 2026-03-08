@@ -92,6 +92,8 @@ Si Railway muestra "Crashed" pero código es correcto:
 
 | Commit | Rama | Descripción | Estado |
 |--------|------|-------------|--------|
+| f8e0468 | main | Merge fix Dockerfile OOM Railway | ✅ DESPLEGADO 8/3/2026 |
+| 5e7a2ed | todas | Fix OOM - límites JVM Dockerfile | ✅ FIX APLICADO |
 | 621c41b | main | CORS preflight fix | ⚠️ CRASHEÓ 7/3/2026 (OOM) |
 | 5983378 | todas | Backup desactivado Railway | ✅ ESTABLE |
 | 4f0aae8 | frontend | Encoding UTF-8 fix | ✅ ESTABLE |
@@ -101,8 +103,11 @@ Si Railway muestra "Crashed" pero código es correcto:
 ### Crash 7/3/2026 17:47 GMT-3 (Deployment 7151e56f)
 - **Causa**: OutOfMemoryError - Dockerfile sin límites JVM
 - **Síntomas**: Crash silencioso sin exception logs, memoria ~500MB
-- **Solución**: Agregar -Xmx512m -Xms256m al Dockerfile ENTRYPOINT
-- **Commit fix**: [pendiente merge]
+- **Diagnóstico**: Railway usa Dockerfile (no nixpacks.toml), faltaban parámetros -Xmx/-Xms
+- **Solución**: Agregar -Xmx512m -Xms256m -XX:MaxRAMPercentage=75.0 al Dockerfile ENTRYPOINT
+- **Commit fix**: 5e7a2ed
+- **Deploy fix**: f8e0468 → 8/3/2026 ~09:30 ART
+- **Estado**: ✅ RESUELTO
 ## 📊 Verificación de Estado
 ```bash
 # Backend - verificar commit actual
