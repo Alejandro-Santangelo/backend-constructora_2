@@ -92,10 +92,17 @@ Si Railway muestra "Crashed" pero código es correcto:
 
 | Commit | Rama | Descripción | Estado |
 |--------|------|-------------|--------|
-| 621c41b | main | CORS preflight fix | ✅ ACTUAL ESTABLE |
+| 621c41b | main | CORS preflight fix | ⚠️ CRASHEÓ 7/3/2026 (OOM) |
 | 5983378 | todas | Backup desactivado Railway | ✅ ESTABLE |
 | 4f0aae8 | frontend | Encoding UTF-8 fix | ✅ ESTABLE |
 
+## 🐛 Incidentes Registrados
+
+### Crash 7/3/2026 17:47 GMT-3 (Deployment 7151e56f)
+- **Causa**: OutOfMemoryError - Dockerfile sin límites JVM
+- **Síntomas**: Crash silencioso sin exception logs, memoria ~500MB
+- **Solución**: Agregar -Xmx512m -Xms256m al Dockerfile ENTRYPOINT
+- **Commit fix**: [pendiente merge]
 ## 📊 Verificación de Estado
 ```bash
 # Backend - verificar commit actual
