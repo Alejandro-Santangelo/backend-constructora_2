@@ -399,6 +399,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         configurarPresupuestoPorTipo(pnc, dto, tipoPresupuesto);
 
         // numeroPresupuesto / numeroVersion
+        // Si el frontend envía un número de presupuesto, lo usamos y calculamos la versión
         if (dto.getNumeroPresupuesto() != null) {
             Long numero = dto.getNumeroPresupuesto();
             Integer maxVersion = repository.findMaxNumeroVersionByNumero(numero);
@@ -406,9 +407,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             pnc.setNumeroPresupuesto(numero);
             pnc.setNumeroVersion(maxVersion + 1);
         } else {
-            Long maxNumero = repository.findMaxNumeroPresupuesto();
-            if (maxNumero == null) maxNumero = 0L;
-            pnc.setNumeroPresupuesto(maxNumero + 1);
+            // Si NO envía número, dejamos en null temporalmente
+            // Después del save() lo actualizaremos con el ID generado
+            pnc.setNumeroPresupuesto(null);
             pnc.setNumeroVersion(1);
         }
 
@@ -658,6 +659,13 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         // Guardar el presupuesto primero para obtener su ID
         log.info("💾 INICIANDO GUARDADO - Presupuesto ID: {}", pnc.getId());
         PresupuestoNoCliente guardado = repository.save(pnc);
+        
+        // Si no se envió numeroPresupuesto, usar el ID generado
+        if (guardado.getNumeroPresupuesto() == null && guardado.getId() != null) {
+            guardado.setNumeroPresupuesto(guardado.getId());
+            guardado = repository.save(guardado);
+            log.info("📋 numeroPresupuesto generado automáticamente con ID: {}", guardado.getId());
+        }
         
         // ============= AUTO-CREACIÓN DE OBRA SEGÚN TIPO =============
         if (tipoPresupuesto.creaObraInmediatamente()) {
@@ -1400,6 +1408,19 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                 obraRepository.save(pnc.getObra());
                 log.info("✅ Nombre de obra actualizado en tabla obras: '{}'", dto.getNombreObra());
             }
+        }
+
+        // IMPORTANTE: Mapear numeroPresupuesto
+        log.info("🔍 DEBUG numeroPresupuesto - DTO recibido: {}, ID presupuesto existente: {}", 
+                dto.getNumeroPresupuesto(), pnc.getId());
+        
+        if (dto.getNumeroPresupuesto() != null && dto.getNumeroPresupuesto() > 0) {
+            pnc.setNumeroPresupuesto(dto.getNumeroPresupuesto());
+            log.info("✅ numeroPresupuesto actualizado a: {}", dto.getNumeroPresupuesto());
+        } else if (pnc.getId() != null) {
+            // Si no viene numeroPresupuesto y ya tiene ID, usar el ID
+            pnc.setNumeroPresupuesto(pnc.getId());
+            log.info("✅ numeroPresupuesto auto-generado con ID: {}", pnc.getId());
         }
 
         pnc.setDescripcion(dto.getDescripcion());
