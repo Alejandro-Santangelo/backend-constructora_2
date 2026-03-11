@@ -158,6 +158,12 @@ public class PresupuestoNoCliente {
     @Column(name = "total_con_descuentos", precision = 15, scale = 2)
     private BigDecimal totalConDescuentos; // Total después de aplicar descuentos
 
+    @Column(name = "total_mayores_costos_por_rubro", precision = 15, scale = 2)
+    private BigDecimal totalMayoresCostosPorRubro; // Total mayores costos aplicados por rubro (adicional a mayores costos tradicionales)
+
+    @Column(name = "total_descuentos_por_rubro", precision = 15, scale = 2)
+    private BigDecimal totalDescuentosPorRubro; // Total descuentos aplicados por rubro (se resta del total final)
+
     @com.fasterxml.jackson.annotation.JsonProperty("totalFinal")
     public BigDecimal getTotalPresupuestoConHonorarios() {
         return this.totalPresupuestoConHonorarios;
@@ -232,6 +238,24 @@ public class PresupuestoNoCliente {
 
     @Column(name = "honorarios_configuracion_presupuesto_valor", precision = 10, scale = 2)
     private BigDecimal honorariosConfiguracionPresupuestoValor;
+
+    // Honorarios por Rubro (relación a tabla separada)
+    @OneToMany(mappedBy = "presupuestoNoCliente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
+    @JsonManagedReference
+    private Set<HonorarioPorRubro> honorariosPorRubro = new HashSet<>();
+
+    // Mayores Costos por Rubro (relación a tabla separada)
+    @OneToMany(mappedBy = "presupuestoNoCliente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
+    @JsonManagedReference("mayoresCostosPorRubro")
+    private Set<MayorCostoPorRubro> mayoresCostosPorRubro = new HashSet<>();
+
+    // Descuentos por Rubro (relación a tabla separada)
+    @OneToMany(mappedBy = "presupuestoNoCliente", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Fetch(FetchMode.SUBSELECT)
+    @JsonManagedReference("descuentosPorRubro")
+    private Set<DescuentoPorRubro> descuentosPorRubro = new HashSet<>();
 
     // ========== CONFIGURACIÓN DE MAYORES COSTOS ==========
     @Column(name = "mayores_costos_aplicar_valor_general")
@@ -972,8 +996,12 @@ public class PresupuestoNoCliente {
             if (descuentos.compareTo(BigDecimal.ZERO) > 0) {
                 this.totalDescuentos = descuentos;
                 this.totalSinDescuentos = this.totalPresupuestoConHonorarios;
+                this.totalConDescuentos = this.totalPresupuestoConHonorarios.subtract(descuentos); // ✅ FIX: Calcular después de descuentos
                 this.totalFinal = this.totalPresupuestoConHonorarios.subtract(descuentos);
                 this.totalPresupuestoConHonorarios = this.totalFinal; // Actualizar el total final
+            } else {
+                // ✅ FIX: Sin descuentos, totalConDescuentos = totalPresupuestoConHonorarios
+                this.totalConDescuentos = this.totalPresupuestoConHonorarios;
             }
             return;
         }
@@ -1002,11 +1030,13 @@ public class PresupuestoNoCliente {
             // Hay descuentos aplicados
             this.totalDescuentos = descuentos;
             this.totalSinDescuentos = subtotalSinDescuentos;
+            this.totalConDescuentos = subtotalSinDescuentos.subtract(descuentos); // ✅ CRÍTICO: Total DESPUÉS de descuentos
             this.totalPresupuestoConHonorarios = subtotalSinDescuentos.subtract(descuentos);
         } else {
-            // No hay descuentos
+            // No hay descuentos (o descuentos = 0)
             this.totalDescuentos = BigDecimal.ZERO;
             this.totalSinDescuentos = null; // No mostrar en frontend si no hay descuentos
+            this.totalConDescuentos = subtotalSinDescuentos; // ✅ FIX: Sin descuentos, total = subtotal completo
             this.totalPresupuestoConHonorarios = subtotalSinDescuentos;
         }
         

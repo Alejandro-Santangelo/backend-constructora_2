@@ -194,6 +194,18 @@ public class PresupuestoNoClienteRequestDTO {
     @Schema(description = "Valor del honorario para configuración de presupuesto", example = "5.0")
     private java.math.BigDecimal honorariosConfiguracionPresupuestoValor;
 
+    // Honorarios por Rubro (lista de objetos)
+    @Schema(description = "Configuración de honorarios por rubro. Permite aplicar honorarios independientes a cada rubro creado en Configuración de Presupuesto")
+    private List<HonorarioPorRubroDTO> honorariosPorRubro;
+
+    // Mayores Costos por Rubro (lista de objetos)
+    @Schema(description = "Configuración de mayores costos por rubro. Permite aplicar mayores costos independientes a cada rubro")
+    private List<MayorCostoPorRubroDTO> mayoresCostosPorRubro;
+
+    // Descuentos por Rubro (lista de objetos)
+    @Schema(description = "Configuración de descuentos por rubro. Permite aplicar descuentos independientes a cada rubro")
+    private List<DescuentoPorRubroDTO> descuentosPorRubro;
+
     // ========== CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
     @Schema(description = "Indica si el cálculo de días hábiles es automático (true) o manual (false)", example = "false")
     private Boolean calculoAutomaticoDiasHabiles;
@@ -413,6 +425,12 @@ public class PresupuestoNoClienteRequestDTO {
 
     @Schema(description = "Total del presupuesto después de aplicar descuentos", example = "19150000")
     private java.math.BigDecimal totalConDescuentos;
+
+    @Schema(description = "Total mayores costos aplicados por rubro (adicional a mayores costos tradicionales)", example = "10500000")
+    private java.math.BigDecimal totalMayoresCostosPorRubro;
+
+    @Schema(description = "Total descuentos aplicados por rubro (se resta del total final)", example = "0")
+    private java.math.BigDecimal totalDescuentosPorRubro;
 
     // ========== ITEMS DE CALCULADORA ==========
     @Schema(description = "Items ingresados mediante la calculadora rápida de presupuestos. Soporta modo automático (jornales + materiales) y modo manual (total directo).")

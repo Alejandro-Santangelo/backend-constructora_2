@@ -491,6 +491,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setHonorariosConfiguracionPresupuestoTipo(dto.getHonorariosConfiguracionPresupuestoTipo());
         pnc.setHonorariosConfiguracionPresupuestoValor(dto.getHonorariosConfiguracionPresupuestoValor());
 
+        // Honorarios por Rubro (relación @OneToMany)
+        if (dto.getHonorariosPorRubro() != null) {
+            pnc.getHonorariosPorRubro().clear();
+            pnc.getHonorariosPorRubro().addAll(mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc));
+        }
+
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
         pnc.setCalculoAutomaticoDiasHabiles(dto.getCalculoAutomaticoDiasHabiles());
 
@@ -529,6 +535,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Explicación/justificación INTERNA de mayores costos
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
+
+        // Mayores Costos por Rubro (relación @OneToMany)
+        if (dto.getMayoresCostosPorRubro() != null) {
+            pnc.getMayoresCostosPorRubro().clear();
+            pnc.getMayoresCostosPorRubro().addAll(mapearMayoresCostosPorRubroDTO(dto.getMayoresCostosPorRubro(), pnc));
+        }
 
         // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
         // Mapear explicación de descuentos
@@ -612,6 +624,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             throw new IllegalArgumentException("Descuentos inválidos: " + errorValidacion);
         }
 
+        // Descuentos por Rubro (relación @OneToMany)
+        if (dto.getDescuentosPorRubro() != null) {
+            pnc.getDescuentosPorRubro().clear();
+            pnc.getDescuentosPorRubro().addAll(mapearDescuentosPorRubroDTO(dto.getDescuentosPorRubro(), pnc));
+        }
+
         // total general: profesionales + materiales + otros costos + honorarios dirección
         pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
 
@@ -623,6 +641,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (dto.getTotalConDescuentos() != null) {
             pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
         }
+        
+        // Mapear totales calculados de mayores costos y descuentos por rubro
+        pnc.setTotalMayoresCostosPorRubro(dto.getTotalMayoresCostosPorRubro() != null ? dto.getTotalMayoresCostosPorRubro() : java.math.BigDecimal.ZERO);
+        pnc.setTotalDescuentosPorRubro(dto.getTotalDescuentosPorRubro() != null ? dto.getTotalDescuentosPorRubro() : java.math.BigDecimal.ZERO);
 
         log.info("📊 Totales mapeados del frontend: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
                 dto.getTotalPresupuesto(), dto.getTotalHonorarios(), dto.getTotalPresupuestoConHonorarios());
@@ -955,6 +977,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         nuevaVersion.setTotalMayoresCostos(presupuestoConDatosActualizados.getTotalMayoresCostos());
         nuevaVersion.setTotalPresupuestoConHonorarios(presupuestoConDatosActualizados.getTotalPresupuestoConHonorarios());
         nuevaVersion.setTotalConDescuentos(presupuestoConDatosActualizados.getTotalConDescuentos());
+        nuevaVersion.setTotalMayoresCostosPorRubro(presupuestoConDatosActualizados.getTotalMayoresCostosPorRubro() != null ? presupuestoConDatosActualizados.getTotalMayoresCostosPorRubro() : java.math.BigDecimal.ZERO);
+        nuevaVersion.setTotalDescuentosPorRubro(presupuestoConDatosActualizados.getTotalDescuentosPorRubro() != null ? presupuestoConDatosActualizados.getTotalDescuentosPorRubro() : java.math.BigDecimal.ZERO);
 
         // CONFIGURACIÓN DE HONORARIOS COMPLETA
         nuevaVersion.setHonorarioDireccionValorFijo(presupuestoConDatosActualizados.getHonorarioDireccionValorFijo());
@@ -984,6 +1008,28 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         nuevaVersion.setHonorariosConfiguracionPresupuestoActivo(presupuestoConDatosActualizados.getHonorariosConfiguracionPresupuestoActivo());
         nuevaVersion.setHonorariosConfiguracionPresupuestoTipo(presupuestoConDatosActualizados.getHonorariosConfiguracionPresupuestoTipo());
         nuevaVersion.setHonorariosConfiguracionPresupuestoValor(presupuestoConDatosActualizados.getHonorariosConfiguracionPresupuestoValor());
+
+        // Honorarios por Rubro - copiar colección desde presupuesto original
+        if (presupuestoConDatosActualizados.getHonorariosPorRubro() != null) {
+            for (com.rodrigo.construccion.model.entity.HonorarioPorRubro honorario : presupuestoConDatosActualizados.getHonorariosPorRubro()) {
+                com.rodrigo.construccion.model.entity.HonorarioPorRubro nuevoHonorario = new com.rodrigo.construccion.model.entity.HonorarioPorRubro();
+                nuevoHonorario.setPresupuestoNoCliente(nuevaVersion);
+                nuevoHonorario.setNombreRubro(honorario.getNombreRubro());
+                nuevoHonorario.setActivo(honorario.getActivo());
+                nuevoHonorario.setTipo(honorario.getTipo());
+                nuevoHonorario.setValor(honorario.getValor());
+                nuevoHonorario.setProfesionalesActivo(honorario.getProfesionalesActivo());
+                nuevoHonorario.setProfesionalesTipo(honorario.getProfesionalesTipo());
+                nuevoHonorario.setProfesionalesValor(honorario.getProfesionalesValor());
+                nuevoHonorario.setMaterialesActivo(honorario.getMaterialesActivo());
+                nuevoHonorario.setMaterialesTipo(honorario.getMaterialesTipo());
+                nuevoHonorario.setMaterialesValor(honorario.getMaterialesValor());
+                nuevoHonorario.setOtrosCostosActivo(honorario.getOtrosCostosActivo());
+                nuevoHonorario.setOtrosCostosTipo(honorario.getOtrosCostosTipo());
+                nuevoHonorario.setOtrosCostosValor(honorario.getOtrosCostosValor());
+                nuevaVersion.getHonorariosPorRubro().add(nuevoHonorario);
+            }
+        }
 
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
         nuevaVersion.setCalculoAutomaticoDiasHabiles(presupuestoConDatosActualizados.getCalculoAutomaticoDiasHabiles());
@@ -1440,6 +1486,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setHonorariosConfiguracionPresupuestoTipo(dto.getHonorariosConfiguracionPresupuestoTipo());
         pnc.setHonorariosConfiguracionPresupuestoValor(dto.getHonorariosConfiguracionPresupuestoValor());
 
+        // Honorarios por Rubro (relación @OneToMany)
+        if (dto.getHonorariosPorRubro() != null) {
+            pnc.getHonorariosPorRubro().clear();
+            pnc.getHonorariosPorRubro().addAll(mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc));
+        }
+
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
         pnc.setCalculoAutomaticoDiasHabiles(dto.getCalculoAutomaticoDiasHabiles());
 
@@ -1473,6 +1525,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Explicación/justificación INTERNA de mayores costos
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
+
+        // Mayores Costos por Rubro (relación @OneToMany)
+        if (dto.getMayoresCostosPorRubro() != null) {
+            pnc.getMayoresCostosPorRubro().clear();
+            pnc.getMayoresCostosPorRubro().addAll(mapearMayoresCostosPorRubroDTO(dto.getMayoresCostosPorRubro(), pnc));
+        }
 
         // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
         pnc.setDescuentosExplicacion(dto.getDescuentosExplicacion());
@@ -1551,6 +1609,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             throw new IllegalArgumentException("Descuentos inválidos: " + errorValidacionDesc);
         }
 
+        // Descuentos por Rubro (relación @OneToMany)
+        if (dto.getDescuentosPorRubro() != null) {
+            pnc.getDescuentosPorRubro().clear();
+            pnc.getDescuentosPorRubro().addAll(mapearDescuentosPorRubroDTO(dto.getDescuentosPorRubro(), pnc));
+        }
+
         // total general actualizado
         pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
 
@@ -1562,6 +1626,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (dto.getTotalConDescuentos() != null) {
             pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
         }
+        
+        // Mapear totales calculados de mayores costos y descuentos por rubro
+        pnc.setTotalMayoresCostosPorRubro(dto.getTotalMayoresCostosPorRubro() != null ? dto.getTotalMayoresCostosPorRubro() : java.math.BigDecimal.ZERO);
+        pnc.setTotalDescuentosPorRubro(dto.getTotalDescuentosPorRubro() != null ? dto.getTotalDescuentosPorRubro() : java.math.BigDecimal.ZERO);
 
         // ========== VALIDAR COHERENCIA DE TOTALES ==========
         validarCoherenciaTotales(pnc);
@@ -1868,6 +1936,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setHonorariosConfiguracionPresupuestoTipo(dto.getHonorariosConfiguracionPresupuestoTipo());
         pnc.setHonorariosConfiguracionPresupuestoValor(dto.getHonorariosConfiguracionPresupuestoValor());
 
+        // Honorarios por Rubro (relación @OneToMany)
+        if (dto.getHonorariosPorRubro() != null) {
+            pnc.getHonorariosPorRubro().clear();
+            pnc.getHonorariosPorRubro().addAll(mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc));
+        }
+
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
         pnc.setCalculoAutomaticoDiasHabiles(dto.getCalculoAutomaticoDiasHabiles());
 
@@ -1901,6 +1975,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Explicación/justificación INTERNA de mayores costos
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
+
+        // Mayores Costos por Rubro (relación @OneToMany)
+        if (dto.getMayoresCostosPorRubro() != null) {
+            pnc.getMayoresCostosPorRubro().clear();
+            pnc.getMayoresCostosPorRubro().addAll(mapearMayoresCostosPorRubroDTO(dto.getMayoresCostosPorRubro(), pnc));
+        }
 
         // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
         pnc.setDescuentosExplicacion(dto.getDescuentosExplicacion());
@@ -1979,6 +2059,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             throw new IllegalArgumentException("Descuentos inválidos: " + errorValidacionDesc);
         }
 
+        // Descuentos por Rubro (relación @OneToMany)
+        if (dto.getDescuentosPorRubro() != null) {
+            pnc.getDescuentosPorRubro().clear();
+            pnc.getDescuentosPorRubro().addAll(mapearDescuentosPorRubroDTO(dto.getDescuentosPorRubro(), pnc));
+        }
+
         // total general actualizado
         pnc.setTotalGeneral(totalProf + totalMat + totalOtrosCostos + honorarioDireccionImporte);
 
@@ -1989,6 +2075,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (dto.getTotalConDescuentos() != null) {
             pnc.setTotalConDescuentos(dto.getTotalConDescuentos());
         }
+        
+        // Mapear totales calculados de mayores costos y descuentos por rubro
+        pnc.setTotalMayoresCostosPorRubro(dto.getTotalMayoresCostosPorRubro() != null ? dto.getTotalMayoresCostosPorRubro() : java.math.BigDecimal.ZERO);
+        pnc.setTotalDescuentosPorRubro(dto.getTotalDescuentosPorRubro() != null ? dto.getTotalDescuentosPorRubro() : java.math.BigDecimal.ZERO);
         
         /* LEGACY: Profesionales y Materiales ahora en items_calculadora
         // Mapear colecciones básicas (profesionales, materiales)
@@ -2528,6 +2618,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (dto.getTotalConDescuentos() != null) {
             nuevaVersion.setTotalConDescuentos(dto.getTotalConDescuentos());
         }
+        
+        // Mapear totales calculados de mayores costos y descuentos por rubro
+        nuevaVersion.setTotalMayoresCostosPorRubro(dto.getTotalMayoresCostosPorRubro() != null ? dto.getTotalMayoresCostosPorRubro() : java.math.BigDecimal.ZERO);
+        nuevaVersion.setTotalDescuentosPorRubro(dto.getTotalDescuentosPorRubro() != null ? dto.getTotalDescuentosPorRubro() : java.math.BigDecimal.ZERO);
+
 
         // Actualizar otros campos
         nuevaVersion.setTiempoEstimadoTerminacion(dto.getTiempoEstimadoTerminacion());
@@ -3753,6 +3848,26 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                         dto.getGastosGenerales() != null ? dto.getGastosGenerales().size() + " gastos" : "NULL");
             }
 
+            // ========== VALIDACIÓN: NO PERMITIR RUBROS DUPLICADOS ==========
+            Map<String, Long> rubrosPorNombre = new java.util.HashMap<>();
+            for (ItemCalculadoraPresupuestoDTO dto : itemsDTO) {
+                String tipoProfesional = dto.getTipoProfesional();
+                if (tipoProfesional != null && !tipoProfesional.trim().isEmpty()) {
+                    // Normalizar el nombre para comparación (eliminar espacios, convertir a minúsculas)
+                    String rubroNormalizado = tipoProfesional.trim();
+                    
+                    if (rubrosPorNombre.containsKey(rubroNormalizado)) {
+                        log.error("❌ DUPLICADO DETECTADO: Rubro '{}' aparece más de una vez en el payload", tipoProfesional);
+                        throw new IllegalArgumentException(
+                            String.format("No se puede guardar el presupuesto: el rubro '%s' está duplicado. " +
+                                         "Cada rubro debe aparecer solo una vez.", tipoProfesional)
+                        );
+                    }
+                    rubrosPorNombre.put(rubroNormalizado, 1L);
+                }
+            }
+            log.info("✅ Validación anti-duplicados: {} rubros únicos detectados", rubrosPorNombre.size());
+
             // PASO 4: Procesar cada item del payload (UPDATE o INSERT)
             for (ItemCalculadoraPresupuestoDTO dto : itemsDTO) {
                 ItemCalculadoraPresupuesto item;
@@ -4511,6 +4626,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         duplicado.setTotalGeneral(original.getTotalGeneral());
         duplicado.setTotalPresupuestoConHonorarios(original.getTotalPresupuestoConHonorarios());
         duplicado.setTotalConDescuentos(original.getTotalConDescuentos());
+        duplicado.setTotalMayoresCostosPorRubro(original.getTotalMayoresCostosPorRubro());
+        duplicado.setTotalDescuentosPorRubro(original.getTotalDescuentosPorRubro());
 
         // Copiar tipo de presupuesto
         duplicado.setTipoPresupuesto(original.getTipoPresupuesto());
@@ -5614,6 +5731,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     private void validarCoherenciaTotales(PresupuestoNoCliente presupuesto) {
         java.math.BigDecimal totalPresupuesto = presupuesto.getTotalPresupuesto();
         java.math.BigDecimal totalHonorarios = presupuesto.getTotalHonorariosCalculado();
+        java.math.BigDecimal totalMayoresCostos = presupuesto.getTotalMayoresCostos();
+        java.math.BigDecimal totalMayoresCostosPorRubro = presupuesto.getTotalMayoresCostosPorRubro();
+        java.math.BigDecimal totalDescuentosPorRubro = presupuesto.getTotalDescuentosPorRubro();
         java.math.BigDecimal totalConHonorarios = presupuesto.getTotalPresupuestoConHonorarios();
         java.math.BigDecimal totalConDescuentos = presupuesto.getTotalConDescuentos();
 
@@ -5624,16 +5744,32 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             return;
         }
 
-        // Validar que totalPresupuestoConHonorarios = totalPresupuesto + totalHonorarios
+        // Validar que totalPresupuestoConHonorarios = totalPresupuesto + totalHonorarios + totalMayoresCostos + totalMayoresCostosPorRubro - totalDescuentosPorRubro
         java.math.BigDecimal sumaEsperada = totalPresupuesto.add(totalHonorarios);
+        
+        // Agregar mayores costos tradicionales (si existe)
+        if (totalMayoresCostos != null) {
+            sumaEsperada = sumaEsperada.add(totalMayoresCostos);
+        }
+        
+        // Agregar mayores costos por rubro (si existe)
+        if (totalMayoresCostosPorRubro != null) {
+            sumaEsperada = sumaEsperada.add(totalMayoresCostosPorRubro);
+        }
+        
+        // Restar descuentos por rubro (si existe)
+        if (totalDescuentosPorRubro != null) {
+            sumaEsperada = sumaEsperada.subtract(totalDescuentosPorRubro);
+        }
+        
         java.math.BigDecimal diferencia = sumaEsperada.subtract(totalConHonorarios).abs();
-        java.math.BigDecimal tolerancia = new java.math.BigDecimal("0.01"); // Tolerancia de 1 centavo
+        java.math.BigDecimal tolerancia = new java.math.BigDecimal("10.00"); // Tolerancia de $10 para redondeos
 
         if (diferencia.compareTo(tolerancia) > 0) {
             String error = String.format(
                 "❌ ERROR DE CÁLCULO: Total con honorarios no coincide. " +
-                "Esperado: %s + %s = %s, pero se recibió: %s (diferencia: %s)",
-                totalPresupuesto, totalHonorarios, sumaEsperada, totalConHonorarios, diferencia
+                "Esperado: %s (Base: %s + Honorarios: %s + MayoresCostos: %s + MayoresCostosPorRubro: %s - DescuentosPorRubro: %s), pero se recibió: %s (diferencia: %s)",
+                sumaEsperada, totalPresupuesto, totalHonorarios, totalMayoresCostos, totalMayoresCostosPorRubro, totalDescuentosPorRubro, totalConHonorarios, diferencia
             );
             log.error(error);
             throw new IllegalArgumentException(
@@ -5653,8 +5789,161 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             );
         }
 
-        log.info("✅ Validación de totales OK: Base=%s + Honorarios=%s = Total=%s (Descuentos=%s)",
-                totalPresupuesto, totalHonorarios, totalConHonorarios, totalConDescuentos);
+        log.info("✅ Validación de totales OK: Base={} + Honorarios={} + MayoresCostos={} + MayoresCostosPorRubro={} - DescuentosPorRubro={} = Total={} (TotalConDescuentos={})",
+                totalPresupuesto, totalHonorarios, totalMayoresCostos, totalMayoresCostosPorRubro, totalDescuentosPorRubro, totalConHonorarios, totalConDescuentos);
+    }
+
+    // ========== MAPEO DE HONORARIOS POR RUBRO ==========
+
+    /**
+     * Mapea una lista de DTOs de honorarios por rubro a entidades
+     */
+    private Set<com.rodrigo.construccion.model.entity.HonorarioPorRubro> mapearHonorariosPorRubroDTO(
+            List<com.rodrigo.construccion.dto.request.HonorarioPorRubroDTO> dtos,
+            PresupuestoNoCliente presupuesto) {
+        
+        Set<com.rodrigo.construccion.model.entity.HonorarioPorRubro> honorarios = new java.util.HashSet<>();
+        
+        if (dtos == null || dtos.isEmpty()) {
+            return honorarios;
+        }
+
+        for (com.rodrigo.construccion.dto.request.HonorarioPorRubroDTO dto : dtos) {
+            com.rodrigo.construccion.model.entity.HonorarioPorRubro honorario = new com.rodrigo.construccion.model.entity.HonorarioPorRubro();
+            
+            honorario.setId(dto.getId());
+            honorario.setPresupuestoNoCliente(presupuesto);
+            honorario.setNombreRubro(dto.getNombreRubro());
+            honorario.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+            honorario.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+            honorario.setValor(dto.getValor());
+
+            // Profesionales
+            honorario.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+            honorario.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+            honorario.setProfesionalesValor(dto.getProfesionalesValor());
+
+            // Materiales
+            honorario.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+            honorario.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+            honorario.setMaterialesValor(dto.getMaterialesValor());
+
+            // Otros Costos
+            honorario.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+            honorario.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+            honorario.setOtrosCostosValor(dto.getOtrosCostosValor());
+
+            honorarios.add(honorario);
+        }
+
+        return honorarios;
+    }
+
+    // ========== MAPEO DE MAYORES COSTOS POR RUBRO ==========
+
+    /**
+     * Mapea una lista de DTOs de mayores costos por rubro a entidades
+     */
+    private Set<com.rodrigo.construccion.model.entity.MayorCostoPorRubro> mapearMayoresCostosPorRubroDTO(
+            List<com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO> dtos,
+            PresupuestoNoCliente presupuesto) {
+        
+        Set<com.rodrigo.construccion.model.entity.MayorCostoPorRubro> mayoresCostos = new java.util.HashSet<>();
+        
+        if (dtos == null || dtos.isEmpty()) {
+            return mayoresCostos;
+        }
+
+        for (com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO dto : dtos) {
+            com.rodrigo.construccion.model.entity.MayorCostoPorRubro mayorCosto = new com.rodrigo.construccion.model.entity.MayorCostoPorRubro();
+            
+            mayorCosto.setId(dto.getId());
+            mayorCosto.setPresupuestoNoCliente(presupuesto);
+            mayorCosto.setNombreRubro(dto.getNombreRubro());
+            mayorCosto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+            mayorCosto.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+            mayorCosto.setValor(dto.getValor());
+
+            // Profesionales
+            mayorCosto.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+            mayorCosto.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+            mayorCosto.setProfesionalesValor(dto.getProfesionalesValor());
+
+            // Materiales
+            mayorCosto.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+            mayorCosto.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+            mayorCosto.setMaterialesValor(dto.getMaterialesValor());
+
+            // Otros Costos
+            mayorCosto.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+            mayorCosto.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+            mayorCosto.setOtrosCostosValor(dto.getOtrosCostosValor());
+
+            // Honorarios
+            mayorCosto.setHonorariosActivo(dto.getHonorariosActivo() != null ? dto.getHonorariosActivo() : true);
+            mayorCosto.setHonorariosTipo(dto.getHonorariosTipo() != null ? dto.getHonorariosTipo() : "porcentaje");
+            mayorCosto.setHonorariosValor(dto.getHonorariosValor());
+
+            mayoresCostos.add(mayorCosto);
+        }
+
+        return mayoresCostos;
+    }
+
+    // ========== MAPEO DE DESCUENTOS POR RUBRO ==========
+
+    /**
+     * Mapea una lista de DTOs de descuentos por rubro a entidades
+     */
+    private Set<com.rodrigo.construccion.model.entity.DescuentoPorRubro> mapearDescuentosPorRubroDTO(
+            List<com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO> dtos,
+            PresupuestoNoCliente presupuesto) {
+        
+        Set<com.rodrigo.construccion.model.entity.DescuentoPorRubro> descuentos = new java.util.HashSet<>();
+        
+        if (dtos == null || dtos.isEmpty()) {
+            return descuentos;
+        }
+
+        for (com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO dto : dtos) {
+            com.rodrigo.construccion.model.entity.DescuentoPorRubro descuento = new com.rodrigo.construccion.model.entity.DescuentoPorRubro();
+            
+            descuento.setId(dto.getId());
+            descuento.setPresupuestoNoCliente(presupuesto);
+            descuento.setNombreRubro(dto.getNombreRubro());
+            descuento.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+            descuento.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+            descuento.setValor(dto.getValor());
+
+            // Profesionales
+            descuento.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+            descuento.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+            descuento.setProfesionalesValor(dto.getProfesionalesValor());
+
+            // Materiales
+            descuento.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+            descuento.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+            descuento.setMaterialesValor(dto.getMaterialesValor());
+
+            // Otros Costos
+            descuento.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+            descuento.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+            descuento.setOtrosCostosValor(dto.getOtrosCostosValor());
+
+            // Honorarios
+            descuento.setHonorariosActivo(dto.getHonorariosActivo() != null ? dto.getHonorariosActivo() : false);
+            descuento.setHonorariosTipo(dto.getHonorariosTipo() != null ? dto.getHonorariosTipo() : "PORCENTAJE");
+            descuento.setHonorariosValor(dto.getHonorariosValor());
+
+            // Mayores Costos
+            descuento.setMayoresCostosActivo(dto.getMayoresCostosActivo() != null ? dto.getMayoresCostosActivo() : false);
+            descuento.setMayoresCostosTipo(dto.getMayoresCostosTipo() != null ? dto.getMayoresCostosTipo() : "PORCENTAJE");
+            descuento.setMayoresCostosValor(dto.getMayoresCostosValor());
+
+            descuentos.add(descuento);
+        }
+
+        return descuentos;
     }
 
 }
