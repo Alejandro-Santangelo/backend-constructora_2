@@ -34,6 +34,14 @@ public class TenantFilter extends OncePerRequestFilter {
             return;
         }
         
+        // RUTAS PÚBLICAS: No requieren empresaId (autenticación)
+        String uri = request.getRequestURI();
+        if (uri.startsWith("/api/auth/")) {
+            System.out.println("🔓 RUTA PÚBLICA: " + uri + " - pasando sin empresaId");
+            filterChain.doFilter(request, response);
+            return;
+        }
+        
         System.out.println("🔍 TenantFilter procesando: " + request.getMethod() + " " + request.getRequestURI());
         
         // Debug: mostrar headers relevantes

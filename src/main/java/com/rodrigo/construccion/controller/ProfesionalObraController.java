@@ -15,6 +15,8 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -38,6 +40,8 @@ import java.util.Map;
 @Tag(name = "Profesionales-Obras", description = "Gestión simplificada de asignaciones profesional-obra")
 public class ProfesionalObraController {
 
+        private static final Logger log = LoggerFactory.getLogger(ProfesionalObraController.class);
+        
         private final IProfesionalObraService profesionalObraService;
         private final com.rodrigo.construccion.service.GastoObraProfesionalService gastoService;
 

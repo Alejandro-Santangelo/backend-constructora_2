@@ -18,7 +18,7 @@ public interface EmpresaMapper {
     @Mapping(target = "razonSocial", ignore = true)
     @Mapping(target = "clientes", ignore = true)
     @Mapping(target = "presupuestosNoCliente", ignore = true)
-    @Mapping(target = "usuarios", ignore = true)
+    // usuarios: Relación desactivada, Usuario tiene id_empresa directo
     Empresa toEntity(EmpresaRequestDTO requestDTO);
 
     @Mapping(target = "id", ignore = true)
@@ -26,7 +26,7 @@ public interface EmpresaMapper {
     @Mapping(target = "razonSocial", ignore = true)
     @Mapping(target = "clientes", ignore = true)
     @Mapping(target = "presupuestosNoCliente", ignore = true)
-    @Mapping(target = "usuarios", ignore = true)
+    // usuarios: Relación desactivada, Usuario tiene id_empresa directo
     void updateEntityFromRequestDTO(@MappingTarget Empresa empresa, EmpresaRequestDTO requestDTO);
 
     EmpresaResponseDTO toResponseDTO(Empresa empresa);
@@ -41,6 +41,6 @@ public interface EmpresaMapper {
     @Mapping(target = "representanteLegal", ignore = true)
     @Mapping(target = "clientes", ignore = true)
     @Mapping(target = "presupuestosNoCliente", ignore = true)
-    @Mapping(target = "usuarios", ignore = true)
+    // usuarios: Relación desactivada, Usuario tiene id_empresa directo
     Empresa toEntityFromResponseDTO(EmpresaResponseDTO dto);
 }

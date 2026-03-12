@@ -28,12 +28,12 @@ public class UsuarioService {
         var empresa = empresaService.findEmpresaById(empresaId);
 
         // Verificar email único en la empresa
-        if (usuarioRepository.existsByEmpresa_IdAndEmail(empresaId, usuario.getEmail())) {
+        if (usuarioRepository.existsByIdEmpresaAndEmail(empresaId, usuario.getEmail())) {
             throw new DuplicateEmailException(usuario.getEmail(), empresa.getNombreEmpresa());
         }
 
-        // Asignar empresa
-        usuario.setEmpresa(empresa);
+        // Asignar empresa por ID
+        usuario.setEmpresaId(empresaId);
 
         // Establecer valores por defecto
         if (usuario.getRol() == null || usuario.getRol().trim().isEmpty()) {
@@ -53,13 +53,13 @@ public class UsuarioService {
     /* Obtener usuarios por empresa con paginación  */
     @Transactional(readOnly = true)
     public Page<Usuario> obtenerPorEmpresaConPaginacion(Long empresaId, Pageable pageable) {
-        return usuarioRepository.findByEmpresa_Id(empresaId, pageable);
+        return usuarioRepository.findByIdEmpresa(empresaId, pageable);
     }
 
     /* Obtener usuario por ID y empresa */
     @Transactional(readOnly = true)
     public Usuario obtenerPorIdYEmpresa(Long id, Long empresaId) {
-        return usuarioRepository.findByIdAndEmpresa_Id(id, empresaId)
+        return usuarioRepository.findByIdAndIdEmpresa(id, empresaId)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuario no encontrado"));
     }
 
@@ -71,7 +71,7 @@ public class UsuarioService {
         // Verificar email único si se está cambiando
         if (usuarioActualizado.getEmail() != null &&
                 !usuarioActualizado.getEmail().equals(usuarioExistente.getEmail()) &&
-                usuarioRepository.existsByEmpresa_IdAndEmail(empresaId, usuarioActualizado.getEmail())) {
+                usuarioRepository.existsByIdEmpresaAndEmail(empresaId, usuarioActualizado.getEmail())) {
             throw new DuplicateEmailException(usuarioActualizado.getEmail());
         }
 
@@ -99,13 +99,13 @@ public class UsuarioService {
     /* Obtener usuarios por rol y empresa  */
     @Transactional(readOnly = true)
     public List<Usuario> obtenerPorRolYEmpresa(String rol, Long empresaId) {
-        return usuarioRepository.findByEmpresa_IdAndRol(empresaId, rol);
+        return usuarioRepository.findByIdEmpresaAndRol(empresaId, rol);
     }
 
     /* Buscar usuarios por nombre */
     @Transactional(readOnly = true)
     public Page<Usuario> buscarPorNombre(Long empresaId, String nombre, Pageable pageable) {
-        return usuarioRepository.findByEmpresa_IdAndNombreContainingIgnoreCase(empresaId, nombre, pageable);
+        return usuarioRepository.findByIdEmpresaAndNombreContainingIgnoreCase(empresaId, nombre, pageable);
     }
 
     /* GESTIÓN DE CONTRASEÑAS Y AUTENTICACIÓN */
@@ -139,7 +139,7 @@ public class UsuarioService {
     /* Obtener usuario por email y empresa */
     @Transactional(readOnly = true)
     public Optional<Usuario> obtenerPorEmailYEmpresa(String email, Long empresaId) {
-        return usuarioRepository.findByEmailAndEmpresa_Id(email, empresaId);
+        return usuarioRepository.findByEmailAndIdEmpresa(email, empresaId);
     }
 
     /* ESTADÍSTICAS Y MÉTRICAS */
@@ -147,8 +147,8 @@ public class UsuarioService {
     /* Obtener estadísticas de usuarios */
     @Transactional(readOnly = true)
     public UsuarioEstadisticasDTO obtenerEstadisticas(Long empresaId) {
-        long totalUsuarios = usuarioRepository.countByEmpresa_Id(empresaId);
-        long usuariosActivos = usuarioRepository.countByEmpresa_IdAndActivoTrue(empresaId);
+        long totalUsuarios = usuarioRepository.countByIdEmpresa(empresaId);
+        long usuariosActivos = usuarioRepository.countByIdEmpresaAndActivoTrue(empresaId);
         int administradores = usuarioRepository.findAdministradoresByEmpresaId(empresaId).size();
 
         double porcentajeActivos = totalUsuarios > 0 ? (usuariosActivos * 100.0 / totalUsuarios) : 0.0;
@@ -187,19 +187,19 @@ public class UsuarioService {
     /* Obtener usuarios activos por empresa */
     @Transactional(readOnly = true)
     public List<Usuario> obtenerActivosPorEmpresa(Long empresaId) {
-        return usuarioRepository.findByEmpresa_IdAndActivoTrue(empresaId);
+        return usuarioRepository.findByIdEmpresaAndActivoTrue(empresaId);
     }
 
     /* Contar usuarios por empresa */
     @Transactional(readOnly = true)
     public long contarUsuariosPorEmpresa(Long empresaId) {
-        return usuarioRepository.countByEmpresa_Id(empresaId);
+        return usuarioRepository.countByIdEmpresa(empresaId);
     }
 
     /* Contar usuarios activos por empresa */
     @Transactional(readOnly = true)
     public long contarUsuariosActivosPorEmpresa(Long empresaId) {
-        return usuarioRepository.countByEmpresa_IdAndActivoTrue(empresaId);
+        return usuarioRepository.countByIdEmpresaAndActivoTrue(empresaId);
     }
 
     /* VALIDACIONES */
@@ -207,12 +207,12 @@ public class UsuarioService {
     /* Verificar si existe un usuario en la empresa */
     @Transactional(readOnly = true)
     public boolean existeUsuarioEnEmpresa(Long usuarioId, Long empresaId) {
-        return usuarioRepository.findByIdAndEmpresa_Id(usuarioId, empresaId).isPresent();
+        return usuarioRepository.findByIdAndIdEmpresa(usuarioId, empresaId).isPresent();
     }
 
     /* Verificar si existe un email en la empresa     */
     @Transactional(readOnly = true)
     public boolean existeEmailEnEmpresa(String email, Long empresaId) {
-        return usuarioRepository.existsByEmpresa_IdAndEmail(empresaId, email);
+        return usuarioRepository.existsByIdEmpresaAndEmail(empresaId, email);
     }
 }

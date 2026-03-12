@@ -52,15 +52,17 @@ public class Usuario {
     @Column(name = "fecha_creacion", updatable = false)
     private LocalDateTime fechaCreacion;
 
-    // Relación Multi-Tenant: Cada usuario pertenece a una empresa
-    @JsonIgnore
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "id_empresa")
-    private Empresa empresa;
+    // Campo directo para multi-tenancy (sin relación ManyToOne para simplicidad)
+    @Column(name = "id_empresa")
+    private Long idEmpresa;
 
-    // Getter para el ID de la empresa (útil para queries)
+    // Getter para compatibilidad con código existente
     public Long getEmpresaId() {
-        return empresa != null ? empresa.getId() : null;
+        return idEmpresa;
+    }
+
+    public void setEmpresaId(Long idEmpresa) {
+        this.idEmpresa = idEmpresa;
     }
 
     // Métodos de utilidad para roles

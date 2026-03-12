@@ -63,9 +63,10 @@ public class Empresa {
     @ManyToMany(mappedBy = "empresas")
     private List<Cliente> clientes = new ArrayList<>();
 
-    @JsonIgnore
-    @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Usuario> usuarios = new ArrayList<>();
+    // RELACIÓN USUARIOS DESACTIVADA - Usuario tiene ID empresa directo sin ManyToOne
+    // @JsonIgnore
+    // @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    // private List<Usuario> usuarios = new ArrayList<>();
 
     @JsonIgnore
     @OneToMany(mappedBy = "empresa", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
@@ -79,15 +80,16 @@ public class Empresa {
         }
     }
 
-    public void addUsuario(Usuario usuario) {
-        usuarios.add(usuario);
-        usuario.setEmpresa(this);
-    }
+    // MÉTODOS DE USUARIOS DESACTIVADOS - No hay relación OneToMany
+    // public void addUsuario(Usuario usuario) {
+    //     usuarios.add(usuario);
+    //     usuario.setEmpresaId(this.getId());
+    // }
 
-    public void removeUsuario(Usuario usuario) {
-        usuarios.remove(usuario);
-        usuario.setEmpresa(null);
-    }
+    // public void removeUsuario(Usuario usuario) {
+    //    usuarios.remove(usuario);
+    //     usuario.setEmpresaId(null);
+    // }
 
     public void removeCliente(Cliente cliente) {
         clientes.remove(cliente);

@@ -27,11 +27,10 @@ public interface EmpresaRepository extends JpaRepository<Empresa, Long> {
                      "e.id, e.nombreEmpresa, " +
                      "COUNT(DISTINCT c), " +
                      "COUNT(DISTINCT o), " +
-                     "COUNT(DISTINCT u)) " +
+                     "0L) " +
                      "FROM Empresa e " +
                      "LEFT JOIN e.clientes c " +
                      "LEFT JOIN c.obras o " +
-                     "LEFT JOIN e.usuarios u " +
                      "WHERE e.activa = true " +
                      "GROUP BY e.id, e.nombreEmpresa " +
                      "ORDER BY e.nombreEmpresa")

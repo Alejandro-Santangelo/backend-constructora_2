@@ -36,6 +36,8 @@ import jakarta.validation.Valid;
 
 import java.util.Arrays;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import lombok.RequiredArgsConstructor;
 
 @Tag(name = "Obra", description = "Gestión de obras de construcción")
@@ -44,6 +46,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class ObraController {
 
+    private static final Logger log = LoggerFactory.getLogger(ObraController.class);
+    
     private final IObraService obraService;
     private final AsignacionProfesionalObraService asignacionService;
     private final AsignacionSemanalService asignacionSemanalService;
