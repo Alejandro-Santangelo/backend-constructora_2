@@ -28,6 +28,12 @@ public interface PresupuestoNoClienteRepository extends JpaRepository<Presupuest
      * Ordenados por versión descendente (versión más reciente primero)
      */
     List<PresupuestoNoCliente> findByObra_IdOrderByNumeroVersionDesc(Long obraId);
+    
+    /**
+     * Lista todos los presupuestos de una empresa específica
+     * ⚠️ FILTRO EXPLÍCITO: No confía en HibernateFilterInterceptor, filtra directamente por empresaId
+     */
+    List<PresupuestoNoCliente> findByEmpresaId(Long empresaId);
 
     @Query("select max(p.numeroPresupuesto) from PresupuestoNoCliente p")
     Long findMaxNumeroPresupuesto();

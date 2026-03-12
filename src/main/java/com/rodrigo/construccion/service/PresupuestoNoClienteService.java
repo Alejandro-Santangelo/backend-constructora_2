@@ -174,11 +174,9 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("🔍 Buscando presupuestos para empresaId: {}", empresaId);
 
         try {
-            // NOTA: El filtro de Hibernate @Filter NO ES automático - se activa via TenantContext + HibernateFilterInterceptor
-            // El TenantContext debe haberse establecido en el TenantFilter desde el header empresaId
-            // Solo entonces el HibernateFilterInterceptor habilita el filtro antes de cada query
-            log.warn("⚠️ ADVERTENCIA: findAllByEmpresaId() confía en filtro Hibernate - empresaId debe estar en TenantContext");
-            List<PresupuestoNoCliente> presupuestos = repository.findAll();
+            // ✅ FILTRO EXPLÍCITO: Usar empresaId directamente en la query en lugar de confiar en HibernateFilterInterceptor
+            log.info("✅ Usando filtro EXPLÍCITO por empresaId={}", empresaId);
+            List<PresupuestoNoCliente> presupuestos = repository.findByEmpresaId(empresaId);
 
             log.info("📊 Encontrados {} presupuestos para empresaId {}", presupuestos.size(), empresaId);
 
