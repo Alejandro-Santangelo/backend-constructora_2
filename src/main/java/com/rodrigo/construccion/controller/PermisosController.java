@@ -41,9 +41,22 @@ public class PermisosController {
                      "SUPER_ADMIN: todas las secciones. CONTRATISTA: solo presupuestos y obras."
     )
     public Map<String, Object> getSeccionesPermitidas(
-            @RequestHeader(value = "X-User-Rol", required = true) String rol) {
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        System.out.println("🔐 GET /api/permisos/secciones - Rol recibido: '" + rol + "'");
+        
+        // Validar que el rol no sea null o vacío
+        if (rol == null || rol.trim().isEmpty()) {
+            System.err.println("❌ Error: Header X-User-Rol es null o vacío");
+            throw new IllegalArgumentException("El header X-User-Rol es obligatorio");
+        }
+        
+        // Normalizar rol (trim y uppercase)
+        rol = rol.trim().toUpperCase();
+        System.out.println("🔐 Rol normalizado: '" + rol + "'");
         
         List<String> secciones = permisoService.getSeccionesPermitidas(rol);
+        System.out.println("✅ Secciones permitidas para " + rol + ": " + secciones);
         
         Map<String, Object> response = new HashMap<>();
         response.put("rol", rol);
