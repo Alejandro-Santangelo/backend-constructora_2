@@ -22,7 +22,10 @@ public interface IObraService {
 
     List<ObraSimpleDTO> obtenerPorEstado(EstadoObra estado);
 
+    @Deprecated
     List<ObraSimpleDTO> obtenerActivas();
+    
+    List<ObraSimpleDTO> obtenerActivasPorEmpresa(Long empresaId);
 
     List<ObraResponseDTO> obtenerPorEmpresa(Long empresaId);
 

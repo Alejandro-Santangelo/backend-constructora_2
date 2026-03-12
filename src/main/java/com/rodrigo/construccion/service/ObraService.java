@@ -81,8 +81,16 @@ public class ObraService implements IObraService {
 
     /* Obtener obras activas (simplificado) */
     @Override
+    @Deprecated
     public List<ObraSimpleDTO> obtenerActivas() {
-        List<Obra> obrasActivas = obraRepository.findObrasActivas();
+        log.warn("⚠️ DEPRECADO: obtenerActivas() sin empresaId - VIOLACIÓN MULTI-TENANCY");
+        return new ArrayList<>();
+    }
+
+    /* Obtener obras activas por empresa (método seguro) */
+    public List<ObraSimpleDTO> obtenerActivasPorEmpresa(Long empresaId) {
+        empresaService.findEmpresaById(empresaId);
+        List<Obra> obrasActivas = obraRepository.findObrasActivasByEmpresaId(empresaId);
         return mapToSimpleDTOList(obrasActivas);
     }
 

@@ -80,10 +80,12 @@ public class ObraController {
         return ResponseEntity.ok(obrasSimpleDto);
     }
 
-    @Operation(summary = "Obtener obras activas")
+    @Operation(summary = "Obtener obras activas de una empresa")
     @GetMapping("/activas")
-    public ResponseEntity<List<ObraSimpleDTO>> obtenerObrasActivas() {
-        List<ObraSimpleDTO> obrasActivasDto = obraService.obtenerActivas();
+    public ResponseEntity<List<ObraSimpleDTO>> obtenerObrasActivas(
+            @Parameter(description = "ID de la empresa", required = true)
+            @RequestParam Long empresaId) {
+        List<ObraSimpleDTO> obrasActivasDto = obraService.obtenerActivasPorEmpresa(empresaId);
         return ResponseEntity.ok(obrasActivasDto);
     }
 
