@@ -30,9 +30,13 @@ public class PresupuestoNoClienteController {
     private static final Logger log = LoggerFactory.getLogger(PresupuestoNoClienteController.class);
     
     private final PresupuestoNoClienteService service;
+    private final com.rodrigo.construccion.security.PermisoService permisoService;
 
-    public PresupuestoNoClienteController(PresupuestoNoClienteService service) {
+    public PresupuestoNoClienteController(
+            PresupuestoNoClienteService service,
+            com.rodrigo.construccion.security.PermisoService permisoService) {
         this.service = service;
+        this.permisoService = permisoService;
     }
 
 
@@ -147,12 +151,21 @@ public class PresupuestoNoClienteController {
                      "Útil para cambios administrativos que no requieren versionado (ej: correcciones, datos de contacto, fechas). " +
                      "Para cambios críticos que requieren versionado (ej: precios, materiales, profesionales), " +
                      "usar PUT /presupuestos-no-cliente sin /{id} con parámetros de dirección. " +
-                     "Respeta el filtrado multi-tenant automáticamente."
+                     "Respeta el filtrado multi-tenant automáticamente. " +
+                     "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR"
     )
     public ResponseEntity<PresupuestoNoCliente> actualizarPorId(
             @Parameter(description = "ID del presupuesto a actualizar", required = true)
             @PathVariable Long id,
-            @Valid @RequestBody PresupuestoNoClienteRequestDTO dto) {
+            @Valid @RequestBody PresupuestoNoClienteRequestDTO dto,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarPresupuestos(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó modificar presupuesto {}", rol, id);
+            return ResponseEntity.status(403).build(); // 403 Forbidden
+        }
+        
         return ResponseEntity.ok(service.actualizar(id, dto));
     }
 
@@ -165,9 +178,10 @@ public class PresupuestoNoClienteController {
                      "Útil para cambios críticos que requieren historial de versiones (ej: cambios de precios, materiales, profesionales). " +
                      "Si no se especifica numeroVersion, toma la versión más reciente como base. " +
                      "El registro anterior NO se modifica, se crea uno nuevo. " +
-                     "Respeta el filtrado multi-tenant automáticamente."
+                     "Respeta el filtrado multi-tenant automáticamente. " +
+                     "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR"
     )
-    public ResponseEntity<PresupuestoNoCliente> actualizarPorDireccion(
+    public ResponseEntity<?> actualizarPorDireccion(
             @Parameter(description = "Calle de la obra", required = true, example = "Av. Libertador")
             @RequestParam String direccionObraCalle,
             @Parameter(description = "Altura/número de la obra", required = true, example = "1234")
@@ -178,7 +192,16 @@ public class PresupuestoNoClienteController {
             @RequestParam(required = false) String direccionObraDepartamento,
             @Parameter(description = "Número de versión base (opcional, por defecto usa la última versión)", example = "1")
             @RequestParam(required = false) Integer numeroVersion,
-            @Valid @RequestBody PresupuestoNoClienteRequestDTO dto) {
+            @Valid @RequestBody PresupuestoNoClienteRequestDTO dto,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarPresupuestos(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó crear nueva versión de presupuesto en {}, {}", 
+                rol, direccionObraCalle, direccionObraAltura);
+            return ResponseEntity.status(403).build(); // 403 Forbidden
+        }
+        
         return ResponseEntity.ok(service.actualizarPorDireccion(
             direccionObraCalle, 
             direccionObraAltura, 
@@ -192,13 +215,22 @@ public class PresupuestoNoClienteController {
     @Operation(
         summary = "Eliminar versión de presupuesto", 
         description = "Elimina un presupuesto específico. No renumera las versiones restantes. " +
-                     "Si el presupuesto está APROBADO y tiene obra asociada, devuelve 409 Conflict."
+                     "Si el presupuesto está APROBADO y tiene obra asociada, devuelve 409 Conflict. " +
+                     "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN ELIMINAR"
     )
     public ResponseEntity<?> eliminar(
             @PathVariable Long id,
             @RequestParam(required = true) 
             @Parameter(description = "ID de la empresa", required = true) 
-            Long empresaId) {
+            Long empresaId,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeEliminarPresupuestos(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó eliminar presupuesto {}", rol, id);
+            return ResponseEntity.status(403)
+                .body(new ErrorResponse("No tiene permisos para eliminar presupuestos"));
+        }
         
         log.info("🗑️ DELETE /presupuestos-no-cliente/{} - empresaId recibido: {}", id, empresaId);
         
@@ -344,7 +376,8 @@ public class PresupuestoNoClienteController {
                      "El presupuesto anterior se desvincula (obra_id = null) y el nuevo se vincula. " +
                      "El estado de la obra se sincroniza automáticamente según el estado del nuevo presupuesto. " +
                      "El presupuesto estimado de la obra se actualiza con el total del nuevo presupuesto. " +
-                     "Requiere empresaId para validación multi-tenant."
+                     "Requiere empresaId para validación multi-tenant. " +
+                     "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR OBRAS"
     )
     public ResponseEntity<?> reactivarObraConNuevoPresupuesto(
             @Parameter(description = "ID de la obra a reactivar", required = true)
@@ -352,7 +385,16 @@ public class PresupuestoNoClienteController {
             @Parameter(description = "ID del nuevo presupuesto APROBADO", required = true)
             @RequestParam Long nuevoPresupuestoId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestParam Long empresaId) {
+            @RequestParam Long empresaId,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó reactivar obra {}", rol, obraId);
+            return ResponseEntity.status(403)
+                .body(new ErrorResponse("No tiene permisos para modificar obras"));
+        }
+        
         try {
             log.info("🔄 PUT /presupuestos-no-cliente/obras/{}/reactivar?nuevoPresupuestoId={}&empresaId={}", 
                 obraId, nuevoPresupuestoId, empresaId);

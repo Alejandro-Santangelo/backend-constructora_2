@@ -52,6 +52,7 @@ public class ObraController {
     private final AsignacionProfesionalObraService asignacionService;
     private final AsignacionSemanalService asignacionSemanalService;
     private final IObraOtroCostoService obraOtroCostoService;
+    private final com.rodrigo.construccion.security.PermisoService permisoService;
 
     @Operation(summary = "Obtener obra por ID")
     @GetMapping("/{id}")
@@ -129,19 +130,37 @@ public class ObraController {
         return ResponseEntity.status(HttpStatus.CREATED).body(nuevaObra);
     }
 
-    @Operation(summary = "Actualizar obra")
+    @Operation(summary = "Actualizar obra", description = "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR OBRAS")
     @PutMapping("/{id}")
-    public ResponseEntity<ObraResponseDTO> actualizarObra(@Parameter(description = "ID de la obra") @PathVariable Long id,
-                                                          @Valid @RequestBody ObraRequestDTO obraRequestDTO) {
+    public ResponseEntity<?> actualizarObra(
+            @Parameter(description = "ID de la obra") @PathVariable Long id,
+            @Valid @RequestBody ObraRequestDTO obraRequestDTO,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó modificar obra {}", rol, id);
+            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para modificar obras"));
+        }
+        
         ObraResponseDTO obraActualizada = obraService.actualizar(id, obraRequestDTO);
         return ResponseEntity.ok(obraActualizada);
     }
 
     @DeleteMapping("/{id}/cascade")
+    @Operation(summary = "Eliminar obra en cascada", description = "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN ELIMINAR OBRAS")
     public ResponseEntity<Map<String, String>> eliminarObraEnCascada(
             @Parameter(description = "ID de la obra a eliminar") @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenancy)", required = true)
-            @RequestParam Long empresaId) {
+            @RequestParam Long empresaId,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeEliminarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó eliminar obra {}", rol, id);
+            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para eliminar obras"));
+        }
+        
         obraService.eliminarEnCascada(id, empresaId);
         return ResponseEntity.ok(Map.of("mensaje", "Obra y todas sus relaciones eliminadas exitosamente."));
     }
@@ -170,11 +189,20 @@ public class ObraController {
 
     @Operation(summary = "Actualizar borrador de obra independiente",
                description = "Actualiza cualquier campo de un borrador de obra independiente. " +
-                             "Solo funciona si la obra está en estado BORRADOR. Permite persistir cambios incrementales.")
+                             "Solo funciona si la obra está en estado BORRADOR. Permite persistir cambios incrementales. " +
+                             "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR OBRAS")
     @PutMapping("/borrador/{id}")
-    public ResponseEntity<ObraResponseDTO> actualizarBorrador(
+    public ResponseEntity<?> actualizarBorrador(
             @Parameter(description = "ID del borrador de obra") @PathVariable Long id,
-            @RequestBody ObraRequestDTO obraRequestDTO) {  // Sin @Valid para permitir actualizaciones parciales
+            @RequestBody ObraRequestDTO obraRequestDTO,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó modificar borrador de obra {}", rol, id);
+            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para modificar obras"));
+        }
+        
         ObraResponseDTO obraActualizada = obraService.actualizarBorrador(id, obraRequestDTO);
         return ResponseEntity.ok(obraActualizada);
     }
@@ -250,19 +278,41 @@ public class ObraController {
     }
 
     @PutMapping("/{id}/actualizar-porcentaje-ganancia-todos")
-    @Operation(summary = "Actualizar porcentaje de ganancia de todos los profesionales asignados a una obra", description = "Modifica el porcentaje de ganancia de todos los profesionales asignados a la obra indicada por su ID.")
-    public ResponseEntity<List<ProfesionalResponseDTO>> actualizarPorcentajeGananciaTodosAsignados(
+    @Operation(summary = "Actualizar porcentaje de ganancia de todos los profesionales asignados a una obra", 
+               description = "Modifica el porcentaje de ganancia de todos los profesionales asignados a la obra indicada por su ID. " +
+                             "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR OBRAS")
+    public ResponseEntity<?> actualizarPorcentajeGananciaTodosAsignados(
             @PathVariable Long id,
-            @RequestParam("porcentaje") double porcentaje) {
+            @RequestParam("porcentaje") double porcentaje,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó modificar porcentajes de obra {}", rol, id);
+            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para modificar obras"));
+        }
+        
         List<ProfesionalResponseDTO> profesionalesActualizados = obraService
                 .actualizarPorcentajeGananciaTodosAsignados(id, porcentaje);
         return ResponseEntity.ok(profesionalesActualizados);
     }
 
     @PutMapping("/{id}/actualizar-porcentaje-ganancia-profesional")
-    @Operation(summary = "Actualizar porcentaje de ganancia de un profesional asignado a una obra", description = "Modifica el porcentaje de ganancia de un profesional específico asignado a la obra indicada por su ID.")
-    public ResponseEntity<ProfesionalResponseDTO> actualizarPorcentajeGananciaProfesionalAsignado(@PathVariable Long id,
-                                                                                                  @RequestParam("profesionalId") Long profesionalId, @RequestParam("porcentaje") double porcentaje) {
+    @Operation(summary = "Actualizar porcentaje de ganancia de un profesional asignado a una obra", 
+               description = "Modifica el porcentaje de ganancia de un profesional específico asignado a la obra indicada por su ID. " +
+                             "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR OBRAS")
+    public ResponseEntity<?> actualizarPorcentajeGananciaProfesionalAsignado(
+            @PathVariable Long id,
+            @RequestParam("profesionalId") Long profesionalId, 
+            @RequestParam("porcentaje") double porcentaje,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó modificar porcentaje de profesional en obra {}", rol, id);
+            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para modificar obras"));
+        }
+        
         ProfesionalResponseDTO profesionalActualizado = obraService.actualizarPorcentajeGananciaProfesionalAsignado(id,
                 profesionalId, porcentaje);
         return ResponseEntity.ok(profesionalActualizado);
@@ -331,7 +381,8 @@ public class ObraController {
                      "- Verifica que la asignación existe. " +
                      "- Verifica que pertenece a la obra especificada. " +
                      "- Verifica que pertenece a la empresa (multi-tenant). " +
-                     "Requiere empresaId como header."
+                     "Requiere empresaId como header. " +
+                     "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN ELIMINAR ASIGNACIONES"
     )
     public ResponseEntity<?> eliminarAsignacionProfesional(
             @Parameter(description = "ID de la obra", required = true)
@@ -339,7 +390,14 @@ public class ObraController {
             @Parameter(description = "ID de la asignación a eliminar", required = true)
             @PathVariable Long asignacionId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader Long empresaId,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeEliminarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó eliminar asignación {} de obra {}", rol, asignacionId, obraId);
+            return ResponseEntity.status(403).body(java.util.Map.of("error", "No tiene permisos para eliminar asignaciones de obras"));
+        }
         
         try {
             asignacionService.eliminarAsignacion(asignacionId, obraId, empresaId);
@@ -476,14 +534,22 @@ public class ObraController {
         }
     }
 
-    @Operation(summary = "Modificar asignación de otro costo de una obra")
+    @Operation(summary = "Modificar asignación de otro costo de una obra", 
+               description = "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN MODIFICAR OBRAS")
     @PutMapping("/{obraId}/otros-costos/{asignacionId}")
     public ResponseEntity<?> modificarOtroCosto(
             @Parameter(description = "ID de la obra") @PathVariable Long obraId,
             @Parameter(description = "ID de la asignación de costo a modificar") @PathVariable Long asignacionId,
             @Parameter(description = "Datos de la asignación a modificar") @RequestBody AsignarOtroCostoRequestDTO requestDTO,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader Long empresaId,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeModificarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó modificar otro costo {} de obra {}", rol, asignacionId, obraId);
+            return ResponseEntity.status(403).body(java.util.Map.of("error", "No tiene permisos para modificar obras"));
+        }
         
         try {
             // Verificar que la obra exista
@@ -501,13 +567,21 @@ public class ObraController {
         }
     }
 
-    @Operation(summary = "Eliminar asignación de otro costo de una obra")
+    @Operation(summary = "Eliminar asignación de otro costo de una obra", 
+               description = "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN ELIMINAR ASIGNACIONES")
     @DeleteMapping("/{obraId}/otros-costos/{asignacionId}")
     public ResponseEntity<?> eliminarOtroCosto(
             @Parameter(description = "ID de la obra") @PathVariable Long obraId,
             @Parameter(description = "ID de la asignación de costo a eliminar") @PathVariable Long asignacionId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader Long empresaId,
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VALIDAR PERMISOS
+        if (!permisoService.puedeEliminarObras(rol)) {
+            log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó eliminar otro costo {} de obra {}", rol, asignacionId, obraId);
+            return ResponseEntity.status(403).body(java.util.Map.of("error", "No tiene permisos para eliminar asignaciones de obras"));
+        }
         
         try {
             obraOtroCostoService.eliminar(empresaId, asignacionId);
