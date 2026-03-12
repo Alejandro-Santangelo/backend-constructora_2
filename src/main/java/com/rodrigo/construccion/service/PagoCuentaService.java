@@ -14,7 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -91,7 +91,7 @@ public class PagoCuentaService implements IPagoCuentaService {
                 .monto(request.getMonto())
                 .metodoPago(request.getMetodoPago() != null ? request.getMetodoPago().toUpperCase() : "EFECTIVO")
                 .observaciones(request.getObservaciones())
-                .fechaPago(request.getFechaPago() != null ? request.getFechaPago() : LocalDate.now())
+                .fechaPago(request.getFechaPago() != null ? request.getFechaPago() : LocalDateTime.now())
                 .usuarioRegistro(request.getUsuarioRegistro())
                 .build();
 

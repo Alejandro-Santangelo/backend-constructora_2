@@ -3,7 +3,6 @@ package com.rodrigo.construccion.model.entity;
 import jakarta.persistence.*;
 import lombok.*;
 import java.math.BigDecimal;
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 /**
@@ -72,7 +71,7 @@ public class PagoParcialRubro {
      */
     @Column(name = "fecha_pago")
     @Builder.Default
-    private LocalDate fechaPago = LocalDate.now();
+    private LocalDateTime fechaPago = LocalDateTime.now();
 
     /**
      * Usuario que registró el pago
@@ -130,7 +129,7 @@ public class PagoParcialRubro {
     @PrePersist
     protected void onCreate() {
         if (fechaPago == null) {
-            fechaPago = LocalDate.now();
+            fechaPago = LocalDateTime.now();
         }
         if (fechaRegistro == null) {
             fechaRegistro = LocalDateTime.now();
