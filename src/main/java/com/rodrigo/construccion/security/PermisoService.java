@@ -42,7 +42,8 @@ public class PermisoService {
         if ("CONTRATISTA".equals(rol)) {
             return Arrays.asList(
                 "presupuestos",
-                "obras"
+                "obras",
+                "usuarios"
             );
         }
         
