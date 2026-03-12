@@ -30,12 +30,22 @@ public class HibernateFilterInterceptor {
     /**
      * Intercepta TODOS los métodos de los repositories antes de ejecutarse
      * y habilita el filtro empresaFilter si existe un empresaId en TenantContext
+     * 
+     * ⚠️ EXCEPCIÓN: No se activa el filtro cuando el usuario es SUPER_ADMIN
+     * porque el super admin debe poder ver datos de TODAS las empresas
      */
     @Before("execution(* org.springframework.data.repository.Repository+.*(..))")
     public void enableFilter() {
         Long empresaId = TenantContext.getTenantId();
+        Boolean isSuperAdmin = TenantContext.isSuperAdmin();
         
         if (empresaId != null) {
+            // 🔓 SUPER_ADMIN: NO aplicar filtro para que vea todos los datos
+            if (isSuperAdmin) {
+                System.out.println("🔓 HibernateFilterInterceptor: SUPER_ADMIN detectado - filtro DESACTIVADO (ve todas las empresas)");
+                return;
+            }
+            
             try {
                 Session session = entityManager.unwrap(Session.class);
                 org.hibernate.Filter filter = session.enableFilter("empresaFilter");

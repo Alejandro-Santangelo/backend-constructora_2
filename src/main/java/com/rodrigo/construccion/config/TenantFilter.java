@@ -48,6 +48,7 @@ public class TenantFilter extends OncePerRequestFilter {
         System.out.println("📋 Header 'empresaId': " + request.getHeader("empresaId"));
         System.out.println("📋 Header 'X-Empresa-Id': " + request.getHeader("X-Empresa-Id"));
         System.out.println("📋 Header 'empresa-id': " + request.getHeader("empresa-id"));
+        System.out.println("📋 Header 'X-Super-Admin': " + request.getHeader("X-Super-Admin"));
         System.out.println("📋 Parámetro empresaId: " + request.getParameter("empresaId"));
         
         // Obtener empresaId del parámetro query o header (intentar varios nombres de header)
@@ -55,6 +56,10 @@ public class TenantFilter extends OncePerRequestFilter {
         String empresaIdHeader = request.getHeader("empresaId");
         if (empresaIdHeader == null) empresaIdHeader = request.getHeader("X-Empresa-Id");
         if (empresaIdHeader == null) empresaIdHeader = request.getHeader("empresa-id");
+        
+        // Obtener flag de Super Admin
+        String superAdminHeader = request.getHeader("X-Super-Admin");
+        boolean isSuperAdmin = "true".equalsIgnoreCase(superAdminHeader);
         
         try {
             Long empresaId = null;
@@ -74,6 +79,12 @@ public class TenantFilter extends OncePerRequestFilter {
                 System.out.println("💾 TenantContext.setTenantId: empresaId=" + empresaId + " en " + request.getRequestURI());
             } else {
                 System.out.println("⚠️ No se proporcionó empresaId en " + request.getRequestURI());
+            }
+            
+            // Guardar flag de Super Admin en contexto
+            if (isSuperAdmin) {
+                TenantContext.setSuperAdmin(true);
+                System.out.println("🔓 SUPER_ADMIN detectado - filtro de multi-tenancy DESACTIVADO");
             }
             
             // Continuar con la cadena de filtros

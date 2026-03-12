@@ -9,6 +9,7 @@ package com.rodrigo.construccion.config;
 public class TenantContext {
     
     private static final ThreadLocal<Long> CURRENT_TENANT = new ThreadLocal<>();
+    private static final ThreadLocal<Boolean> IS_SUPER_ADMIN = new ThreadLocal<>();
 
     /**
      * Establece el ID de la empresa actual para el hilo de ejecución actual
@@ -27,6 +28,24 @@ public class TenantContext {
     public static Long getTenantId() {
         return CURRENT_TENANT.get();
     }
+    
+    /**
+     * Establece si el usuario actual es Super Admin
+     * 
+     * @param superAdmin true si es super admin, false si no
+     */
+    public static void setSuperAdmin(Boolean superAdmin) {
+        IS_SUPER_ADMIN.set(superAdmin);
+    }
+    
+    /**
+     * Verifica si el usuario actual es Super Admin
+     * 
+     * @return true si es super admin, false si no
+     */
+    public static Boolean isSuperAdmin() {
+        return Boolean.TRUE.equals(IS_SUPER_ADMIN.get());
+    }
 
     /**
      * Limpia el contexto del tenant para el hilo actual
@@ -34,5 +53,6 @@ public class TenantContext {
      */
     public static void clear() {
         CURRENT_TENANT.remove();
+        IS_SUPER_ADMIN.remove();
     }
 }
