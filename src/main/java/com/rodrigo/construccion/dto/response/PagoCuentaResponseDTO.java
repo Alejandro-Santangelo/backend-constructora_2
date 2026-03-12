@@ -42,8 +42,8 @@ public class PagoCuentaResponseDTO {
     @Schema(description = "Observaciones del pago", example = "Pago parcial primera quincena")
     private String observaciones;
 
-    @Schema(description = "Fecha del pago", example = "2026-03-12")
-    private LocalDate fechaPago;
+    @Schema(description = "Fecha del pago", example = "2026-03-12T10:30:00")
+    private LocalDateTime fechaPago;
 
     @Schema(description = "Usuario que registró el pago", example = "admin@empresa.com")
     private String usuarioRegistro;

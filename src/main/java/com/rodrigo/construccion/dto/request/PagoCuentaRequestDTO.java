@@ -5,7 +5,7 @@ import jakarta.validation.constraints.*;
 import lombok.*;
 
 import java.math.BigDecimal;
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * DTO de request para crear un pago a cuenta sobre un item de rubro
@@ -52,8 +52,8 @@ public class PagoCuentaRequestDTO {
     @Size(max = 500, message = "Las observaciones no pueden exceder 500 caracteres")
     private String observaciones;
 
-    @Schema(description = "Fecha del pago (default: hoy)", example = "2026-03-12")
-    private LocalDate fechaPago;
+    @Schema(description = "Fecha del pago (default: ahora)", example = "2026-03-12T10:30:00")
+    private LocalDateTime fechaPago;
 
     @Schema(description = "Usuario que registra el pago", example = "admin@empresa.com")
     @Size(max = 100, message = "El usuario registro no puede exceder 100 caracteres")
