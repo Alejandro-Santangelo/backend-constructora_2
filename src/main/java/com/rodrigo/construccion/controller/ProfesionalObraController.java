@@ -173,61 +173,19 @@ public class ProfesionalObraController {
          * ENDPOINTS DE DEPURACIÓN (TEMPORALES)
          * ============================================
          */
+        /**
+         * DEBUG: Ver todos los tipos de profesionales
+         * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId, expone datos de todas las empresas
+         */
+        @Deprecated
         @GetMapping("/debug/tipos-profesionales")
-        @Operation(summary = "🔍 DEBUG: Ver todos los tipos de profesionales", description = "Endpoint temporal para verificar qué tipos de profesionales existen en la base de datos")
+        @Operation(summary = "🚫 DEPRECATED: Ver todos los tipos de profesionales", description = "Endpoint deprecated - violaba multi-tenancy al no filtrar por empresaId")
         public ResponseEntity<Map<String, Object>> debugTiposProfesionales() {
-                try {
-                        Map<String, Object> debug = new HashMap<>();
-
-                        // 1. Obtener todos los profesionales
-                        List<com.rodrigo.construccion.model.entity.Profesional> todosProfesionales = profesionalObraService
-                                        .obtenerTodosProfesionales();
-
-                        // 2. Obtener todas las asignaciones
-                        List<ProfesionalObra> todasAsignaciones = profesionalObraService.obtenerTodasLasAsignaciones();
-
-                        // 3. Tipos únicos de profesionales
-                        List<String> tiposUnicos = todosProfesionales.stream()
-                                        .map(p -> p.getTipoProfesional())
-                                        .filter(tipo -> tipo != null && !tipo.trim().isEmpty())
-                                        .distinct()
-                                        .sorted()
-                                        .collect(java.util.stream.Collectors.toList());
-
-                        // 4. Resumen por tipos
-                        Map<String, Long> conteosPorTipo = todosProfesionales.stream()
-                                        .filter(p -> p.getTipoProfesional() != null)
-                                        .collect(java.util.stream.Collectors.groupingBy(
-                                                        p -> p.getTipoProfesional(),
-                                                        java.util.stream.Collectors.counting()));
-
-                        debug.put("totalProfesionales", todosProfesionales.size());
-                        debug.put("totalAsignaciones", todasAsignaciones.size());
-                        debug.put("tiposUnicos", tiposUnicos);
-                        debug.put("conteosPorTipo", conteosPorTipo);
-                        debug.put("profesionalesDetalle", todosProfesionales.stream()
-                                        .map(p -> Map.of(
-                                                        "id", p.getId(),
-                                                        "nombre", p.getNombre(),
-                                                        "tipo",
-                                                        p.getTipoProfesional() != null ? p.getTipoProfesional()
-                                                                        : "null",
-                                                        "activo", p.getActivo()
-                                        // Removimos la relación obrasAsignadas para evitar referencia circular
-                                        ))
-                                        .collect(java.util.stream.Collectors.toList()));
-
-                        debug.put("timestamp", LocalDate.now());
-
-                        return ResponseEntity.ok(debug);
-
-                } catch (Exception e) {
-                        System.out.println("🚨 Error en debug de tipos profesionales: " + e.getMessage());
-                        Map<String, Object> error = new HashMap<>();
-                        error.put("error", "Error al obtener datos de debug");
-                        error.put("mensaje", e.getMessage());
-                        return ResponseEntity.internalServerError().body(error);
-                }
+                log.warn("⚠️ SEGURIDAD: /debug/tipos-profesionales llamado - endpoint deprecated que exponía datos de todas las empresas");
+                return ResponseEntity.ok(Map.of(
+                        "error", "Este endpoint ha sido deshabilitado por seguridad",
+                        "razon", "Exponía datos de todas las empresas sin filtrar por empresaId"
+                ));
         }
 
         /**

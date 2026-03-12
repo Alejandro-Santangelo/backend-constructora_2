@@ -487,9 +487,8 @@ public class PagoConsolidadoService {
             pagosMateriales = pagoRepository
                 .findByPresupuestoNoClienteIdAndEmpresaIdOrderByFechaPagoDesc(presupuestoId, empresaId);
         } else {
-            pagosMateriales = pagoRepository.findAll().stream()
-                .filter(p -> p.getEmpresaId().equals(empresaId))
-                .collect(Collectors.toList());
+            // Todos los pagos de materiales de la empresa (sin filtro de fechas)
+            pagosMateriales = pagoRepository.findByEmpresaIdOrderByFechaPagoDesc(empresaId);
         }
 
         // 2. Obtener pagos de GASTOS GENERALES / OTROS COSTOS
@@ -506,9 +505,8 @@ public class PagoConsolidadoService {
             pagosGastosGenerales = pagoGastoGeneralRepository
                 .findByPresupuestoNoClienteIdAndEmpresaIdOrderByFechaPagoDesc(presupuestoId, empresaId);
         } else {
-            pagosGastosGenerales = pagoGastoGeneralRepository.findAll().stream()
-                .filter(p -> p.getEmpresaId().equals(empresaId))
-                .collect(Collectors.toList());
+            // Todos los pagos de gastos generales de la empresa (sin filtro de fechas)
+            pagosGastosGenerales = pagoGastoGeneralRepository.findByEmpresaIdOrderByFechaPagoDesc(empresaId);
         }
 
         // 3. Filtrar solo PAGADOS de materiales

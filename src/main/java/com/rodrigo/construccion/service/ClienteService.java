@@ -131,10 +131,14 @@ public class ClienteService implements IClienteService {
         return clienteMapper.toResponseDTOList(clientes);
     }
 
-    /* Obtener todos los clientes del sistema (sin filtrar por empresa) */
+    /* Obtener todos los clientes del sistema (sin filtrar por empresa) 
+     * NOTA: Este método se mantiene SOLO para el endpoint /empresas que permite
+     * a administradores ver todos los clientes. Uso normal debe ser obtenerTodosPorEmpresa()
+     */
     @Override
     @Transactional(readOnly = true)
     public List<ClienteResponseDTO> obtenerTodos() {
+        log.warn("⚠️ obtenerTodos() llamado - Este método solo debe usarse en contexto admin");
         List<Cliente> clientes = clienteRepository.findAll();
         return clienteMapper.toResponseDTOList(clientes);
     }

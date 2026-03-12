@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.controller;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -104,10 +105,15 @@ public class ObraController {
         return ResponseEntity.ok(obras);
     }
 
-    @Operation(summary = "Obtener todas las obras")
+    @Deprecated
+    @Operation(
+        summary = "[DEPRECADO] Obtener todas las obras",
+        description = "DEPRECADO: Este endpoint viola multi-tenancy. Usar GET /empresa/{empresaId} en su lugar."
+    )
     @GetMapping("/todas")
     public ResponseEntity<List<ObraResponseDTO>> obtenerTodasObras() {
-        return ResponseEntity.ok(obraService.obtenerTodas());
+        log.warn("⚠️ Endpoint DEPRECADO /obras/todas llamado - retornando lista vacía");
+        return ResponseEntity.ok(new ArrayList<>());
     }
 
     @Operation(summary = "Crear nueva obra")

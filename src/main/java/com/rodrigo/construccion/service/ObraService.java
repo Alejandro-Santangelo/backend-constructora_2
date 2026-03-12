@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -107,11 +108,13 @@ public class ObraService implements IObraService {
         return mapToResponseDTOList(obrasManuales);
     }
 
-    /* Obtener todas las obras */
+    /* Obtener todas las obras - DEPRECADO: Viola multi-tenancy */
     @Override
+    @Deprecated
     public List<ObraResponseDTO> obtenerTodas() {
-        List<Obra> obras = obraRepository.findAll();
-        return mapToResponseDTOList(obras);
+        log.warn("⚠️ DEPRECADO: obtenerTodas() no filtra por empresa. Usar obtenerPorEmpresa(empresaId)");
+        // Por seguridad, retornar lista vacía en lugar de exponer datos de otras empresas
+        return new ArrayList<>();
     }
 
     /* Crear nueva obra con cliente específico */

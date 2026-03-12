@@ -152,7 +152,7 @@ public class MovimientoMaterialController {
             @Parameter(description = "ID de la empresa") @RequestParam Long empresaId) {
         
               System.out.println("Obteniendo movimientos entre " + fechaInicio + " y " + fechaFin + " para empresa: " + empresaId);
-        List<MovimientoMaterial> movimientos = movimientoMaterialService.buscarPorRangoFechas(fechaInicio, fechaFin);
+        List<MovimientoMaterial> movimientos = movimientoMaterialService.buscarPorRangoFechasYEmpresa(empresaId, fechaInicio, fechaFin);
         return ResponseEntity.ok(movimientos);
     }
 
@@ -162,7 +162,7 @@ public class MovimientoMaterialController {
             @Parameter(description = "ID de la empresa") @RequestParam Long empresaId) {
         
               System.out.println("Obteniendo movimientos del mes actual para empresa: " + empresaId);
-        List<MovimientoMaterial> movimientos = movimientoMaterialService.obtenerMovimientosMesActual();
+        List<MovimientoMaterial> movimientos = movimientoMaterialService.obtenerMovimientosMesActualPorEmpresa(empresaId);
         return ResponseEntity.ok(movimientos);
     }
 
@@ -214,7 +214,7 @@ public class MovimientoMaterialController {
         
               System.out.println("Obteniendo resumen de movimientos entre " + fechaInicio + " y " + fechaFin + " para empresa: " + empresaId);
         
-        List<MovimientoMaterial> movimientosPeriodo = movimientoMaterialService.buscarPorRangoFechas(fechaInicio, fechaFin);
+        List<MovimientoMaterial> movimientosPeriodo = movimientoMaterialService.buscarPorRangoFechasYEmpresa(empresaId, fechaInicio, fechaFin);
         BigDecimal valorTotal = movimientoMaterialService.calcularValorTotal(movimientosPeriodo);
         
         Map<String, Object> resumen = new HashMap<>();

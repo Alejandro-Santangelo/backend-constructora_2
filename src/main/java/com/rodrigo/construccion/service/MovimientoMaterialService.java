@@ -30,10 +30,12 @@ public class MovimientoMaterialService {
 
     /**
      * Obtener todos los movimientos
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId. Usar buscarPorEmpresa(empresaId)
      */
+    @Deprecated
     public List<MovimientoMaterial> obtenerTodos() {
-    System.out.println("Obteniendo todos los movimientos de material");
-        return movimientoMaterialRepository.findAll();
+    System.out.println("⚠️ SEGURIDAD: obtenerTodos() llamado sin empresaId - método deprecated");
+        return new java.util.ArrayList<>();
     }
 
     /**
@@ -122,27 +124,40 @@ public class MovimientoMaterialService {
 
     /**
      * Buscar movimientos por tipo
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId. Usar buscarPorTipoYEmpresa(empresaId, tipo)
      */
+    @Deprecated
     public List<MovimientoMaterial> buscarPorTipo(String tipoMovimiento) {
-    System.out.println("Buscando movimientos por tipo: " + tipoMovimiento);
-        return movimientoMaterialRepository.findAll().stream()
+    System.out.println("⚠️ SEGURIDAD: buscarPorTipo() llamado sin empresaId - método deprecated");
+        return new java.util.ArrayList<>();
+    }
+
+    /**
+     * Buscar movimientos por tipo y empresa (versión segura)
+     */
+    public List<MovimientoMaterial> buscarPorTipoYEmpresa(Long empresaId, String tipoMovimiento) {
+    System.out.println("Buscando movimientos por tipo: " + tipoMovimiento + " para empresa: " + empresaId);
+        return movimientoMaterialRepository.findByEmpresaId(empresaId).stream()
                 .filter(mov -> tipoMovimiento.equals(mov.getTipoMovimiento()))
                 .toList();
     }
 
     /**
      * Buscar movimientos por rango de fechas
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId. Usar buscarPorRangoFechasYEmpresa(empresaId, fechaInicio, fechaFin)
      */
+    @Deprecated
     public List<MovimientoMaterial> buscarPorRangoFechas(LocalDateTime fechaInicio, LocalDateTime fechaFin) {
-    System.out.println("Buscando movimientos entre " + fechaInicio + " y " + fechaFin);
-        return movimientoMaterialRepository.findAll().stream()
-                .filter(mov -> {
-                    LocalDateTime fecha = mov.getFechaMovimiento();
-                    return fecha != null && 
-                           !fecha.isBefore(fechaInicio) && 
-                           !fecha.isAfter(fechaFin);
-                })
-                .toList();
+    System.out.println("⚠️ SEGURIDAD: buscarPorRangoFechas() llamado sin empresaId - método deprecated");
+        return new java.util.ArrayList<>();
+    }
+
+    /**
+     * Buscar movimientos por rango de fechas y empresa (versión segura)
+     */
+    public List<MovimientoMaterial> buscarPorRangoFechasYEmpresa(Long empresaId, LocalDateTime fechaInicio, LocalDateTime fechaFin) {
+    System.out.println("Buscando movimientos entre " + fechaInicio + " y " + fechaFin + " para empresa: " + empresaId);
+        return movimientoMaterialRepository.findByEmpresaIdAndFechaBetween(empresaId, fechaInicio, fechaFin);
     }
 
     /**
@@ -157,11 +172,21 @@ public class MovimientoMaterialService {
 
     /**
      * Obtener movimientos del mes actual
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId. Usar obtenerMovimientosMesActualPorEmpresa(empresaId)
      */
+    @Deprecated
     public List<MovimientoMaterial> obtenerMovimientosMesActual() {
+        System.out.println("⚠️ SEGURIDAD: obtenerMovimientosMesActual() llamado sin empresaId - método deprecated");
+        return new java.util.ArrayList<>();
+    }
+
+    /**
+     * Obtener movimientos del mes actual por empresa (versión segura)
+     */
+    public List<MovimientoMaterial> obtenerMovimientosMesActualPorEmpresa(Long empresaId) {
         LocalDateTime inicioMes = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0).withSecond(0).withNano(0);
         LocalDateTime finMes = inicioMes.plusMonths(1).minusNanos(1);
-        return buscarPorRangoFechas(inicioMes, finMes);
+        return buscarPorRangoFechasYEmpresa(empresaId, inicioMes, finMes);
     }
 
     /**

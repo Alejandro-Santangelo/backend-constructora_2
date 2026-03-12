@@ -155,6 +155,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     }
 
     public List<PresupuestoNoCliente> listarTodos() {
+        log.warn("⚠️ SEGURIDAD: listarTodos() llamado - Este método confía en el filtro Hibernate @Filter, verificar que TenantContext tenga empresaId");
         List<PresupuestoNoCliente> presupuestos = repository.findAll();
         // Calcular campos calculados para cada presupuesto
         presupuestos.forEach(p -> {
@@ -173,8 +174,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("🔍 Buscando presupuestos para empresaId: {}", empresaId);
 
         try {
-            // El filtro de Hibernate automáticamente filtra por empresaId
-            // Solo necesitamos llamar a findAll() y el filtro se aplica automáticamente
+            // NOTA: El filtro de Hibernate @Filter NO ES automático - se activa via TenantContext + HibernateFilterInterceptor
+            // El TenantContext debe haberse establecido en el TenantFilter desde el header empresaId
+            // Solo entonces el HibernateFilterInterceptor habilita el filtro antes de cada query
+            log.warn("⚠️ ADVERTENCIA: findAllByEmpresaId() confía en filtro Hibernate - empresaId debe estar en TenantContext");
             List<PresupuestoNoCliente> presupuestos = repository.findAll();
 
             log.info("📊 Encontrados {} presupuestos para empresaId {}", presupuestos.size(), empresaId);
@@ -2229,6 +2232,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         presupuestoObraSyncService.procesarEliminacionPresupuesto(obraIdAsociado, id);
 
         // Obtener información de versiones restantes
+        log.warn("⚠️ ADVERTENCIA: Buscando versiones restantes - confía en filtro Hibernate via TenantContext");
         List<PresupuestoNoCliente> versionesRestantes = repository.findAll().stream()
                 .filter(p -> p.getNumeroPresupuesto().equals(numeroPresupuesto))
                 .toList();
@@ -3701,6 +3705,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
     public java.util.List<PresupuestoNoCliente> buscarPorTipoProfesional(String tipoProfesional, Long empresaId) {
         // Implementación básica - puede mejorarse según necesidades
+        log.warn("⚠️ ADVERTENCIA: buscarPorTipoProfesional() ignora empresaId y confía en filtro Hibernate - debería usar repository con empresaId");
         List<PresupuestoNoCliente> presupuestos = repository.findAll();
         // Calcular campos calculados
         presupuestos.forEach(PresupuestoNoCliente::calcularCamposCalculados);

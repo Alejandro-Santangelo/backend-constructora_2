@@ -397,10 +397,13 @@ public class ProfesionalObraService implements IProfesionalObraService {
 
     /**
      * Obtener todas las asignaciones para debug
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId, expone datos de todas las empresas
      */
     @Override
+    @Deprecated
     public List<ProfesionalObra> obtenerTodasLasAsignaciones() {
-        return profesionalObraRepository.findAll();
+        log.warn("⚠️ SEGURIDAD: obtenerTodasLasAsignaciones() llamado - método deprecated que expone datos de todas las empresas");
+        return new ArrayList<>();
     }
 
     /**
@@ -571,11 +574,14 @@ public class ProfesionalObraService implements IProfesionalObraService {
      * ============================================
      */
 
-    /*
+    /**
      * Obtener todas las asignaciones
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId, expone datos de todas las empresas
      */
+    @Deprecated
     public List<ProfesionalObra> obtenerTodas() {
-        return profesionalObraRepository.findAll();
+        log.warn("⚠️ SEGURIDAD: obtenerTodas() llamado - método deprecated que expone datos de todas las empresas");
+        return new ArrayList<>();
     }
 
     /**
@@ -709,35 +715,32 @@ public class ProfesionalObraService implements IProfesionalObraService {
 
     /**
      * Buscar asignaciones por rango de fechas
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId, expone datos de todas las empresas. Usar buscarPorRangoFechasYEmpresa(empresaId, fechaInicio, fechaFin)
      */
+    @Deprecated
     public List<ProfesionalObra> buscarPorRangoFechas(LocalDate fechaInicio, LocalDate fechaFin) {
-        return profesionalObraRepository.findAll().stream()
-                .filter(asignacion -> {
-                    LocalDate desde = asignacion.getFechaDesde();
-                    LocalDate hasta = asignacion.getFechaHasta();
-                    return desde != null &&
-                            !desde.isAfter(fechaFin) &&
-                            (hasta == null || !hasta.isBefore(fechaInicio));
-                })
-                .toList();
+        log.warn("⚠️ SEGURIDAD: buscarPorRangoFechas() llamado sin empresaId - método deprecated que expone datos de todas las empresas");
+        return new ArrayList<>();
     }
 
     /**
      * Buscar asignaciones por rol
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId, expone datos de todas las empresas
      */
+    @Deprecated
     public List<ProfesionalObra> buscarPorRol(String rol) {
-        return profesionalObraRepository.findAll().stream()
-                .filter(asignacion -> rol.equals(asignacion.getRolEnObra()))
-                .toList();
+        log.warn("⚠️ SEGURIDAD: buscarPorRol() llamado sin empresaId - método deprecated que expone datos de todas las empresas");
+        return new ArrayList<>();
     }
 
     /**
      * Obtener asignaciones activas
+     * @deprecated VIOLACIÓN MULTI-TENANCY: No filtra por empresaId, expone datos de todas las empresas
      */
+    @Deprecated
     public List<ProfesionalObra> obtenerAsignacionesActivas() {
-        return profesionalObraRepository.findAll().stream()
-                .filter(asignacion -> Boolean.TRUE.equals(asignacion.getActivo()))
-                .toList();
+        log.warn("⚠️ SEGURIDAD: obtenerAsignacionesActivas() llamado sin empresaId - método deprecated que expone datos de todas las empresas");
+        return new ArrayList<>();
     }
 
     /**
