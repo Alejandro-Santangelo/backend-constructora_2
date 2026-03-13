@@ -36,7 +36,7 @@ public class LoginResponse {
         response.setEmail(usuario.getEmail());
         response.setRol(usuario.getRol());
         response.setEmpresaId(usuario.getEmpresaId());
-        response.setEsSuperAdmin("SUPER_ADMIN".equals(usuario.getRol()));
+        response.setEsSuperAdmin("SUPER_ADMINISTRADOR".equals(usuario.getRol()));
         return response;
     }
 }

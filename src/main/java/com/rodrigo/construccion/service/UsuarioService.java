@@ -2,6 +2,7 @@ package com.rodrigo.construccion.service;
 
 import com.rodrigo.construccion.dto.response.UsuarioEstadisticasDTO;
 import com.rodrigo.construccion.exception.DuplicateEmailException;
+import com.rodrigo.construccion.exception.DuplicatePinException;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.Usuario;
 import com.rodrigo.construccion.repository.UsuarioRepository;
@@ -11,6 +12,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -22,18 +24,41 @@ public class UsuarioService {
     private final UsuarioRepository usuarioRepository;
     private final IEmpresaService empresaService;
 
-    /* Crear un nuevo usuario */
+    /* Crear un nuevo usuario con empresa única (método existente para compatibilidad) */
     public Usuario crearUsuario(Usuario usuario, Long empresaId) {
-        // Validar que la empresa existe
-        var empresa = empresaService.findEmpresaById(empresaId);
+        // Delegar al método multi-empresa con lista de una sola empresa
+        return crearUsuarioMultiEmpresa(usuario, empresaId, List.of(empresaId));
+    }
 
-        // Verificar email único en la empresa
-        if (usuarioRepository.existsByIdEmpresaAndEmail(empresaId, usuario.getEmail())) {
+    /* 🆕 Crear un nuevo usuario con acceso a múltiples empresas */
+    public Usuario crearUsuarioMultiEmpresa(Usuario usuario, Long empresaPrincipal, List<Long> empresasPermitidas) {
+        // Validar que la empresa principal existe
+        var empresa = empresaService.findEmpresaById(empresaPrincipal);
+
+        // Verificar email único en la empresa principal
+        if (usuarioRepository.existsByIdEmpresaAndEmail(empresaPrincipal, usuario.getEmail())) {
             throw new DuplicateEmailException(usuario.getEmail(), empresa.getNombreEmpresa());
         }
 
-        // Asignar empresa por ID
-        usuario.setEmpresaId(empresaId);
+        // Verificar PIN único en el sistema (validación global)
+        if (usuario.getPasswordHash() != null && usuarioRepository.existsByPasswordHash(usuario.getPasswordHash())) {
+            throw new DuplicatePinException(usuario.getPasswordHash());
+        }
+
+        // Asignar empresa principal
+        usuario.setEmpresaId(empresaPrincipal);
+
+        // 🆕 Asignar empresas permitidas
+        if (empresasPermitidas != null && !empresasPermitidas.isEmpty()) {
+            // Validar que todas las empresas existen
+            for (Long empId : empresasPermitidas) {
+                empresaService.findEmpresaById(empId); // Lanza excepción si no existe
+            }
+            usuario.setEmpresasPermitidas(new ArrayList<>(empresasPermitidas));
+        } else {
+            // Si no se especifican, por defecto tiene acceso solo a su empresa principal
+            usuario.setEmpresasPermitidas(new ArrayList<>(List.of(empresaPrincipal)));
+        }
 
         // Establecer valores por defecto
         if (usuario.getRol() == null || usuario.getRol().trim().isEmpty()) {
