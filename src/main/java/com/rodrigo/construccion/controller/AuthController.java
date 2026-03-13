@@ -56,16 +56,19 @@ public class AuthController {
      * Cambiar PIN de un usuario
      * PUT /api/auth/cambiar-pin/{userId}
      * Body: { "pinActual": "1111", "pinNuevo": "9999" }
+     * Header: X-Super-Admin: true (opcional - omite validación de PIN actual)
      */
     @PutMapping("/cambiar-pin/{userId}")
     public ResponseEntity<?> cambiarPin(
             @PathVariable Long userId,
-            @RequestBody CambiarPinRequest request
+            @RequestBody CambiarPinRequest request,
+            @RequestHeader(value = "X-Super-Admin", required = false) String superAdminHeader
     ) {
         try {
             log.info("🔐 PUT /api/auth/cambiar-pin/{} - Cambio de PIN solicitado", userId);
             
-            authService.cambiarPin(userId, request);
+            boolean isSuperAdmin = "true".equalsIgnoreCase(superAdminHeader);
+            authService.cambiarPin(userId, request, isSuperAdmin);
             
             log.info("✅ PIN cambiado exitosamente para usuario ID {}", userId);
             return ResponseEntity.ok("PIN actualizado exitosamente");

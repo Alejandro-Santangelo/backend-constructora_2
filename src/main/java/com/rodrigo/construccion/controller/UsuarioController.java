@@ -17,6 +17,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -29,10 +30,32 @@ public class UsuarioController {
 
     /* Crear un nuevo usuario */
     @PostMapping
-    @Operation(summary = "Crear usuario", description = "Registra un nuevo usuario en la empresa especificada")
-    public ResponseEntity<Usuario> crearUsuario(@Valid @RequestBody Usuario usuario, @RequestHeader("X-Tenant-ID") @Parameter(description = "ID de la empresa") Long empresaId) {
-        var usuarioNuevo = usuarioService.crearUsuario(usuario, empresaId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(usuarioNuevo);
+    @Operation(summary = "Crear usuario", description = "Registra un nuevo usuario. Puede asignarse a una o múltiples empresas.")
+    public ResponseEntity<Usuario> crearUsuario(
+            @Valid @RequestBody Usuario usuario, 
+            @RequestHeader("X-Tenant-ID") @Parameter(description = "ID de la empresa principal") Long empresaId,
+            @RequestParam(required = false) @Parameter(description = "IDs de empresas permitidas (separadas por coma). Si no se envía, solo tendrá acceso a la empresa principal.") String empresasPermitidas) {
+        
+        // 🆕 SISTEMA MULTI-EMPRESA
+        // Si viene el parámetro empresasPermitidas, parsearlo
+        if (empresasPermitidas != null && !empresasPermitidas.trim().isEmpty()) {
+            List<Long> empresasIds = new ArrayList<>();
+            try {
+                String[] ids = empresasPermitidas.split(",");
+                for (String id : ids) {
+                    empresasIds.add(Long.parseLong(id.trim()));
+                }
+                // Usar el método multi-empresa
+                var usuarioNuevo = usuarioService.crearUsuarioMultiEmpresa(usuario, empresaId, empresasIds);
+                return ResponseEntity.status(HttpStatus.CREATED).body(usuarioNuevo);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException("Formato inválido en empresasPermitidas. Use IDs numéricos separados por coma.");
+            }
+        } else {
+            // Si no viene, usar el método tradicional (una sola empresa)
+            var usuarioNuevo = usuarioService.crearUsuario(usuario, empresaId);
+            return ResponseEntity.status(HttpStatus.CREATED).body(usuarioNuevo);
+        }
     }
 
     /* Obtener todos los usuarios con paginación */

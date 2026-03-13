@@ -33,6 +33,12 @@ public interface UsuarioRepository extends JpaRepository<Usuario, Long> {
     /* Verificar si existe un email en una empresa */
     boolean existsByIdEmpresaAndEmail(Long empresaId, String email);
 
+    /* Verificar si existe un PIN en el sistema (PIN único global) */
+    boolean existsByPasswordHash(String pin);
+
+    /* Buscar usuario por PIN (passwordHash) */
+    Optional<Usuario> findByPasswordHash(String pin);
+
     /* Contar usuarios por empresa  */
     long countByIdEmpresa(Long empresaId);
 

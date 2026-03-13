@@ -101,18 +101,23 @@ public class AuthService {
      * Cambiar PIN de un usuario
      * @param userId ID del usuario
      * @param request PIN actual y nuevo
+     * @param isSuperAdmin Si es superadmin, omite validación del PIN actual
      */
     @Transactional
-    public void cambiarPin(Long userId, CambiarPinRequest request) {
-        log.info("🔐 Intentando cambiar PIN para usuario ID {}", userId);
+    public void cambiarPin(Long userId, CambiarPinRequest request, boolean isSuperAdmin) {
+        log.info("🔐 Intentando cambiar PIN para usuario ID {} (Super Admin: {})", userId, isSuperAdmin);
 
         Usuario usuario = usuarioRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Validar PIN actual
-        if (!usuario.getPasswordHash().equals(request.getPinActual())) {
-            log.warn("❌ PIN actual incorrecto para usuario ID {}", userId);
-            throw new RuntimeException("PIN actual incorrecto");
+        // Validar PIN actual SOLO si NO es super admin
+        if (!isSuperAdmin) {
+            if (!usuario.getPasswordHash().equals(request.getPinActual())) {
+                log.warn("❌ PIN actual incorrecto para usuario ID {}", userId);
+                throw new RuntimeException("PIN actual incorrecto");
+            }
+        } else {
+            log.info("🔓 Super Admin detectado - omitiendo validación de PIN actual");
         }
 
         // Validar nuevo PIN (4 dígitos)
