@@ -3,6 +3,7 @@ package com.rodrigo.construccion.service;
 import com.rodrigo.construccion.dto.request.CambiarPinRequest;
 import com.rodrigo.construccion.dto.request.LoginPinRequest;
 import com.rodrigo.construccion.dto.response.LoginResponse;
+import com.rodrigo.construccion.exception.DuplicatePinException;
 import com.rodrigo.construccion.model.entity.Empresa;
 import com.rodrigo.construccion.model.entity.Usuario;
 import com.rodrigo.construccion.repository.EmpresaRepository;
@@ -62,9 +63,9 @@ public class AuthService {
         // Obtener lista de empresas permitidas según rol
         List<LoginResponse.EmpresaPermitida> empresasPermitidas = new ArrayList<>();
 
-        if ("SUPER_ADMIN".equals(usuario.getRol())) {
-            // Super admin puede ver TODAS las empresas
-            log.info("🔓 Super Admin detectado - acceso a todas las empresas");
+        if ("SUPER_ADMINISTRADOR".equals(usuario.getRol())) {
+            // Super administrador puede ver TODAS las empresas
+            log.info("🔓 Super Administrador detectado - acceso a todas las empresas");
             empresasPermitidas = empresaRepository.findAll().stream()
                     .map(e -> new LoginResponse.EmpresaPermitida(
                             e.getId(),
@@ -73,11 +74,14 @@ public class AuthService {
                     ))
                     .collect(Collectors.toList());
         } else {
-            // Contratista solo puede ver SU empresa
-            log.info("🔒 Contratista detectado - acceso solo a empresa ID {}", usuario.getEmpresaId());
-            final Long empresaId = usuario.getEmpresaId();
-            if (empresaId != null) {
-                Optional<Empresa> empresaOpt = empresaRepository.findById(empresaId);
+            // 🆕 SISTEMA MULTI-EMPRESA
+            // Obtener empresas desde la lista de empresas permitidas del usuario
+            List<Long> empresasIds = usuario.obtenerEmpresasAccesibles();
+            
+            log.info("🔒 Usuario con acceso a {} empresas: {}", empresasIds.size(), empresasIds);
+            
+            for (Long empId : empresasIds) {
+                Optional<Empresa> empresaOpt = empresaRepository.findById(empId);
                 if (empresaOpt.isPresent()) {
                     Empresa empresa = empresaOpt.get();
                     empresasPermitidas.add(
@@ -101,24 +105,36 @@ public class AuthService {
      * Cambiar PIN de un usuario
      * @param userId ID del usuario
      * @param request PIN actual y nuevo
+     * @param isSuperAdmin Si es superadmin, omite validación del PIN actual
      */
     @Transactional
-    public void cambiarPin(Long userId, CambiarPinRequest request) {
-        log.info("🔐 Intentando cambiar PIN para usuario ID {}", userId);
+    public void cambiarPin(Long userId, CambiarPinRequest request, boolean isSuperAdmin) {
+        log.info("🔐 Intentando cambiar PIN para usuario ID {} (Super Admin: {})", userId, isSuperAdmin);
 
         Usuario usuario = usuarioRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Validar PIN actual
-        if (!usuario.getPasswordHash().equals(request.getPinActual())) {
-            log.warn("❌ PIN actual incorrecto para usuario ID {}", userId);
-            throw new RuntimeException("PIN actual incorrecto");
+        // Validar PIN actual SOLO si NO es super admin
+        if (!isSuperAdmin) {
+            if (!usuario.getPasswordHash().equals(request.getPinActual())) {
+                log.warn("❌ PIN actual incorrecto para usuario ID {}", userId);
+                throw new RuntimeException("PIN actual incorrecto");
+            }
+        } else {
+            log.info("🔓 Super Admin detectado - omitiendo validación de PIN actual");
         }
 
         // Validar nuevo PIN (4 dígitos)
         if (!request.getPinNuevo().matches("\\d{4}")) {
             log.warn("❌ PIN nuevo inválido (debe ser 4 dígitos)");
             throw new RuntimeException("El PIN debe tener 4 dígitos numéricos");
+        }
+
+        // Validar que el nuevo PIN no esté en uso por otro usuario
+        Optional<Usuario> usuarioConPin = usuarioRepository.findByPasswordHash(request.getPinNuevo());
+        if (usuarioConPin.isPresent() && !usuarioConPin.get().getId().equals(userId)) {
+            log.warn("❌ PIN {} ya está en uso por otro usuario", request.getPinNuevo());
+            throw new DuplicatePinException(request.getPinNuevo());
         }
 
         // Actualizar PIN
@@ -139,12 +155,12 @@ public class AuthService {
         Usuario usuario = usuarioRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
-        // Super admin tiene acceso a todas las empresas
-        if ("SUPER_ADMIN".equals(usuario.getRol())) {
+        // Super administrador tiene acceso a todas las empresas
+        if ("SUPER_ADMINISTRADOR".equals(usuario.getRol())) {
             return true;
         }
 
-        // Contratista solo tiene acceso a su empresa
-        return usuario.getEmpresaId() != null && usuario.getEmpresaId().equals(empresaId);
+        // 🆕 SISTEMA MULTI-EMPRESA: Verificar usando el método del modelo
+        return usuario.tieneAccesoAEmpresa(empresaId);
     }
 }

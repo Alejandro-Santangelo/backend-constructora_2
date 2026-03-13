@@ -85,6 +85,42 @@ public class GlobalExceptionHandler {
     }
 
     /**
+     * Manejo específico de PIN duplicado
+     */
+    @ExceptionHandler(DuplicatePinException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicatePinException(DuplicatePinException ex, WebRequest request) {
+        System.err.println("⚠️ PIN duplicado detectado: " + ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("PIN Duplicado")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
+     * Manejo específico de Email duplicado
+     */
+    @ExceptionHandler(DuplicateEmailException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateEmailException(DuplicateEmailException ex, WebRequest request) {
+        System.err.println("⚠️ Email duplicado detectado: " + ex.getMessage());
+        
+        ErrorResponse errorResponse = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.CONFLICT.value())
+                .error("Email Duplicado")
+                .message(ex.getMessage())
+                .path(request.getDescription(false).replace("uri=", ""))
+                .build();
+
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    /**
      * Manejo de errores de integridad de datos - evitar duplicados
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
