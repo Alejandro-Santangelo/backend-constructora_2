@@ -980,47 +980,68 @@ public class PresupuestoNoCliente {
      * Flujo de cálculo:
      * 1. Calcula honorarios (sobre BASE de cada categoría)
      * 2. Calcula mayores costos (sobre BASE de cada categoría, NO sobre base+honorarios)
-     * 3. Calcula subtotal sin descuentos (BASE + HONORARIOS + MAYORES_COSTOS)
+     * 3. Calcula subtotal sin descuentos (BASE + HONORARIOS) - BASE ya incluye mayores costos
      * 4. Calcula descuentos (sobre diferentes bases según categoría)
      * 5. Calcula total final (SUBTOTAL SIN DESCUENTOS - DESCUENTOS)
      */
     public void calcularCamposCalculados() {
-        // Solo recalcular si NO existe el valor persistido
-        if (this.totalPresupuestoConHonorarios != null && this.totalPresupuestoConHonorarios.compareTo(BigDecimal.ZERO) > 0) {
-            // Si ya existe el total persistido, lo usamos
-            // Pero aún así calculamos descuentos si existen
+        System.out.println("⚠️⚠️⚠️ calcularCamposCalculados() LLAMADO - ID: " + this.id);
+        System.out.println("   totalPresupuestoConHonorarios ANTES: " + this.totalPresupuestoConHonorarios);
+        System.out.println("   totalHonorariosCalculado ANTES: " + this.totalHonorariosCalculado);
+        
+        // ⚠️ CRÍTICO: Si totalPresupuestoConHonorarios YA viene del frontend, NO recalcular
+        // El frontend ya hizo todos los cálculos correctamente
+        if (this.totalPresupuestoConHonorarios != null && 
+            this.totalPresupuestoConHonorarios.compareTo(BigDecimal.ZERO) > 0 &&
+            this.totalHonorariosCalculado != null &&
+            this.totalHonorariosCalculado.compareTo(BigDecimal.ZERO) > 0) {
+            System.out.println("✅✅✅ EARLY RETURN - Usando valores del frontend");
+            // Usar valores del frontend (ya calculados correctamente)
             this.totalFinal = this.totalPresupuestoConHonorarios;
+            this.totalHonorarios = this.totalHonorariosCalculado; // Transient para JSON
             
             // Calcular descuentos si hay configuración
             BigDecimal descuentos = calcularTotalDescuentos();
+            System.out.println("   Descuentos calculados: " + descuentos);
             if (descuentos.compareTo(BigDecimal.ZERO) > 0) {
                 this.totalDescuentos = descuentos;
                 this.totalSinDescuentos = this.totalPresupuestoConHonorarios;
-                this.totalConDescuentos = this.totalPresupuestoConHonorarios.subtract(descuentos); // ✅ FIX: Calcular después de descuentos
+                this.totalConDescuentos = this.totalPresupuestoConHonorarios.subtract(descuentos);
                 this.totalFinal = this.totalPresupuestoConHonorarios.subtract(descuentos);
                 this.totalPresupuestoConHonorarios = this.totalFinal; // Actualizar el total final
+                System.out.println("❌❌❌ SOBRESCRITO totalPresupuestoConHonorarios por descuentos: " + this.totalPresupuestoConHonorarios);
             } else {
-                // ✅ FIX: Sin descuentos, totalConDescuentos = totalPresupuestoConHonorarios
                 this.totalConDescuentos = this.totalPresupuestoConHonorarios;
             }
-            return;
+            System.out.println("   totalPresupuestoConHonorarios DESPUÉS early return: " + this.totalPresupuestoConHonorarios);
+            return; // ✅ NO recalcular nada más
         }
         
+        System.out.println("⚠️⚠️⚠️ RECALCULANDO COMPLETO (no había valores del frontend)");
         // 1. Calcular honorarios (solo sobre base, NO sobre mayores costos)
-        BigDecimal honorariosCalculados = calcularTotalHonorarios();
+        // ⚠️ CRÍTICO: Si totalHonorariosCalculado YA tiene valor (viene del frontend), NO recalcular
+        BigDecimal honorariosCalculados;
+        if (this.totalHonorariosCalculado != null && this.totalHonorariosCalculado.compareTo(BigDecimal.ZERO) > 0) {
+            // Usar valor del frontend (ya calculado correctamente)
+            honorariosCalculados = this.totalHonorariosCalculado;
+        } else {
+            // Recalcular solo si no viene del frontend
+            honorariosCalculados = calcularTotalHonorarios();
+            this.totalHonorariosCalculado = honorariosCalculados; // Persistido en BD
+        }
         this.totalHonorarios = honorariosCalculados; // Transient para JSON
-        this.totalHonorariosCalculado = honorariosCalculados; // Persistido en BD
         
         // 2. Calcular mayores costos (sobre base de cada categoría, NO sobre base+honorarios)
         this.totalMayoresCostos = calcularTotalMayoresCostos();
         
-        // 3. Calcular subtotal sin descuentos (BASE + HONORARIOS + MAYORES_COSTOS)
+        // 3. Calcular subtotal sin descuentos (BASE + HONORARIOS)
+        // ⚠️ CRÍTICO: totalPresupuesto YA incluye mayores costos (aplicados en frontend)
+        // NO sumar mayoresCostos otra vez para evitar doble contabilización
         BigDecimal base = totalPresupuesto != null ? totalPresupuesto :
                 (totalGeneral != null ? BigDecimal.valueOf(totalGeneral) : BigDecimal.ZERO);
         BigDecimal honorarios = this.totalHonorariosCalculado != null ? this.totalHonorariosCalculado : BigDecimal.ZERO;
-        BigDecimal mayoresCostos = this.totalMayoresCostos != null ? this.totalMayoresCostos : BigDecimal.ZERO;
         
-        BigDecimal subtotalSinDescuentos = base.add(honorarios).add(mayoresCostos);
+        BigDecimal subtotalSinDescuentos = base.add(honorarios);
         
         // 4. Calcular descuentos
         BigDecimal descuentos = calcularTotalDescuentos();

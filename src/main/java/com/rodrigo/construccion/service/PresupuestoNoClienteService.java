@@ -1301,9 +1301,12 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             log.info("🔗 Sincronizando datos del cliente...");
             sincronizarDatosClienteConObra(actualizado);
 
-            // PASO 6: Calcular campos calculados antes de devolver
-            log.info("🧮 Calculando campos calculados...");
-            actualizado.calcularCamposCalculados();
+            // ⚠️ CRÍTICO: NO RECALCULAR - El frontend ya envió los valores correctos
+            // ELIMINADO: actualizado.calcularCamposCalculados();
+            // Motivo: calcularCamposCalculados() estaba sobrescribiendo totalPresupuestoConHonorarios
+            // de $32M (correcto del frontend) a $37M (recalculado incorrectamente)
+            log.info("✅ Guardando valores del frontend SIN recalcular: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
+                    actualizado.getTotalPresupuesto(), actualizado.getTotalHonorariosCalculado(), actualizado.getTotalPresupuestoConHonorarios());
 
             // ✅ NUEVO: Sincronizar TODOS los campos de la obra vinculada
             log.info("🔄 Sincronizando todos los campos con obra vinculada...");
@@ -5768,18 +5771,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             return;
         }
 
-        // Validar que totalPresupuestoConHonorarios = totalPresupuesto + totalHonorarios + totalMayoresCostos + totalMayoresCostosPorRubro - totalDescuentosPorRubro
+        // Validar que totalPresupuestoConHonorarios = totalPresupuesto + totalHonorarios - totalDescuentosPorRubro
+        // ⚠️ CRÍTICO: totalPresupuesto YA incluye mayores costos aplicados en el frontend
+        // NO sumar totalMayoresCostos ni totalMayoresCostosPorRubro porque están DENTRO de totalPresupuesto
         java.math.BigDecimal sumaEsperada = totalPresupuesto.add(totalHonorarios);
-        
-        // Agregar mayores costos tradicionales (si existe)
-        if (totalMayoresCostos != null) {
-            sumaEsperada = sumaEsperada.add(totalMayoresCostos);
-        }
-        
-        // Agregar mayores costos por rubro (si existe)
-        if (totalMayoresCostosPorRubro != null) {
-            sumaEsperada = sumaEsperada.add(totalMayoresCostosPorRubro);
-        }
         
         // Restar descuentos por rubro (si existe)
         if (totalDescuentosPorRubro != null) {
@@ -5792,8 +5787,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         if (diferencia.compareTo(tolerancia) > 0) {
             String error = String.format(
                 "❌ ERROR DE CÁLCULO: Total con honorarios no coincide. " +
-                "Esperado: %s (Base: %s + Honorarios: %s + MayoresCostos: %s + MayoresCostosPorRubro: %s - DescuentosPorRubro: %s), pero se recibió: %s (diferencia: %s)",
-                sumaEsperada, totalPresupuesto, totalHonorarios, totalMayoresCostos, totalMayoresCostosPorRubro, totalDescuentosPorRubro, totalConHonorarios, diferencia
+                "Esperado: %s (Base: %s + Honorarios: %s - DescuentosPorRubro: %s), pero se recibió: %s (diferencia: %s). " +
+                "Nota: Base ya incluye mayores costos (general: %s, por rubro: %s)",
+                sumaEsperada, totalPresupuesto, totalHonorarios, totalDescuentosPorRubro, totalConHonorarios, diferencia,
+                totalMayoresCostos, totalMayoresCostosPorRubro
             );
             log.error(error);
             throw new IllegalArgumentException(
@@ -5813,8 +5810,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             );
         }
 
-        log.info("✅ Validación de totales OK: Base={} + Honorarios={} + MayoresCostos={} + MayoresCostosPorRubro={} - DescuentosPorRubro={} = Total={} (TotalConDescuentos={})",
-                totalPresupuesto, totalHonorarios, totalMayoresCostos, totalMayoresCostosPorRubro, totalDescuentosPorRubro, totalConHonorarios, totalConDescuentos);
+        log.info("✅ Validación de totales OK: Base={} (incluye MayoresCostos: {}, MayoresCostosPorRubro: {}) + Honorarios={} - DescuentosPorRubro={} = Total={} (TotalConDescuentos={})",
+                totalPresupuesto, totalMayoresCostos, totalMayoresCostosPorRubro, totalHonorarios, totalDescuentosPorRubro, totalConHonorarios, totalConDescuentos);
     }
 
     // ========== MAPEO DE HONORARIOS POR RUBRO ==========
