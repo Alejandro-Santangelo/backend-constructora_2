@@ -144,6 +144,17 @@ public interface ProfesionalJornalDiarioRepository extends JpaRepository<Profesi
     BigDecimal calcularTotalHorasPorProfesional(@Param("profesionalId") Long profesionalId);
 
     /**
+     * Obtener TODOS los jornales de una empresa (para consolidado de pagos)
+     * Con JOIN FETCH para evitar N+1 queries
+     */
+    @Query("SELECT j FROM ProfesionalJornalDiario j " +
+           "JOIN FETCH j.profesional " +
+           "JOIN FETCH j.obra " +
+           "WHERE j.empresaId = :empresaId " +
+           "ORDER BY j.fecha DESC")
+    List<ProfesionalJornalDiario> findAllByEmpresaId(@Param("empresaId") Long empresaId);
+
+    /**
      * Obtener resumen de jornales por profesional en una obra (agrupado)
      */
     @Query("SELECT j.profesional.id, j.profesional.nombre, " +

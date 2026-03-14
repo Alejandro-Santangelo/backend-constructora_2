@@ -13,12 +13,21 @@ import com.rodrigo.construccion.dto.response.DisponibilidadProfesionalResponse;
 import com.rodrigo.construccion.dto.response.ListaProfesionalesResponse;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
 import com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO;
+import com.rodrigo.construccion.dto.response.ObraPagosDTO;
+import com.rodrigo.construccion.dto.response.RubroPagosDTO;
+import com.rodrigo.construccion.dto.response.ProfesionalPagoDTO;
+import com.rodrigo.construccion.dto.response.ProfesionalConsolidadoDTO;
+import com.rodrigo.construccion.dto.response.ObraAsignacionDTO;
+import com.rodrigo.construccion.dto.response.AsignacionRubroDTO;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
 import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.model.entity.Obra;
+import com.rodrigo.construccion.model.entity.AsignacionProfesionalObra;
 import com.rodrigo.construccion.repository.ProfesionalObraRepository;
 import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
+import com.rodrigo.construccion.repository.ObraRepository;
+import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,7 +40,9 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
@@ -46,6 +57,8 @@ public class ProfesionalObraService implements IProfesionalObraService {
 
     private final ProfesionalObraRepository profesionalObraRepository;
     private final PagoProfesionalObraRepository pagoRepository;
+    private final ObraRepository obraRepository;
+    private final AsignacionProfesionalObraRepository asignacionProfesionalObraRepository;
     private final IEmpresaService empresaService;
     private final ProfesionalObraMapper profesionalObraMapper;
     private final IProfesionalService profesionalService;
@@ -447,6 +460,47 @@ public class ProfesionalObraService implements IProfesionalObraService {
         return asignaciones.stream()
                 .map(po -> mapearAProfesionalFinancieroDTO(po, obra))
                 .collect(Collectors.toList());
+    }
+
+    /**
+     * Obtener TODOS los profesionales de la empresa con datos financieros completos
+     * CONSOLIDADO: Trae profesionales de TODAS las obras activas de la empresa
+     * INCLUYE: totales pagados, adelantos, saldo pendiente, información de la obra
+     */
+    public List<ProfesionalObraFinancieroDTO> obtenerTodosProfesionalesEmpresaConDatosFinancieros(Long empresaId) {
+        log.info("🔍 Obteniendo TODOS los profesionales con datos financieros para empresa {}", empresaId);
+        
+        // Validar empresa
+        empresaService.findEmpresaById(empresaId);
+        
+        // Obtener todas las obras activas de la empresa
+        List<Obra> obrasActivas = obraRepository.findByEmpresaIdAndEstadoIn(
+            empresaId, 
+            Arrays.asList("APROBADO", "EN_EJECUCION", "TERMINADO") // Incluir TERMINADO para obras de trabajo diario
+        );
+        
+        log.info("📊 Se encontraron {} obras activas para la empresa {}", obrasActivas.size(), empresaId);
+        
+        // Lista final de profesionales
+        List<ProfesionalObraFinancieroDTO> todosProfesionales = new ArrayList<>();
+        
+        // Para cada obra, obtener sus profesionales asignados
+        for (Obra obra : obrasActivas) {
+            List<ProfesionalObra> profesionalesObra = profesionalObraRepository.findByObraIdAndEmpresaIdWithRelations(obra.getId(), empresaId);
+            
+            log.debug("📋 Obra {}: {} profesionales asignados", obra.getNombre(), profesionalesObra.size());
+            
+            // Mapear a DTOs con datos financieros
+            List<ProfesionalObraFinancieroDTO> profesionalesDTO = profesionalesObra.stream()
+                    .map(po -> mapearAProfesionalFinancieroDTO(po, obra))
+                    .collect(Collectors.toList());
+            
+            todosProfesionales.addAll(profesionalesDTO);
+        }
+        
+        log.info("✅ Se encontraron {} profesionales asignados en total para la empresa {}", todosProfesionales.size(), empresaId);
+        
+        return todosProfesionales;
     }
 
     /**
@@ -869,6 +923,297 @@ public class ProfesionalObraService implements IProfesionalObraService {
         profesionalObra.setSaldoDisponible(monto);
 
         return profesionalObraRepository.save(profesionalObra);
+    }
+
+    /**
+     * Obtiene todas las obras con sus rubros y profesionales asignados
+     * Estructura jerárquica: Obra → Rubro → Profesionales
+     * Usado para la gestión consolidada de pagos por rubro
+     */
+    public List<ObraPagosDTO> obtenerObrasPorRubroConProfesionales(Long empresaId) {
+        log.info("🔍 Obteniendo obras agrupadas por rubro con profesionales para empresa {}", empresaId);
+        
+        // Validar empresa
+        empresaService.findEmpresaById(empresaId);
+        
+        // Obtener TODAS las obras de la empresa (incluyendo terminadas)
+        List<Obra> todasLasObras = obraRepository.findByEmpresaIdAndEstadoIn(
+            empresaId, 
+            Arrays.asList("PLANIFICACION", "EN_ESPERA", "APROBADO", "EN_EJECUCION", "TERMINADO")
+        );
+        
+        log.info("📊 Se encontraron {} obras para la empresa {}", todasLasObras.size(), empresaId);
+        
+        List<ObraPagosDTO> obrasDTO = new ArrayList<>();
+        
+        // Para cada obra, obtener sus asignaciones agrupadas por rubro
+        for (Obra obra : todasLasObras) {
+            // Obtener todas las asignaciones ACTIVAS de la obra
+            List<AsignacionProfesionalObra> asignaciones = asignacionProfesionalObraRepository
+                .findByObra_IdAndEmpresaIdAndEstado(obra.getId(), empresaId, "ACTIVO");
+            
+            // Crear DTO de la obra (SIEMPRE, incluso sin asignaciones)
+            ObraPagosDTO obraDTO = ObraPagosDTO.builder()
+                .obraId(obra.getId())
+                .obraNombre(obra.getNombre())
+                .obraEstado(obra.getEstado())
+                .direccionCompleta(construirDireccionCompleta(obra))
+                .rubros(new ArrayList<>())
+                .build();
+            
+            if (asignaciones.isEmpty()) {
+                log.debug("⚠️ Obra {} no tiene asignaciones activas, se incluye sin rubros", obra.getNombre());
+                // Calcular totales (serán cero)
+                obraDTO.calcularTotales();
+                obrasDTO.add(obraDTO);
+                continue;
+            }
+            
+            // Agrupar asignaciones por rubroId
+            Map<Long, List<AsignacionProfesionalObra>> asignacionesPorRubro = asignaciones.stream()
+                .collect(Collectors.groupingBy(AsignacionProfesionalObra::getRubroId));
+            
+            // Para cada rubro, crear su DTO con profesionales
+            for (Map.Entry<Long, List<AsignacionProfesionalObra>> entry : asignacionesPorRubro.entrySet()) {
+                Long rubroId = entry.getKey();
+                List<AsignacionProfesionalObra> asignacionesRubro = entry.getValue();
+                
+                // Obtener el nombre del rubro de la primera asignación
+                String rubroNombre = asignacionesRubro.get(0).getRubroNombre();
+                
+                // Crear DTO del rubro
+                RubroPagosDTO rubroDTO = RubroPagosDTO.builder()
+                    .rubroId(rubroId)
+                    .rubroNombre(rubroNombre)
+                    .profesionales(new ArrayList<>())
+                    .build();
+                
+                // Mapear cada asignación a ProfesionalPagoDTO
+                for (AsignacionProfesionalObra asig : asignacionesRubro) {
+                    ProfesionalPagoDTO profesionalDTO = mapearAsignacionAProfesionalPagoDTO(asig);
+                    rubroDTO.getProfesionales().add(profesionalDTO);
+                }
+                
+                // Calcular totales del rubro
+                rubroDTO.calcularTotales();
+                obraDTO.getRubros().add(rubroDTO);
+            }
+            
+            // Calcular totales de la obra
+            obraDTO.calcularTotales();
+            obrasDTO.add(obraDTO);
+        }
+        
+        log.info("✅ Se procesaron {} obras con rubros y profesionales", obrasDTO.size());
+        return obrasDTO;
+    }
+    
+    /**
+     * Mapea AsignacionProfesionalObra a ProfesionalPagoDTO con cálculos financieros
+     */
+    private ProfesionalPagoDTO mapearAsignacionAProfesionalPagoDTO(AsignacionProfesionalObra asig) {
+        BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
+        Integer cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : 0;
+        Integer jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : 0;
+        Integer jornalesRestantes = cantidadJornales - jornalesUtilizados;
+        
+        BigDecimal totalAsignado = importeJornal.multiply(BigDecimal.valueOf(cantidadJornales));
+        BigDecimal totalUtilizado = importeJornal.multiply(BigDecimal.valueOf(jornalesUtilizados));
+        BigDecimal saldoPendiente = totalAsignado.subtract(totalUtilizado);
+        
+        return ProfesionalPagoDTO.builder()
+            .asignacionId(asig.getId())
+            .profesionalId(asig.getProfesionalId())
+            .profesionalNombre(asig.getProfesionalNombre())
+            .profesionalTipo(asig.getProfesionalTipo())
+            .tipoAsignacion(asig.getTipoAsignacion())
+            .importeJornal(importeJornal)
+            .cantidadJornales(cantidadJornales)
+            .jornalesUtilizados(jornalesUtilizados)
+            .jornalesRestantes(jornalesRestantes)
+            .totalAsignado(totalAsignado)
+            .totalUtilizado(totalUtilizado)
+            .saldoPendiente(saldoPendiente)
+            .fechaInicio(asig.getFechaInicio())
+            .fechaFin(asig.getFechaFin())
+            .estado(asig.getEstado())
+            .modalidad(asig.getModalidad())
+            .semanasObjetivo(asig.getSemanasObjetivo())
+            .observaciones(asig.getObservaciones())
+            .build();
+    }
+    
+    /**
+     * Construye la dirección completa de una obra formateada
+     */
+    private String construirDireccionCompleta(Obra obra) {
+        StringBuilder direccion = new StringBuilder();
+        
+        if (obra.getDireccionObraCalle() != null) {
+            direccion.append(obra.getDireccionObraCalle());
+        }
+        if (obra.getDireccionObraAltura() != null) {
+            direccion.append(" ").append(obra.getDireccionObraAltura());
+        }
+        if (obra.getDireccionObraPiso() != null) {
+            direccion.append(", Piso ").append(obra.getDireccionObraPiso());
+        }
+        if (obra.getDireccionObraDepartamento() != null) {
+            direccion.append(", Depto ").append(obra.getDireccionObraDepartamento());
+        }
+        if (obra.getDireccionObraBarrio() != null) {
+            direccion.append(", ").append(obra.getDireccionObraBarrio());
+        }
+        
+        return direccion.toString().trim();
+    }
+
+    /**
+     * Obtiene todos los profesionales con sus asignaciones consolidadas
+     * Estructura jerárquica: Profesional → Obras → Asignaciones por rubro
+     * Usado para la gestión de pagos agrupada por profesional
+     */
+    public List<ProfesionalConsolidadoDTO> obtenerProfesionalesConsolidados(Long empresaId) {
+        log.info("🔍 [CONSOLIDADO] Obteniendo profesionales consolidados para empresa ID: {}", empresaId);
+        
+        // Validar empresa
+        empresaService.findEmpresaById(empresaId);
+        log.info("✅ [CONSOLIDADO] Empresa {} validada correctamente", empresaId);
+        
+        // Obtener TODAS las asignaciones de la empresa (SIN FILTRAR POR ESTADO)
+        log.info("📋 [CONSOLIDADO] Buscando TODAS las asignaciones para empresa {}...", empresaId);
+        List<AsignacionProfesionalObra> todasLasAsignaciones = asignacionProfesionalObraRepository
+            .findByEmpresaId(empresaId);
+        
+        log.info("📊 [CONSOLIDADO] Total asignaciones encontradas: {}", todasLasAsignaciones.size());
+        
+        if (todasLasAsignaciones.isEmpty()) {
+            log.error("❌ [CONSOLIDADO] NO HAY NINGUNA ASIGNACIÓN en la tabla asignaciones_profesional_obra para empresa {}", empresaId);
+            log.error("❌ [CONSOLIDADO] Verifica que hayas asignado profesionales a obras desde 'Asignar por Día' o 'Asignar por Semana'");
+            return new ArrayList<>();
+        }
+        
+        // Log de estados encontrados (solo informativo)
+        Map<String, Long> estadosCount = todasLasAsignaciones.stream()
+            .collect(Collectors.groupingBy(
+                a -> a.getEstado() != null ? a.getEstado() : "NULL",
+                Collectors.counting()
+            ));
+        log.info("📊 [CONSOLIDADO] Estados encontrados: {}", estadosCount);
+        
+        // Log de modalidades encontradas
+        Map<String, Long> modalidadesCount = todasLasAsignaciones.stream()
+            .collect(Collectors.groupingBy(
+                a -> a.getModalidad() != null ? a.getModalidad() : "NULL",
+                Collectors.counting()
+            ));
+        log.info("📊 [CONSOLIDADO] Modalidades encontradas: {}", modalidadesCount);
+        
+        // Log de primeras 3 asignaciones para debug
+        todasLasAsignaciones.stream().limit(3).forEach(a -> 
+            log.info("   → Asignación ID={}, Obra={}, Profesional={}, Estado={}, Modalidad={}", 
+                a.getId(), a.getObraId(), a.getProfesionalNombre(), a.getEstado(), a.getModalidad())
+        );
+        
+        // Agrupar asignaciones por profesionalId
+        Map<Long, List<AsignacionProfesionalObra>> asignacionesPorProfesional = todasLasAsignaciones.stream()
+            .collect(Collectors.groupingBy(AsignacionProfesionalObra::getProfesionalId));
+        
+        List<ProfesionalConsolidadoDTO> profesionalesDTO = new ArrayList<>();
+        
+        // Para cada profesional, crear su DTO consolidado
+        for (Map.Entry<Long, List<AsignacionProfesionalObra>> entry : asignacionesPorProfesional.entrySet()) {
+            Long profesionalId = entry.getKey();
+            List<AsignacionProfesionalObra> asignacionesProfesional = entry.getValue();
+            
+            // Obtener datos del profesional de la primera asignación
+            AsignacionProfesionalObra primeraAsignacion = asignacionesProfesional.get(0);
+            Profesional profesional = primeraAsignacion.getProfesional();
+            
+            // Crear DTO del profesional
+            ProfesionalConsolidadoDTO profesionalDTO = ProfesionalConsolidadoDTO.builder()
+                .profesionalId(profesionalId)
+                .profesionalNombre(primeraAsignacion.getProfesionalNombre())
+                .profesionalTipo(primeraAsignacion.getProfesionalTipo())
+                .profesionalDni(null) // El modelo Profesional no tiene campo DNI
+                .profesionalTelefono(profesional != null ? profesional.getTelefono() : null)
+                .profesionalEmail(profesional != null ? profesional.getEmail() : null)
+                .obras(new ArrayList<>())
+                .build();
+            
+            // Agrupar asignaciones del profesional por obraId
+            Map<Long, List<AsignacionProfesionalObra>> asignacionesPorObra = asignacionesProfesional.stream()
+                .collect(Collectors.groupingBy(AsignacionProfesionalObra::getObraId));
+            
+            // Para cada obra, crear su DTO
+            for (Map.Entry<Long, List<AsignacionProfesionalObra>> obraEntry : asignacionesPorObra.entrySet()) {
+                Long obraId = obraEntry.getKey();
+                List<AsignacionProfesionalObra> asignacionesObra = obraEntry.getValue();
+                
+                // Obtener datos de la obra de la primera asignación
+                AsignacionProfesionalObra asignacionObra = asignacionesObra.get(0);
+                Obra obra = asignacionObra.getObra();
+                
+                ObraAsignacionDTO obraDTO = ObraAsignacionDTO.builder()
+                    .obraId(obraId)
+                    .obraNombre(obra.getNombre())
+                    .obraEstado(obra.getEstado())
+                    .direccionCompleta(construirDireccionCompleta(obra))
+                    .asignaciones(new ArrayList<>())
+                    .build();
+                
+                // Mapear cada asignación a AsignacionRubroDTO
+                for (AsignacionProfesionalObra asig : asignacionesObra) {
+                    AsignacionRubroDTO asignacionDTO = mapearAsignacionARubroDTO(asig);
+                    obraDTO.getAsignaciones().add(asignacionDTO);
+                }
+                
+                // Calcular totales de la obra
+                obraDTO.calcularTotales();
+                profesionalDTO.getObras().add(obraDTO);
+            }
+            
+            // Calcular totales del profesional
+            profesionalDTO.calcularTotales();
+            profesionalesDTO.add(profesionalDTO);
+        }
+        
+        log.info("✅ Se procesaron {} profesionales con sus asignaciones", profesionalesDTO.size());
+        return profesionalesDTO;
+    }
+    
+    /**
+     * Mapea AsignacionProfesionalObra a AsignacionRubroDTO
+     */
+    private AsignacionRubroDTO mapearAsignacionARubroDTO(AsignacionProfesionalObra asig) {
+        BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
+        Integer cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : 0;
+        Integer jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : 0;
+        Integer jornalesRestantes = cantidadJornales - jornalesUtilizados;
+        
+        BigDecimal totalAsignado = importeJornal.multiply(BigDecimal.valueOf(cantidadJornales));
+        BigDecimal totalUtilizado = importeJornal.multiply(BigDecimal.valueOf(jornalesUtilizados));
+        BigDecimal saldoPendiente = totalAsignado.subtract(totalUtilizado);
+        
+        return AsignacionRubroDTO.builder()
+            .asignacionId(asig.getId())
+            .rubroId(asig.getRubroId())
+            .rubroNombre(asig.getRubroNombre())
+            .tipoAsignacion(asig.getTipoAsignacion())
+            .importeJornal(importeJornal)
+            .cantidadJornales(cantidadJornales)
+            .jornalesUtilizados(jornalesUtilizados)
+            .jornalesRestantes(jornalesRestantes)
+            .totalAsignado(totalAsignado)
+            .totalUtilizado(totalUtilizado)
+            .saldoPendiente(saldoPendiente)
+            .fechaInicio(asig.getFechaInicio())
+            .fechaFin(asig.getFechaFin())
+            .estado(asig.getEstado())
+            .modalidad(asig.getModalidad())
+            .semanasObjetivo(asig.getSemanasObjetivo())
+            .observaciones(asig.getObservaciones())
+            .build();
     }
 
 }

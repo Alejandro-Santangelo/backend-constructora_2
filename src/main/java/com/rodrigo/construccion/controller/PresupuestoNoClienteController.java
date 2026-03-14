@@ -86,7 +86,7 @@ public class PresupuestoNoClienteController {
             @Parameter(description = "ID de la obra", required = true)
             @PathVariable Long obraId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         log.info("🔍 GET /presupuestos-no-cliente/por-obra/{}?empresaId={}", obraId, empresaId);
 
@@ -669,7 +669,7 @@ public class PresupuestoNoClienteController {
             @Parameter(description = "ID del presupuesto", required = true)
             @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         log.info("🔍 GET /presupuestos-no-cliente/{}/materiales con empresaId={}", id, empresaId);
         
@@ -695,7 +695,7 @@ public class PresupuestoNoClienteController {
             @Parameter(description = "ID del presupuesto", required = true)
             @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @Parameter(description = "ID de la obra (opcional, para determinar ubicación)")
             @RequestParam(required = false) Long obraId) {
         
@@ -725,7 +725,7 @@ public class PresupuestoNoClienteController {
             @Parameter(description = "ID del presupuesto", required = true)
             @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         log.info("🔍 GET /presupuestos-no-cliente/{}/gastos-generales con empresaId={}", id, empresaId);
         
@@ -751,7 +751,7 @@ public class PresupuestoNoClienteController {
             @Parameter(description = "ID del presupuesto", required = true)
             @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         log.info("🔍 GET /presupuestos-no-cliente/{}/otros-costos con empresaId={}", id, empresaId);
         
@@ -1021,7 +1021,7 @@ public class PresupuestoNoClienteController {
     )
     public ResponseEntity<?> obtenerRubrosActivosPorObra(
             @PathVariable Long obraId,
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         log.info("🔍 GET /presupuestos-no-cliente/por-obra/{}/rubros-activos (empresaId={})", obraId, empresaId);
         try {
             List<com.rodrigo.construccion.model.entity.HonorarioPorRubro> rubros =

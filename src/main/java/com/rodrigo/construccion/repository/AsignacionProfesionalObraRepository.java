@@ -17,6 +17,12 @@ public interface AsignacionProfesionalObraRepository extends JpaRepository<Asign
     /* Obtiene todas las asignaciones ACTIVAS de una obra específica */
     List<AsignacionProfesionalObra> findByObra_IdAndEmpresaIdAndEstado(Long obraId, Long empresaId, String estado);
 
+    /* Obtiene todas las asignaciones de una empresa por estado (para consolidado de pagos por profesional) */
+    List<AsignacionProfesionalObra> findByEmpresaIdAndEstado(Long empresaId, String estado);
+
+    /* Obtiene TODAS las asignaciones de una empresa (sin filtrar por estado) */
+    List<AsignacionProfesionalObra> findByEmpresaId(Long empresaId);
+
     /* Elimina todas las asignaciones de una obra y empresa */
     void deleteByObra_IdAndEmpresaId(Long obraId, Long empresaId);
     

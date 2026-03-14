@@ -8,6 +8,8 @@ import com.rodrigo.construccion.dto.response.AsignacionProfesionalResponse;
 import com.rodrigo.construccion.dto.response.DisponibilidadProfesionalResponse;
 import com.rodrigo.construccion.dto.response.ProfesionalResponseDTO;
 import com.rodrigo.construccion.dto.response.ProfesionalObraFinancieroDTO;
+import com.rodrigo.construccion.dto.response.ObraPagosDTO;
+import com.rodrigo.construccion.dto.response.ProfesionalConsolidadoDTO;
 import com.rodrigo.construccion.model.entity.ProfesionalObra;
 import com.rodrigo.construccion.service.IProfesionalObraService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -169,6 +171,49 @@ public class ProfesionalObraController {
                         @Parameter(description = "ID de la obra", required = true) @RequestParam Long obraId) {
                 List<ProfesionalObraFinancieroDTO> profesionales = profesionalObraService
                                 .obtenerProfesionalesConDatosFinancieros(empresaId, obraId);
+                return ResponseEntity.ok(profesionales);
+        }
+
+        @GetMapping("/profesionales-empresa/financiero")
+        @Operation(summary = "Listar TODOS los profesionales de la empresa con datos financieros", 
+                   description = "RECOMENDADO PARA GESTIÓN DE PAGOS CONSOLIDADA: Devuelve todos los profesionales asignados a TODAS las obras activas de la empresa " +
+                                "con datos financieros completos agrupados por obra. Incluye: ID asignación, nombre profesional, tipo, obra asignada, " +
+                                "precio total, cantidad jornales, precio jornal, totales pagados, adelantos y saldo pendiente. " +
+                                "Útil para tener una vista consolidada de todos los profesionales y sus pagos pendientes. " +
+                                "Solo requiere empresaId.")
+        public ResponseEntity<List<ProfesionalObraFinancieroDTO>> obtenerTodosProfesionalesEmpresaConDatosFinancieros(
+                        @Parameter(description = "ID de la empresa", required = true) @RequestParam Long empresaId) {
+                List<ProfesionalObraFinancieroDTO> profesionales = profesionalObraService
+                                .obtenerTodosProfesionalesEmpresaConDatosFinancieros(empresaId);
+                return ResponseEntity.ok(profesionales);
+        }
+
+        @GetMapping("/obras-rubros-profesionales")
+        @Operation(summary = "Listar obras agrupadas por rubro con profesionales asignados", 
+                   description = "RECOMENDADO PARA GESTIÓN DE PAGOS POR RUBRO: Devuelve estructura jerárquica: Obra → Rubro → Profesionales. " +
+                                "Cada obra contiene sus rubros del presupuesto aprobado, y cada rubro contiene los profesionales asignados " +
+                                "con sus datos financieros completos (jornales asignados, utilizados, importes, saldos pendientes). " +
+                                "Incluye totales consolidados por rubro y por obra. " +
+                                "Solo requiere empresaId.")
+        public ResponseEntity<List<ObraPagosDTO>> obtenerObrasPorRubroConProfesionales(
+                        @Parameter(description = "ID de la empresa", required = true) @RequestParam Long empresaId) {
+                List<ObraPagosDTO> obras = profesionalObraService
+                                .obtenerObrasPorRubroConProfesionales(empresaId);
+                return ResponseEntity.ok(obras);
+        }
+
+        @GetMapping("/profesionales-consolidados")
+        @Operation(summary = "Listar profesionales con sus asignaciones consolidadas", 
+                   description = "RECOMENDADO PARA GESTIÓN DE PAGOS POR PROFESIONAL: Devuelve estructura jerárquica: Profesional → Obras → Asignaciones. " +
+                                "Cada profesional contiene todas las obras donde está asignado, y cada obra contiene las asignaciones específicas " +
+                                "con datos financieros completos (jornales asignados, utilizados, importes, saldos pendientes por rubro). " +
+                                "Incluye totales consolidados por obra y por profesional (saldo total pendiente). " +
+                                "Ideal para ver cuánto se le debe a cada profesional en total. " +
+                                "Solo requiere empresaId.")
+        public ResponseEntity<List<ProfesionalConsolidadoDTO>> obtenerProfesionalesConsolidados(
+                        @Parameter(description = "ID de la empresa", required = true) @RequestParam Long empresaId) {
+                List<ProfesionalConsolidadoDTO> profesionales = profesionalObraService
+                                .obtenerProfesionalesConsolidados(empresaId);
                 return ResponseEntity.ok(profesionales);
         }
 

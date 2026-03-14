@@ -34,7 +34,7 @@ public class GastoGeneralController {
     @Operation(summary = "Crear gasto general")
     @PostMapping("/gastos-generales")
     public ResponseEntity<?> crearGastoGeneral(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @RequestBody GastoGeneral gastoGeneral) {
         
         log.info("📝 POST /api/gastos-generales - Empresa: {}, Nombre: {}", empresaId, gastoGeneral.getNombre());
@@ -52,7 +52,7 @@ public class GastoGeneralController {
     
     @Operation(summary = "Listar gastos generales de la empresa")
     @GetMapping("/gastos-generales")
-    public ResponseEntity<?> listarGastosGenerales(@RequestHeader Long empresaId) {
+    public ResponseEntity<?> listarGastosGenerales(@RequestHeader("empresaId") Long empresaId) {
         
         log.info("🔍 GET /api/gastos-generales - Empresa: {}", empresaId);
         
@@ -78,7 +78,7 @@ public class GastoGeneralController {
     @Operation(summary = "Obtener gasto general por ID")
     @GetMapping("/gastos-generales/{id}")
     public ResponseEntity<?> obtenerGastoGeneral(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @PathVariable Long id) {
         
         log.info("🔍 GET /api/gastos-generales/{} - Empresa: {}", id, empresaId);
@@ -97,7 +97,7 @@ public class GastoGeneralController {
     @Operation(summary = "Actualizar gasto general")
     @PutMapping("/gastos-generales/{id}")
     public ResponseEntity<?> actualizarGastoGeneral(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @PathVariable Long id,
             @RequestBody GastoGeneral gastoGeneral) {
         
@@ -117,7 +117,7 @@ public class GastoGeneralController {
     @Operation(summary = "Eliminar gasto general")
     @DeleteMapping("/gastos-generales/{id}")
     public ResponseEntity<?> eliminarGastoGeneral(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @PathVariable Long id) {
         
         log.info("🗑️ DELETE /api/gastos-generales/{} - Empresa: {}", id, empresaId);
@@ -136,7 +136,7 @@ public class GastoGeneralController {
     @Operation(summary = "Listar gastos generales por categoría")
     @GetMapping("/gastos-generales/categoria/{categoria}")
     public ResponseEntity<?> listarPorCategoria(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @PathVariable String categoria) {
         
         log.info("🔍 GET /api/gastos-generales/categoria/{} - Empresa: {}", categoria, empresaId);
@@ -155,7 +155,7 @@ public class GastoGeneralController {
     @Operation(summary = "Actualizar precio de todos los gastos generales")
     @PutMapping("/gastos-generales/actualizar-precio-todos")
     public ResponseEntity<?> actualizarPrecioTodos(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @RequestParam("porcentaje") double porcentaje) {
         
         log.info("💰 PUT /api/gastos-generales/actualizar-precio-todos - Empresa: {}, Porcentaje: {}%", empresaId, porcentaje);
@@ -174,7 +174,7 @@ public class GastoGeneralController {
     @Operation(summary = "Actualizar precio de un gasto general")
     @PutMapping("/gastos-generales/{id}/actualizar-precio")
     public ResponseEntity<?> actualizarPrecioPorId(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @PathVariable Long id,
             @RequestParam("porcentaje") double porcentaje) {
         
@@ -194,7 +194,7 @@ public class GastoGeneralController {
     @Operation(summary = "Actualizar precio de varios gastos generales")
     @PutMapping("/gastos-generales/actualizar-precio-varios")
     public ResponseEntity<?> actualizarPrecioVarios(
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @RequestBody java.util.Map<String, Object> request) {
         
         log.info("💰 PUT /api/gastos-generales/actualizar-precio-varios - Empresa: {}", empresaId);
@@ -223,7 +223,7 @@ public class GastoGeneralController {
     @GetMapping("/presupuestos-no-cliente/{id}/gastos-generales")
     public ResponseEntity<List<GastoGeneralConStockResponseDTO>> obtenerGastosGeneralesConStock(
             @PathVariable Long id,
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         log.info("🔍 GET /presupuestos-no-cliente/{}/gastos-generales - Empresa: {}", id, empresaId);
         

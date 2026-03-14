@@ -334,7 +334,7 @@ public class ObraController {
             @Parameter(description = "ID de la obra", required = true)
             @PathVariable Long obraId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         List<AsignacionProfesionalObraDTO> asignaciones = asignacionService.obtenerAsignacionesPorObra(obraId, empresaId);
         return ResponseEntity.ok(asignaciones);
@@ -357,7 +357,7 @@ public class ObraController {
             @Parameter(description = "ID de la obra", required = true)
             @PathVariable Long obraId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @Valid @RequestBody AsignacionProfesionalRequestDTO request) {
         
         try {
@@ -390,7 +390,7 @@ public class ObraController {
             @Parameter(description = "ID de la asignación a eliminar", required = true)
             @PathVariable Long asignacionId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @RequestHeader(value = "X-User-Rol", required = false) String rol) {
         
         // ✅ VALIDAR PERMISOS
@@ -435,7 +435,7 @@ public class ObraController {
             @Parameter(description = "ID de la obra", required = true)
             @PathVariable Long obraId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @Parameter(description = "Datos de la asignación semanal", required = true)
             @Valid @RequestBody AsignacionSemanalRequestDTO request) {
         
@@ -473,7 +473,7 @@ public class ObraController {
             @Parameter(description = "ID de la obra", required = true)
             @PathVariable Long obraId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         try {
             // Por ahora retornamos las asignaciones existentes usando el servicio de asignación estándar
@@ -497,7 +497,7 @@ public class ObraController {
     public ResponseEntity<?> asignarOtroCosto(
             @Parameter(description = "ID de la obra") @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @Parameter(description = "Datos del costo a asignar", required = true)
             @Valid @RequestBody AsignarOtroCostoRequestDTO request) {
         
@@ -522,7 +522,7 @@ public class ObraController {
     public ResponseEntity<?> obtenerOtrosCostos(
             @Parameter(description = "ID de la obra") @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId) {
+            @RequestHeader("empresaId") Long empresaId) {
         
         try {
             List<ObraOtroCostoResponseDTO> otrosCostos = obraOtroCostoService.obtenerPorObra(empresaId, id);
@@ -542,7 +542,7 @@ public class ObraController {
             @Parameter(description = "ID de la asignación de costo a modificar") @PathVariable Long asignacionId,
             @Parameter(description = "Datos de la asignación a modificar") @RequestBody AsignarOtroCostoRequestDTO requestDTO,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @RequestHeader(value = "X-User-Rol", required = false) String rol) {
         
         // ✅ VALIDAR PERMISOS
@@ -574,7 +574,7 @@ public class ObraController {
             @Parameter(description = "ID de la obra") @PathVariable Long obraId,
             @Parameter(description = "ID de la asignación de costo a eliminar") @PathVariable Long asignacionId,
             @Parameter(description = "ID de la empresa (multi-tenant)", required = true)
-            @RequestHeader Long empresaId,
+            @RequestHeader("empresaId") Long empresaId,
             @RequestHeader(value = "X-User-Rol", required = false) String rol) {
         
         // ✅ VALIDAR PERMISOS
