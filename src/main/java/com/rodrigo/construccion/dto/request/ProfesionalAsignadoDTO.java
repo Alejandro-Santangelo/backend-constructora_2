@@ -24,4 +24,8 @@ public class ProfesionalAsignadoDTO {
     @NotNull(message = "La cantidad por día es obligatoria")
     @PositiveOrZero(message = "La cantidad por día debe ser mayor o igual a cero")
     private Integer cantidadPorDia;
+
+    // Rubro del presupuesto (opcional por retrocompatibilidad)
+    private Long rubroId;
+    private String rubroNombre;
 }

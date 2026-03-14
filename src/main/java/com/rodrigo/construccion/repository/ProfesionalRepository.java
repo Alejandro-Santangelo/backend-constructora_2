@@ -61,4 +61,8 @@ public interface ProfesionalRepository extends JpaRepository<Profesional, Long> 
         @Param("empresaId") Long empresaId
     );
 
+    /* Buscar todos los profesionales activos de una empresa */
+    @Query("SELECT p FROM Profesional p WHERE p.empresa.id = :empresaId AND p.activo = true ORDER BY p.nombre")
+    List<Profesional> findByEmpresaIdAndActivoTrue(@Param("empresaId") Long empresaId);
+
 }

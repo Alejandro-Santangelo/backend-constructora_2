@@ -62,6 +62,13 @@ public class ProfesionalController {
         }
     }
 
+    @GetMapping("/por-empresa")
+    public ResponseEntity<List<ProfesionalResponseDTO>> buscarPorEmpresa(
+            @Parameter(description = "ID de la empresa", example = "1", required = true)
+            @RequestParam Long empresaId) {
+        return ResponseEntity.ok(profesionalService.buscarPorEmpresaId(empresaId));
+    }
+
     @PutMapping("/{id}")
     public ResponseEntity<ProfesionalResponseDTO> actualizarProfesional(@PathVariable Long id,
                                                                         @Valid @RequestBody ProfesionalRequestDTO requestDTO) {

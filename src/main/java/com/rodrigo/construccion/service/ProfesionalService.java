@@ -12,24 +12,34 @@ import com.rodrigo.construccion.dto.request.AsignarProfesionalRequest;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.repository.ProfesionalRepository;
 
-import lombok.RequiredArgsConstructor;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
+import org.hibernate.Session;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class ProfesionalService implements IProfesionalService {
 
     private final ProfesionalRepository profesionalRepository;
     private final ProfesionalMapper profesionalMapper;
     private final IEmpresaService empresaService;
+    private final EntityManager entityManager;
+
+    public ProfesionalService(ProfesionalRepository profesionalRepository, 
+                              ProfesionalMapper profesionalMapper,
+                              IEmpresaService empresaService,
+                              EntityManager entityManager) {
+        this.profesionalRepository = profesionalRepository;
+        this.profesionalMapper = profesionalMapper;
+        this.empresaService = empresaService;
+        this.entityManager = entityManager;
+    }
 
     /* Crear nuevo profesional desde DTO */
     @Override
@@ -140,9 +150,14 @@ public class ProfesionalService implements IProfesionalService {
         }
     }
 
-    /* Obtener todos los profesionales */
+    /* Obtener todos los profesionales - SIN FILTRAR POR EMPRESA (compartidos entre todas) */
     @Override
     public List<ProfesionalResponseDTO> obtenerTodos() {
+        Session session = entityManager.unwrap(Session.class);
+        
+        // Deshabilitar filtro empresaFilter para que devuelva TODOS los profesionales
+        session.disableFilter("empresaFilter");
+        
         List<Profesional> profesionales = profesionalRepository.findAll();
         return profesionalMapper.toResponseDTOList(profesionales);
     }
@@ -366,6 +381,12 @@ public class ProfesionalService implements IProfesionalService {
             categoria.toUpperCase(), 
             empresaId
         );
+        return profesionalMapper.toResponseDTOList(profesionales);
+    }
+
+    @Override
+    public List<ProfesionalResponseDTO> buscarPorEmpresaId(Long empresaId) {
+        List<Profesional> profesionales = profesionalRepository.findByEmpresaIdAndActivoTrue(empresaId);
         return profesionalMapper.toResponseDTOList(profesionales);
     }
 

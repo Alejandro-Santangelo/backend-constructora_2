@@ -5,22 +5,28 @@ import com.rodrigo.construccion.dto.response.MaterialEstadisticaResponseDTO;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.Material;
 import com.rodrigo.construccion.repository.MaterialRepository;
-import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
+import org.hibernate.Session;
 
 import java.math.BigDecimal;
 import java.util.List;
 
 @Service
-@RequiredArgsConstructor
 @Transactional
 public class MaterialService implements IMaterialService {
 
     private final MaterialRepository materialRepository;
+    private final EntityManager entityManager;
+
+    public MaterialService(MaterialRepository materialRepository, EntityManager entityManager) {
+        this.materialRepository = materialRepository;
+        this.entityManager = entityManager;
+    }
 
     /* Obtener todos los materiales activos */
     @Override
@@ -145,10 +151,15 @@ public class MaterialService implements IMaterialService {
         return precio != null ? precio : BigDecimal.ZERO;
     }
 
-    /* Obtener todos los materiales ordenados por nombre */
+    /* Obtener todos los materiales ordenados por nombre - SIN FILTRAR POR EMPRESA (compartidos entre todas) */
     @Override
     @Transactional(readOnly = true)
     public List<Material> obtenerTodosOrdenadosPorNombre() {
+        Session session = entityManager.unwrap(Session.class);
+        
+        // Deshabilitar filtro empresaFilter para que devuelva TODOS los materiales
+        session.disableFilter("empresaFilter");
+        
         return materialRepository.findAllActivosOrdenadosPorNombre();
     }
 

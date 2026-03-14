@@ -19,4 +19,8 @@ public class ProfesionalBasicoDTO {
     private Long profesionalId;
 
     private String nombre; // Informativo, viene del frontend
+
+    // Rubro del presupuesto (opcional por retrocompatibilidad)
+    private Long rubroId;
+    private String rubroNombre;
 }

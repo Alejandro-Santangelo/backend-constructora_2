@@ -7,6 +7,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import jakarta.persistence.EntityManager;
+import org.hibernate.Session;
 
 import java.util.List;
 
@@ -15,11 +17,16 @@ import java.util.List;
  */
 @Service
 @Transactional
-@RequiredArgsConstructor
 @Slf4j
 public class GastoGeneralServiceImpl implements IGastoGeneralService {
 
     private final GastoGeneralRepository gastoGeneralRepository;
+    private final EntityManager entityManager;
+
+    public GastoGeneralServiceImpl(GastoGeneralRepository gastoGeneralRepository, EntityManager entityManager) {
+        this.gastoGeneralRepository = gastoGeneralRepository;
+        this.entityManager = entityManager;
+    }
 
     @Override
     public GastoGeneral crear(Long empresaId, GastoGeneral gastoGeneral) {
@@ -75,7 +82,12 @@ public class GastoGeneralServiceImpl implements IGastoGeneralService {
     @Override
     @Transactional(readOnly = true)
     public List<GastoGeneral> listarPorEmpresa(Long empresaId) {
-        log.info("🔍 Listando gastos generales - Empresa: {}", empresaId);
+        log.info("🔍 Listando gastos generales - TODOS (compartidos entre empresas)");
+        
+        Session session = entityManager.unwrap(Session.class);
+        
+        // Deshabilitar filtro empresaFilter para que devuelva TODOS los gastos generales
+        session.disableFilter("empresaFilter");
         
         return gastoGeneralRepository.findByEmpresaIdOrderByNombre(empresaId);
     }

@@ -50,5 +50,7 @@ public interface IProfesionalService {
     List<ProfesionalResponseDTO> buscarPorCategoria(String categoria);
 
     List<ProfesionalResponseDTO> buscarPorCategoriaYEmpresaId(String categoria, Long empresaId);
+    
+    List<ProfesionalResponseDTO> buscarPorEmpresaId(Long empresaId);
 
 }

@@ -31,12 +31,15 @@ public class PresupuestoNoClienteController {
     
     private final PresupuestoNoClienteService service;
     private final com.rodrigo.construccion.security.PermisoService permisoService;
+    private final com.rodrigo.construccion.repository.HonorarioPorRubroRepository honorarioPorRubroRepository;
 
     public PresupuestoNoClienteController(
             PresupuestoNoClienteService service,
-            com.rodrigo.construccion.security.PermisoService permisoService) {
+            com.rodrigo.construccion.security.PermisoService permisoService,
+            com.rodrigo.construccion.repository.HonorarioPorRubroRepository honorarioPorRubroRepository) {
         this.service = service;
         this.permisoService = permisoService;
+        this.honorarioPorRubroRepository = honorarioPorRubroRepository;
     }
 
 
@@ -1007,6 +1010,37 @@ public class PresupuestoNoClienteController {
             log.error("❌ Error obteniendo profesionales financieros: {}", e.getMessage(), e);
             return ResponseEntity.internalServerError()
                 .body(new ErrorResponse("Error al obtener profesionales: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/por-obra/{obraId}/rubros-activos")
+    @Operation(
+        summary = "Obtener rubros activos del presupuesto aprobado de una obra",
+        description = "Retorna los honorarios por rubro marcados como activos del presupuesto APROBADO más reciente de la obra. " +
+                     "Usado para el selector de rubros en el registro de jornales diarios."
+    )
+    public ResponseEntity<?> obtenerRubrosActivosPorObra(
+            @PathVariable Long obraId,
+            @RequestHeader Long empresaId) {
+        log.info("🔍 GET /presupuestos-no-cliente/por-obra/{}/rubros-activos (empresaId={})", obraId, empresaId);
+        try {
+            List<com.rodrigo.construccion.model.entity.HonorarioPorRubro> rubros =
+                honorarioPorRubroRepository.findRubrosActivosByObraId(obraId);
+            log.info("✅ {} rubros activos encontrados para obra {}", rubros.size(), obraId);
+            // Mapear a un DTO simple para no serializar toda la entidad con lazy refs
+            List<java.util.Map<String, Object>> resultado = rubros.stream()
+                .map(r -> {
+                    java.util.Map<String, Object> m = new java.util.LinkedHashMap<>();
+                    m.put("id", r.getId());
+                    m.put("nombreRubro", r.getNombreRubro());
+                    return m;
+                })
+                .toList();
+            return ResponseEntity.ok(resultado);
+        } catch (Exception e) {
+            log.error("❌ Error obteniendo rubros para obra {}: {}", obraId, e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(new ErrorResponse("Error al obtener rubros: " + e.getMessage()));
         }
     }
 }

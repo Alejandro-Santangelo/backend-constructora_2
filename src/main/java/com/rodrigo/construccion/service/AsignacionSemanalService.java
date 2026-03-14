@@ -116,8 +116,9 @@ public class AsignacionSemanalService {
             asignacion.setTipoAsignacion("JORNAL");
             asignacion.setEstado("ACTIVO");
             asignacion.setFechaInicio(obra.getFechaInicio());
-            asignacion.setRubroId(0L); // Mock - ajustar según lógica de negocio
-            asignacion.setRubroNombre("Asignación Semanal");
+            // Usar rubroId del DTO si existe, sino usar 0L como fallback
+            asignacion.setRubroId(profDTO.getRubroId() != null ? profDTO.getRubroId() : 0L);
+            asignacion.setRubroNombre(profDTO.getRubroNombre() != null ? profDTO.getRubroNombre() : "Asignación Semanal");
             asignacion.setCantidadJornales(diasHabiles.size() * profDTO.getCantidadPorDia());
             asignacion.setJornalesUtilizados(0);
 
@@ -200,8 +201,11 @@ public class AsignacionSemanalService {
                 asignacion.setTipoAsignacion("JORNAL");
                 asignacion.setEstado("ACTIVO");
                 asignacion.setFechaInicio(obra.getFechaInicio());
-                asignacion.setRubroId(0L); // Mock - ajustar según lógica de negocio
-                asignacion.setRubroNombre("Asignación Semanal - " + semanaDTO.getSemanaKey());
+                // Usar rubroId del profesional si existe, sino usar 0L como fallback
+                asignacion.setRubroId(profDTO.getRubroId() != null ? profDTO.getRubroId() : 0L);
+                asignacion.setRubroNombre(profDTO.getRubroNombre() != null 
+                    ? profDTO.getRubroNombre() 
+                    : "Asignación Semanal - " + semanaDTO.getSemanaKey());
                 asignacion.setCantidadJornales(jornalesSemana);
                 asignacion.setJornalesUtilizados(0);
 
