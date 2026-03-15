@@ -2,6 +2,7 @@ package com.rodrigo.construccion.repository;
 
 import com.rodrigo.construccion.model.entity.PagoProfesionalObra;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -233,4 +234,28 @@ public interface PagoProfesionalObraRepository extends JpaRepository<PagoProfesi
            "AND p.estado = 'PAGADO' " +
            "ORDER BY p.fechaPago DESC")
     List<PagoProfesionalObra> findPagosByAsignacionId(@Param("asignacionId") Long asignacionId);
+
+    /**
+     * Contar pagos asociados a una asignación específica (SQL nativo para evitar filtros)
+     * Útil para validar si se puede eliminar la asignación
+     * 
+     * @param asignacionId ID de la asignación
+     * @return Cantidad de pagos asociados (incluye PAGADO, PENDIENTE, etc.)
+     */
+    @Query(value = "SELECT COUNT(*) FROM pagos_profesional_obra " +
+                   "WHERE profesional_obra_id = :asignacionId", 
+           nativeQuery = true)
+    Long countByAsignacionId(@Param("asignacionId") Long asignacionId);
+    
+    /**
+     * Eliminar todos los pagos asociados a una asignación (SQL nativo para evitar filtros)
+     * Usado al eliminar una asignación para mantener integridad referencial
+     * 
+     * @param asignacionId ID de la asignación
+     */
+    @Modifying
+    @Query(value = "DELETE FROM pagos_profesional_obra " +
+                   "WHERE profesional_obra_id = :asignacionId", 
+           nativeQuery = true)
+    void deleteByAsignacionId(@Param("asignacionId") Long asignacionId);
 }

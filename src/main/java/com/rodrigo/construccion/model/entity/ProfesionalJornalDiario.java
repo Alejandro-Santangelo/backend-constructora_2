@@ -105,17 +105,18 @@ public class ProfesionalJornalDiario {
     /**
      * Horas trabajadas expresadas como decimal.
      * 
-     * Representa la proporción del día trabajado:
-     * - 1.0 = día completo (8 horas)
-     * - 0.5 = medio día (4 horas)
-     * - 0.25 = cuarto de día (2 horas)
-     * - Valores entre 0.01 y 1.5 permitidos
+     * Representa la proporción del día/período trabajado:
+     * - 0.25 = 1/4 día
+     * - 0.5  = medio día
+     * - 1.0  = día completo
+     * - 5.0  = semana completa (5 días hábiles)
+     * - Valores entre 0.01 y 30.0 permitidos
      * 
      * Este valor se multiplica por honorarioDia para calcular montoCobrado.
      */
-    @NotNull(message = "Las horas trabajadas son obligatorias")
-    @DecimalMin(value = "0.01", message = "Las horas trabajadas deben ser mayor a 0")
-    @DecimalMax(value = "1.5", message = "Las horas trabajadas no pueden exceder 1.5 (día y medio)")
+    @NotNull(message = "Las jornadas son obligatorias")
+    @DecimalMin(value = "0.01", message = "Las jornadas deben ser mayor a 0")
+    @DecimalMax(value = "30.0", message = "Las jornadas no pueden exceder 30 días")
     @Column(name = "horas_trabajadas_decimal", nullable = false, precision = 5, scale = 2)
     private BigDecimal horasTrabajadasDecimal;
 

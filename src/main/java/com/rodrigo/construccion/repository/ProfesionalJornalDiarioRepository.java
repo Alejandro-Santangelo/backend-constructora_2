@@ -4,6 +4,7 @@ import com.rodrigo.construccion.model.entity.ProfesionalJornalDiario;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -216,6 +217,30 @@ public interface ProfesionalJornalDiarioRepository extends JpaRepository<Profesi
      * Contar cantidad de jornales de un profesional en una obra
      */
     long countByProfesionalIdAndObraId(Long profesionalId, Long obraId);
+
+    /**
+     * Contar jornales asociados a una asignación específica (profesional + obra + rubro)
+     * Útil para validar si se puede eliminar la asignación
+     * 
+     * @param profesionalId ID del profesional
+     * @param obraId ID de la obra  
+     * @param rubroId ID del rubro
+     * @return Cantidad de jornales asociados
+     */
+    @Query(value = "SELECT COUNT(*) FROM profesional_jornales_diarios WHERE id_profesional = :profesionalId AND id_obra = :obraId AND rubro_id = :rubroId", nativeQuery = true)
+    long countByProfesionalIdAndObraIdAndRubroId(@Param("profesionalId") Long profesionalId, @Param("obraId") Long obraId, @Param("rubroId") Long rubroId);
+
+    /**
+     * Eliminar todos los jornales asociados a una asignación (profesional + obra + rubro)
+     * Usado al eliminar una asignación para mantener integridad referencial
+     * 
+     * @param profesionalId ID del profesional
+     * @param obraId ID de la obra  
+     * @param rubroId ID del rubro
+     */
+    @Modifying
+    @Query(value = "DELETE FROM profesional_jornales_diarios WHERE id_profesional = :profesionalId AND id_obra = :obraId AND rubro_id = :rubroId", nativeQuery = true)
+    void deleteByProfesionalIdAndObraIdAndRubroId(@Param("profesionalId") Long profesionalId, @Param("obraId") Long obraId, @Param("rubroId") Long rubroId);
 
     /**
      * Obtener último jornal registrado de un profesional

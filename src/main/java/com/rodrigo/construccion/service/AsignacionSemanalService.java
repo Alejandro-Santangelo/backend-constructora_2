@@ -11,6 +11,8 @@ import com.rodrigo.construccion.model.entity.Profesional;
 import com.rodrigo.construccion.repository.AsignacionProfesionalDiaRepository;
 import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
+import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
+import com.rodrigo.construccion.repository.ProfesionalJornalDiarioRepository;
 import com.rodrigo.construccion.repository.ProfesionalRepository;
 import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
 import com.rodrigo.construccion.util.DiasHabilesUtil;
@@ -21,6 +23,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -38,6 +41,8 @@ public class AsignacionSemanalService {
     private final AsignacionProfesionalDiaRepository asignacionDiaRepository;
     private final ObraRepository obraRepository;
     private final ProfesionalRepository profesionalRepository;
+    private final PagoProfesionalObraRepository pagoProfesionalObraRepository;
+    private final ProfesionalJornalDiarioRepository profesionalJornalDiarioRepository;
     private final HonorarioPorRubroRepository honorarioPorRubroRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
@@ -389,10 +394,11 @@ public class AsignacionSemanalService {
     }
 
     /**
-     * Eliminar asignación semanal individual
+     * Eliminar asignación semanal individual (eliminación en cascada)
+     * Elimina también los pagos y jornales asociados
      */
     public AsignacionSemanalCreacionResponseDTO eliminarAsignacion(Long asignacionId, Long empresaId) {
-        log.info("Eliminando asignación {}", asignacionId);
+        log.info("Eliminando asignación {} con eliminación en cascada", asignacionId);
 
         AsignacionProfesionalObra asignacion = asignacionRepository.findById(asignacionId)
                 .orElseThrow(() -> new ResourceNotFoundException("Asignación no encontrada con ID: " + asignacionId));
@@ -401,8 +407,48 @@ public class AsignacionSemanalService {
             throw new BusinessException("La asignación no pertenece a la empresa actual");
         }
 
-        // Hard delete - eliminación física del registro
+        // Contar registros antes de eliminar (para el log)
+        Long cantidadPagos = pagoProfesionalObraRepository.countByAsignacionId(asignacionId);
+        Long cantidadJornales = profesionalJornalDiarioRepository.countByProfesionalIdAndObraIdAndRubroId(
+            asignacion.getProfesionalId(),
+            asignacion.getObraId(),
+            asignacion.getRubroId()
+        );
+        
+        log.info("La asignación tiene {} pago(s) y {} jornal(es) asociados que serán eliminados", 
+            cantidadPagos, cantidadJornales);
+        
+        // Eliminar pagos asociados (SQL nativo, evita filtros de Hibernate)
+        if (cantidadPagos > 0) {
+            pagoProfesionalObraRepository.deleteByAsignacionId(asignacionId);
+            pagoProfesionalObraRepository.flush();
+            log.info("✓ Eliminados {} pago(s) asociados a la asignación {}", cantidadPagos, asignacionId);
+        }
+        
+        // Eliminar jornales asociados
+        if (cantidadJornales > 0) {
+            profesionalJornalDiarioRepository.deleteByProfesionalIdAndObraIdAndRubroId(
+                asignacion.getProfesionalId(),
+                asignacion.getObraId(),
+                asignacion.getRubroId()
+            );
+            profesionalJornalDiarioRepository.flush();
+            log.info("✓ Eliminados {} jornal(es) asociados a la asignación {}", cantidadJornales, asignacionId);
+        }
+        
+        // Finalmente eliminar la asignación
         asignacionRepository.delete(asignacion);
+        asignacionRepository.flush();
+        log.info("✓ Asignación {} eliminada físicamente de la base de datos", asignacionId);
+        
+        String mensajeResultado = "Asignación eliminada correctamente" 
+            + (cantidadPagos > 0 || cantidadJornales > 0 
+                ? " (junto con " 
+                    + (cantidadPagos > 0 ? cantidadPagos + " pago(s)" : "") 
+                    + (cantidadPagos > 0 && cantidadJornales > 0 ? " y " : "")
+                    + (cantidadJornales > 0 ? cantidadJornales + " jornal(es)" : "")
+                    + " asociado(s))"
+                : "");
 
         // Preparar response
         AsignacionSemanalCreacionResponseDTO.DatosAsignacionDTO datos = 
@@ -413,14 +459,11 @@ public class AsignacionSemanalService {
                 .profesionalesAsignados(0)
                 .build();
 
-        AsignacionSemanalCreacionResponseDTO response = AsignacionSemanalCreacionResponseDTO.builder()
+        return AsignacionSemanalCreacionResponseDTO.builder()
                 .success(true)
-                .message("Asignación eliminada correctamente")
+                .message(mensajeResultado)
                 .data(datos)
                 .build();
-
-        log.info("Asignación {} eliminada físicamente de la base de datos", asignacionId);
-        return response;
     }
 
     /**

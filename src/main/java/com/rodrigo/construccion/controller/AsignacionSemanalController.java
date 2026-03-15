@@ -101,17 +101,27 @@ public class AsignacionSemanalController {
                     .eliminarAsignacion(asignacionId, empresaId);
             return ResponseEntity.ok(response);
         } catch (ResourceNotFoundException e) {
+            log.error("Asignación no encontrada: {}", e.getMessage());
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(
                 AsignacionSemanalCreacionResponseDTO.builder()
                     .success(false)
                     .message("Asignación no encontrada: " + e.getMessage())
                     .build()
             );
+        } catch (BusinessException e) {
+            log.error("Error de negocio al eliminar asignación: {}", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                AsignacionSemanalCreacionResponseDTO.builder()
+                    .success(false)
+                    .message(e.getMessage())
+                    .build()
+            );
         } catch (Exception e) {
+            log.error("Error interno al eliminar asignación {}", asignacionId, e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(
                 AsignacionSemanalCreacionResponseDTO.builder()
                     .success(false)
-                    .message("Error interno del servidor")
+                    .message("Error interno: " + e.getMessage())
                     .build()
             );
         }

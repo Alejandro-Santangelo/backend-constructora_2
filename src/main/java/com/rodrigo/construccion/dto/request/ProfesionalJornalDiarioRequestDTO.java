@@ -55,16 +55,17 @@ public class ProfesionalJornalDiarioRequestDTO {
      * Horas trabajadas expresadas como decimal
      * 
      * Valores válidos:
-     * - 1.0 = día completo
-     * - 0.5 = medio día
-     * - 0.25 = cuarto de día
+     * - 0.25 = 1/4 día
+     * - 0.5  = medio día
+     * - 1.0  = día completo
+     * - 5.0  = semana completa
      * - Mínimo: 0.01
-     * - Máximo: 1.5
+     * - Máximo: 30.0
      */
-    @NotNull(message = "Las horas trabajadas son obligatorias")
-    @DecimalMin(value = "0.01", message = "Las horas trabajadas deben ser mayor a 0")
-    @DecimalMax(value = "1.5", message = "Las horas trabajadas no pueden exceder 1.5")
-    @Digits(integer = 3, fraction = 2, message = "Las horas trabajadas deben tener máximo 2 decimales")
+    @NotNull(message = "Las jornadas son obligatorias")
+    @DecimalMin(value = "0.01", message = "Las jornadas deben ser mayor a 0")
+    @DecimalMax(value = "30.0", message = "Las jornadas no pueden exceder 30 días")
+    @Digits(integer = 4, fraction = 2, message = "Las jornadas deben tener máximo 2 decimales")
     private BigDecimal horasTrabajadasDecimal;
 
     /**
