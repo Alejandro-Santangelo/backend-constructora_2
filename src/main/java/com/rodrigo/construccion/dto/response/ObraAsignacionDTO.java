@@ -33,6 +33,7 @@ public class ObraAsignacionDTO {
     private Integer totalAsignaciones;
     private BigDecimal totalAsignado;
     private BigDecimal totalUtilizado;
+    private BigDecimal totalPagado;  // Suma real de pagos efectuados
     private BigDecimal saldoPendiente;
     
     /**
@@ -46,8 +47,9 @@ public class ObraAsignacionDTO {
         this.totalUtilizado = asignaciones.stream()
             .map(a -> a.getTotalUtilizado() != null ? a.getTotalUtilizado() : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        this.saldoPendiente = asignaciones.stream()
-            .map(a -> a.getSaldoPendiente() != null ? a.getSaldoPendiente() : BigDecimal.ZERO)
+        this.totalPagado = asignaciones.stream()
+            .map(a -> a.getTotalPagado() != null ? a.getTotalPagado() : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+        this.saldoPendiente = this.totalAsignado.subtract(this.totalPagado);
     }
 }

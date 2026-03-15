@@ -1240,7 +1240,6 @@ public class ProfesionalObraService implements IProfesionalObraService {
         
         BigDecimal totalAsignado = importeJornal.multiply(cantidadJornales);
         BigDecimal totalUtilizado = importeJornal.multiply(jornalesUtilizados);
-        BigDecimal saldoPendiente = totalAsignado.subtract(totalUtilizado);
         
         // 💰 Calcular total pagado en esta asignación específica
         BigDecimal totalPagado = BigDecimal.ZERO;
@@ -1264,6 +1263,11 @@ public class ProfesionalObraService implements IProfesionalObraService {
         } catch (Exception e) {
             log.warn("⚠️ Error al calcular totalPagado para asignación {}: {}", asig.getId(), e.getMessage());
         }
+        
+        // ✅ Calcular saldo pendiente correctamente: presupuesto - pagos reales
+        BigDecimal saldoPendiente = totalAsignado.subtract(totalPagado);
+        log.debug("💰 Asignación ID={}: Presupuesto={}, Pagado={}, Pendiente={}", 
+            asig.getId(), totalAsignado, totalPagado, saldoPendiente);
         
         // Obtener rubroNombre dinámicamente desde honorarios_por_rubro si no existe o es un valor por defecto
         String rubroNombre = asig.getRubroNombre();

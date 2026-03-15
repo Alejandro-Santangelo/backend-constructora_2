@@ -1043,4 +1043,62 @@ public class PresupuestoNoClienteController {
                 .body(new ErrorResponse("Error al obtener rubros: " + e.getMessage()));
         }
     }
+
+    /**
+     * PATCH /presupuestos-no-cliente/pool-mano-obra
+     * Actualizar el pool (subtotal) de mano de obra de un rubro en una obra
+     * Usado por el modal de gestión de pagos para ajustar pools de rubros
+     */
+    @PatchMapping("/pool-mano-obra")
+    @Operation(
+        summary = "Actualizar pool de mano de obra de un rubro en una obra",
+        description = "Actualiza el subtotal de mano de obra (pool) de un rubro específico en una obra. " +
+                     "Busca automáticamente el item de calculadora correspondiente usando obraId + tipoProfesional. " +
+                     "Requiere empresaId para validación multi-tenant."
+    )
+    public ResponseEntity<?> actualizarPoolManoObra(
+            @RequestParam 
+            @Parameter(description = "ID de la obra", required = true) 
+            Long obraId,
+            @RequestParam 
+            @Parameter(description = "Nombre del rubro/tipo profesional", required = true) 
+            String tipoProfesional,
+            @RequestParam 
+            @Parameter(description = "Nuevo subtotal de mano de obra", required = true) 
+            BigDecimal nuevoSubtotal,
+            @RequestParam 
+            @Parameter(description = "ID de la empresa (multi-tenant)", required = true) 
+            Long empresaId) {
+        
+        log.info("🔄 PATCH /presupuestos-no-cliente/pool-mano-obra - obraId={}, tipoProfesional={}, nuevoSubtotal={}, empresaId={}", 
+            obraId, tipoProfesional, nuevoSubtotal, empresaId);
+        
+        try {
+            service.actualizarPoolManoObra(obraId, tipoProfesional, nuevoSubtotal, empresaId);
+            
+            log.info("✅ Pool de mano de obra actualizado para obra {} - rubro {}", obraId, tipoProfesional);
+            
+            return ResponseEntity.ok(java.util.Map.of(
+                "mensaje", "Pool de mano de obra actualizado exitosamente",
+                "obraId", obraId,
+                "tipoProfesional", tipoProfesional,
+                "nuevoSubtotal", nuevoSubtotal
+            ));
+            
+        } catch (ResourceNotFoundException e) {
+            log.error("❌ No encontrado: {}", e.getMessage());
+            return ResponseEntity.status(404)
+                .body(new ErrorResponse(e.getMessage()));
+                
+        } catch (IllegalArgumentException e) {
+            log.error("❌ Validación fallida: {}", e.getMessage());
+            return ResponseEntity.badRequest()
+                .body(new ErrorResponse(e.getMessage()));
+                
+        } catch (Exception e) {
+            log.error("❌ Error actualizando pool: {}", e.getMessage(), e);
+            return ResponseEntity.internalServerError()
+                .body(new ErrorResponse("Error al actualizar pool: " + e.getMessage()));
+        }
+    }
 }

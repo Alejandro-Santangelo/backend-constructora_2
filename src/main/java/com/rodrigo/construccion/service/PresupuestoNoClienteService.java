@@ -6021,5 +6021,129 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         return descuentos;
     }
 
+    /**
+     * Actualiza el pool (subtotal) de mano de obra de un rubro en una obra específica
+     * Busca automáticamente el item de calculadora correspondiente
+     * 
+     * @param obraId ID de la obra
+     * @param tipoProfesional Nombre del rubro/tipo profesional
+     * @param nuevoSubtotal Nuevo valor del pool
+     * @param empresaId ID de la empresa (validación multi-tenant)
+     * @throws ResourceNotFoundException si no se encuentra el presupuesto o item
+     * @throws IllegalArgumentException si el subtotal es negativo
+     */
+    @Transactional
+    public void actualizarPoolManoObra(Long obraId, String tipoProfesional, BigDecimal nuevoSubtotal, Long empresaId) {
+        log.info("🔄 Actualizando pool mano de obra - obraId={}, tipoProfesional={}, nuevoSubtotal={}, empresaId={}", 
+            obraId, tipoProfesional, nuevoSubtotal, empresaId);
+        
+        // Validar parámetros
+        if (nuevoSubtotal == null || nuevoSubtotal.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El subtotal de mano de obra no puede ser negativo");
+        }
+        
+        if (tipoProfesional == null || tipoProfesional.trim().isEmpty()) {
+            throw new IllegalArgumentException("El tipo profesional es requerido");
+        }
+        
+        // Buscar obra para validar que existe
+        Obra obra = obraRepository.findById(obraId)
+            .orElseThrow(() -> new ResourceNotFoundException("Obra no encontrada con ID: " + obraId));
+        
+        // Buscar presupuestos vinculados a esta obra
+        List<PresupuestoNoCliente> presupuestos = repository.findByObra_IdOrderByNumeroVersionDesc(obraId);
+        
+        if (presupuestos.isEmpty()) {
+            throw new ResourceNotFoundException(
+                "No hay presupuestos vinculados a la obra ID: " + obraId);
+        }
+        
+        // Buscar el presupuesto más reciente (o el que esté APROBADO)
+        PresupuestoNoCliente presupuesto = presupuestos.stream()
+            .filter(p -> p.getEmpresa().getId().equals(empresaId)) // Validar empresa
+            .filter(p -> p.getEstado() == PresupuestoEstado.APROBADO)
+            .findFirst()
+            .orElse(presupuestos.stream()
+                .filter(p -> p.getEmpresa().getId().equals(empresaId))
+                .reduce((first, second) -> second) // Último de la lista
+                .orElseThrow(() -> new IllegalArgumentException(
+                    "Ningún presupuesto de esta obra pertenece a la empresa especificada")));
+        
+        // Buscar item de calculadora con ese tipo profesional
+        ItemCalculadoraPresupuesto item = presupuesto.getItemsCalculadora().stream()
+            .filter(i -> tipoProfesional.equalsIgnoreCase(i.getTipoProfesional()))
+            .findFirst()
+            .orElseThrow(() -> new ResourceNotFoundException(
+                String.format("No se encontró el rubro '%s' en el presupuesto de la obra %d", 
+                    tipoProfesional, obraId)));
+        
+        // Guardar valor anterior para logs
+        BigDecimal subtotalAnterior = item.getSubtotalManoObra();
+        
+        // ✅ Actualizar subtotal TAL CUAL se ingresó (sin recalcular nada más)
+        item.setSubtotalManoObra(nuevoSubtotal);
+        
+        // 🔒 NO recalcular el total del item - mantener lo que ya está
+        // El usuario solo quiere ajustar el pool de mano de obra, no el total del presupuesto
+        
+        itemCalculadoraRepository.save(item);
+        
+        log.info("✅ Pool de mano de obra actualizado: {} → {} (obra={}, rubro={})", 
+            subtotalAnterior, nuevoSubtotal, obraId, tipoProfesional);
+    }
+
+    /**
+     * Actualiza el subtotal de mano de obra de un item de calculadora específico
+     * Usado por el modal de gestión de pagos para ajustar pools de rubros
+     * 
+     * @param itemId ID del item de calculadora
+     * @param nuevoSubtotal Nuevo valor del subtotal de mano de obra
+     * @param empresaId ID de la empresa (validación multi-tenant)
+     * @throws ResourceNotFoundException si el item no existe
+     * @throws IllegalArgumentException si el subtotal es negativo
+     */
+    @Transactional
+    public void actualizarSubtotalManoObraItem(Long itemId, BigDecimal nuevoSubtotal, Long empresaId) {
+        log.info("🔄 Actualizando subtotal mano de obra - itemId={}, nuevoSubtotal={}, empresaId={}", 
+            itemId, nuevoSubtotal, empresaId);
+        
+        // Validar parámetros
+        if (nuevoSubtotal == null || nuevoSubtotal.compareTo(BigDecimal.ZERO) < 0) {
+            throw new IllegalArgumentException("El subtotal de mano de obra no puede ser negativo");
+        }
+        
+        // Buscar item
+        ItemCalculadoraPresupuesto item = itemCalculadoraRepository.findById(itemId)
+            .orElseThrow(() -> new ResourceNotFoundException(
+                "Item de calculadora no encontrado con ID: " + itemId));
+        
+        // Validar empresa (multi-tenant)
+        if (!item.getPresupuestoNoCliente().getEmpresa().getId().equals(empresaId)) {
+            throw new IllegalArgumentException(
+                "El item no pertenece a la empresa especificada");
+        }
+        
+        // Guardar valor anterior para auditoría
+        BigDecimal subtotalAnterior = item.getSubtotalManoObra();
+        
+        // Actualizar subtotal
+        item.setSubtotalManoObra(nuevoSubtotal);
+        
+        // Recalcular total del item si es necesario
+        if (!Boolean.TRUE.equals(item.getEsModoManual())) {
+            BigDecimal nuevoTotal = nuevoSubtotal.add(
+                item.getSubtotalMateriales() != null ? item.getSubtotalMateriales() : BigDecimal.ZERO
+            );
+            item.setTotal(nuevoTotal);
+        }
+        
+        itemCalculadoraRepository.save(item);
+        
+        log.info("✅ Subtotal mano de obra actualizado: {} → {} (item={}, rubro={})", 
+            subtotalAnterior, nuevoSubtotal, itemId, item.getTipoProfesional());
+        
+        // TODO: Considerar registrar este cambio en auditoría del presupuesto
+    }
+
 }
 

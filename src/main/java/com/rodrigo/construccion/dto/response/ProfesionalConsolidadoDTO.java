@@ -37,6 +37,7 @@ public class ProfesionalConsolidadoDTO {
     private Integer totalAsignaciones;
     private BigDecimal totalAsignado;
     private BigDecimal totalUtilizado;
+    private BigDecimal totalPagado;  // Suma real de pagos efectuados
     private BigDecimal saldoPendiente;
     
     /**
@@ -53,8 +54,9 @@ public class ProfesionalConsolidadoDTO {
         this.totalUtilizado = obras.stream()
             .map(o -> o.getTotalUtilizado() != null ? o.getTotalUtilizado() : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
-        this.saldoPendiente = obras.stream()
-            .map(o -> o.getSaldoPendiente() != null ? o.getSaldoPendiente() : BigDecimal.ZERO)
+        this.totalPagado = obras.stream()
+            .map(o -> o.getTotalPagado() != null ? o.getTotalPagado() : BigDecimal.ZERO)
             .reduce(BigDecimal.ZERO, BigDecimal::add);
+        this.saldoPendiente = this.totalAsignado.subtract(this.totalPagado);
     }
 }

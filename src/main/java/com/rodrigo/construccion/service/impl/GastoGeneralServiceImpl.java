@@ -6,8 +6,10 @@ import com.rodrigo.construccion.dto.response.AsignacionGastoDTO;
 import com.rodrigo.construccion.model.entity.GastoGeneral;
 import com.rodrigo.construccion.model.entity.PagoGastoGeneralObra;
 import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
+import com.rodrigo.construccion.model.entity.PresupuestoGastoGeneral;
 import com.rodrigo.construccion.repository.GastoGeneralRepository;
 import com.rodrigo.construccion.repository.PagoGastoGeneralObraRepository;
+import com.rodrigo.construccion.repository.PresupuestoGastoGeneralRepository;
 import com.rodrigo.construccion.service.IGastoGeneralService;
 import com.rodrigo.construccion.service.EmpresaService;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +21,7 @@ import org.hibernate.Session;
 
 import java.math.BigDecimal;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -33,15 +36,18 @@ public class GastoGeneralServiceImpl implements IGastoGeneralService {
 
     private final GastoGeneralRepository gastoGeneralRepository;
     private final PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository;
+    private final PresupuestoGastoGeneralRepository presupuestoGastoGeneralRepository;
     private final EntityManager entityManager;
     private final EmpresaService empresaService;
 
     public GastoGeneralServiceImpl(GastoGeneralRepository gastoGeneralRepository,
                                   PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository,
+                                  PresupuestoGastoGeneralRepository presupuestoGastoGeneralRepository,
                                   EntityManager entityManager,
                                   EmpresaService empresaService) {
         this.gastoGeneralRepository = gastoGeneralRepository;
         this.pagoGastoGeneralObraRepository = pagoGastoGeneralObraRepository;
+        this.presupuestoGastoGeneralRepository = presupuestoGastoGeneralRepository;
         this.entityManager = entityManager;
         this.empresaService = empresaService;
     }
@@ -228,42 +234,88 @@ public class GastoGeneralServiceImpl implements IGastoGeneralService {
                 .obras(new ArrayList<>())
                 .build();
             
-            // Agrupar pagos por presupuestoNoClienteId (que representa la obra)
-            Map<Long, List<PagoGastoGeneralObra>> pagosPorObra = pagosGasto.stream()
+            // Agrupar pagos por presupuestoNoClienteId (que representa la obra) y gastoGeneralCalculadoraId
+            Map<String, List<PagoGastoGeneralObra>> pagosPorObraYGasto = pagosGasto.stream()
                 .filter(p -> p.getPresupuestoNoCliente() != null && p.getPresupuestoNoCliente().getId() != null)
-                .collect(Collectors.groupingBy(p -> p.getPresupuestoNoCliente().getId()));
+                .collect(Collectors.groupingBy(p -> 
+                    p.getPresupuestoNoCliente().getId() + "_" + 
+                    (p.getGastoGeneralCalculadoraId() != null ? p.getGastoGeneralCalculadoraId() : "0")
+                ));
             
-            // Para cada obra, crear su DTO
-            for (Map.Entry<Long, List<PagoGastoGeneralObra>> obraEntry : pagosPorObra.entrySet()) {
-                Long presupuestoId = obraEntry.getKey();
-                List<PagoGastoGeneralObra> pagosObra = obraEntry.getValue();
-                
-                // Obtener datos de la obra
-                PagoGastoGeneralObra pagoObra = pagosObra.get(0);
+            // Para cada obra/gasto, crear su DTO
+            Map<Long, ObraGastoGeneralDTO> obrasMap = new HashMap<>();
+            
+            for (Map.Entry<String, List<PagoGastoGeneralObra>> obraGastoEntry : pagosPorObraYGasto.entrySet()) {
+                List<PagoGastoGeneralObra> pagosObraGasto = obraGastoEntry.getValue();
+                PagoGastoGeneralObra pagoObra = pagosObraGasto.get(0);
                 PresupuestoNoCliente presupuesto = pagoObra.getPresupuestoNoCliente();
+                Long presupuestoId = presupuesto.getId();
                 
-                ObraGastoGeneralDTO obraDTO = ObraGastoGeneralDTO.builder()
-                    .obraId(presupuestoId)
-                    .obraNombre(presupuesto != null && presupuesto.getNombreObra() != null ? 
-                        presupuesto.getNombreObra() : "Obra " + presupuestoId)
-                    .obraEstado(presupuesto != null && presupuesto.getEstado() != null ? 
-                        presupuesto.getEstado().name() : "DESCONOCIDO")
-                    .direccionCompleta(presupuesto != null ? construirDireccionPresupuesto(presupuesto) : "")
-                    .asignaciones(new ArrayList<>())
-                    .build();
+                // Obtener o crear ObraDTO
+                ObraGastoGeneralDTO obraDTO = obrasMap.computeIfAbsent(presupuestoId, id ->
+                    ObraGastoGeneralDTO.builder()
+                        .obraId(id)
+                        .obraNombre(presupuesto.getNombreObra() != null ? 
+                            presupuesto.getNombreObra() : "Obra " + id)
+                        .obraEstado(presupuesto.getEstado() != null ? 
+                            presupuesto.getEstado().name() : "DESCONOCIDO")
+                        .direccionCompleta(construirDireccionPresupuesto(presupuesto))
+                        .asignaciones(new ArrayList<>())
+                        .build()
+                );
                 
-                // Mapear cada pago a AsignacionGastoDTO
-                for (PagoGastoGeneralObra pago : pagosObra) {
-                    AsignacionGastoDTO asignacionDTO = mapearPagoAGastoDTO(pago);
-                    obraDTO.getAsignaciones().add(asignacionDTO);
+                // 💰 Calcular presupuesto base desde PresupuestoGastoGeneral
+                BigDecimal presupuestoBase = BigDecimal.ZERO;
+                Long gastoGeneralCalculadoraId = pagoObra.getGastoGeneralCalculadoraId();
+                
+                if (gastoGeneralCalculadoraId != null) {
+                    try {
+                        PresupuestoGastoGeneral gastoGeneral = presupuestoGastoGeneralRepository.findById(gastoGeneralCalculadoraId).orElse(null);
+                        if (gastoGeneral != null && gastoGeneral.getSubtotal() != null) {
+                            presupuestoBase = gastoGeneral.getSubtotal();
+                            log.debug("💰 Presupuesto base para gasto {}: {}", conceptoGasto, presupuestoBase);
+                        }
+                    } catch (Exception e) {
+                        log.warn("⚠️ No se pudo obtener presupuesto base para gasto_id {}: {}", gastoGeneralCalculadoraId, e.getMessage());
+                    }
                 }
                 
-                // Calcular totales de la obra
-                obraDTO.calcularTotales();
-                gastoDTO.getObras().add(obraDTO);
+                // 💰 Calcular total pagado (suma de todos los pagos)
+                BigDecimal totalPagado = pagosObraGasto.stream()
+                    .map(p -> p.getMonto() != null ? p.getMonto() : BigDecimal.ZERO)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+                
+                // 💰 Calcular pendiente correctamente
+                BigDecimal saldoPendiente = presupuestoBase.subtract(totalPagado);
+                
+                log.debug("📊 Gasto '{}' en obra {}: Presupuesto={}, Pagado={}, Pendiente={}", 
+                    conceptoGasto, presupuestoId, presupuestoBase, totalPagado, saldoPendiente);
+                
+                // Crear AsignacionGastoDTO consolidado (representa la agrupación)
+                AsignacionGastoDTO asignacionConsolidada = AsignacionGastoDTO.builder()
+                    .asignacionId(gastoGeneralCalculadoraId != null ? gastoGeneralCalculadoraId : pagoObra.getId())
+                    .tipoPago(pagoObra.getTipoPago() != null ? pagoObra.getTipoPago().name() : "")
+                    .concepto(pagoObra.getConcepto())
+                    .categoria(pagoObra.getTipoPago() != null ? pagoObra.getTipoPago().name() : "GENERAL")
+                    .cantidad(BigDecimal.valueOf(pagosObraGasto.size()))
+                    .precioUnitario(BigDecimal.ZERO)
+                    .totalAsignado(presupuestoBase) // ✅ Presupuesto base
+                    .totalUtilizado(totalPagado)     // ✅ Total pagado
+                    .saldoPendiente(saldoPendiente)  // ✅ Presupuesto - Pagado
+                    .fechaPago(pagoObra.getFechaPago())
+                    .metodoPago(pagoObra.getMetodoPago() != null ? pagoObra.getMetodoPago().name() : "")
+                    .estado(pagoObra.getEstado() != null ? pagoObra.getEstado().name() : "")
+                    .observaciones(pagosObraGasto.size() + " pago(s) realizados")
+                    .build();
+                
+                obraDTO.getAsignaciones().add(asignacionConsolidada);
             }
             
-            // Calcular totales del gasto
+            // Agregar todas las obras al gastoDTO
+            gastoDTO.getObras().addAll(obrasMap.values());
+            
+            // Calcular totales de cada obra y del gasto
+            gastoDTO.getObras().forEach(ObraGastoGeneralDTO::calcularTotales);
             gastoDTO.calcularTotales();
             gastosDTO.add(gastoDTO);
         }
