@@ -7,6 +7,8 @@ import lombok.NoArgsConstructor;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * DTO que representa una asignación específica de un profesional a un rubro en una obra
@@ -35,6 +37,7 @@ public class AsignacionRubroDTO {
     // Financiero
     private BigDecimal totalAsignado;
     private BigDecimal totalUtilizado;
+    private BigDecimal totalPagado;  // Suma de todos los pagos realizados a esta asignación
     private BigDecimal saldoPendiente;
     
     // Fechas y estado
@@ -46,4 +49,8 @@ public class AsignacionRubroDTO {
     private String modalidad; // total, semanal
     private Integer semanasObjetivo;
     private String observaciones;
+    
+    // Historial de pagos
+    @Builder.Default
+    private List<HistorialPagoDTO> historialPagos = new ArrayList<>();
 }

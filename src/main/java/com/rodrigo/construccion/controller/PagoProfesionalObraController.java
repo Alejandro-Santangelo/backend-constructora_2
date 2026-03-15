@@ -254,4 +254,19 @@ public class PagoProfesionalObraController {
         PagoProfesionalObraResponseDTO pago = pagoService.marcarComoPagado(id, empresaId, fechaPago);
         return ResponseEntity.ok(pago);
     }
+
+    /**
+     * POST /api/v1/pagos-profesional-obra/batch
+     * Crear múltiples pagos parciales por asignación
+     * Usado desde el modal de gestión de pagos profesionales
+     */
+    @PostMapping("/batch")
+    public ResponseEntity<com.rodrigo.construccion.dto.response.PagoProfesionalBatchResponseDTO> crearPagosBatch(
+            @Valid @RequestBody com.rodrigo.construccion.dto.request.PagoProfesionalBatchRequestDTO request) {
+        
+        com.rodrigo.construccion.dto.response.PagoProfesionalBatchResponseDTO response = 
+            pagoService.crearPagosBatch(request);
+        
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
+    }
 }

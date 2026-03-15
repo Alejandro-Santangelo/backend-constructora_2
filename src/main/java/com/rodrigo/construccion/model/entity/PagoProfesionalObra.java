@@ -56,6 +56,14 @@ public class PagoProfesionalObra {
     @JoinColumn(name = "profesional_obra_id", nullable = false)
     private ProfesionalObra profesionalObra;
 
+    /**
+     * Asignación específica (profesional + obra + rubro) a la que pertenece este pago.
+     * Permite vincular pagos parciales por rubro. NULL para pagos generales.
+     */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "asignacion_profesional_obra_id")
+    private AsignacionProfesionalObra asignacion;
+
     @NotNull(message = "La empresa es obligatoria")
     @Column(name = "empresa_id", nullable = false)
     private Long empresaId;

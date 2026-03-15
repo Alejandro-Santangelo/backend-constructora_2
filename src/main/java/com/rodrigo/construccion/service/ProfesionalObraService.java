@@ -2,6 +2,7 @@ package com.rodrigo.construccion.service;
 
 import com.rodrigo.construccion.dto.request.ActualizarAsignacionRequest;
 import com.rodrigo.construccion.enums.RolEnObra;
+import com.rodrigo.construccion.enums.TipoPresupuesto;
 import com.rodrigo.construccion.dto.request.AsignarProfesionalRequest;
 import com.rodrigo.construccion.dto.request.AsignarProfesionalesBatchRequest;
 import com.rodrigo.construccion.dto.mapper.ProfesionalMapper;
@@ -1082,12 +1083,12 @@ public class ProfesionalObraService implements IProfesionalObraService {
         empresaService.findEmpresaById(empresaId);
         log.info("✅ [CONSOLIDADO] Empresa {} validada correctamente", empresaId);
         
-        // Obtener TODAS las asignaciones de la empresa (SIN FILTRAR POR ESTADO)
+        // Obtener TODAS las asignaciones de la empresa
         log.info("📋 [CONSOLIDADO] Buscando TODAS las asignaciones para empresa {}...", empresaId);
         List<AsignacionProfesionalObra> todasLasAsignaciones = asignacionProfesionalObraRepository
             .findByEmpresaId(empresaId);
         
-        log.info("📊 [CONSOLIDADO] Total asignaciones encontradas: {}", todasLasAsignaciones.size());
+        log.info("📊 [CONSOLIDADO] Total asignaciones encontradas (sin filtrar): {}", todasLasAsignaciones.size());
         
         if (todasLasAsignaciones.isEmpty()) {
             log.error("❌ [CONSOLIDADO] NO HAY NINGUNA ASIGNACIÓN en la tabla asignaciones_profesional_obra para empresa {}", empresaId);
@@ -1095,16 +1096,60 @@ public class ProfesionalObraService implements IProfesionalObraService {
             return new ArrayList<>();
         }
         
+        // 🔍 Filtrar asignaciones por estado de obra
+        // Incluir obras con estado: APROBADO, EN_EJECUCION
+        // Si la obra es TAREA_LEVE, también incluir estado TERMINADO
+        List<AsignacionProfesionalObra> asignacionesFiltradas = todasLasAsignaciones.stream()
+            .filter(asig -> {
+                Obra obra = asig.getObra();
+                if (obra == null) {
+                    log.warn("⚠️ Asignación ID={} sin obra asociada", asig.getId());
+                    return false;
+                }
+                
+                String estadoObra = obra.getEstado();
+                TipoPresupuesto tipoPresupuesto = obra.getTipoPresupuesto();
+                
+                // Estados base aceptados
+                boolean esAprobadoOEnEjecucion = "APROBADO".equals(estadoObra) || 
+                                                  "EN_EJECUCION".equals(estadoObra);
+                
+                // Si es TAREA_LEVE, también aceptar TERMINADO
+                boolean esTareaLeveTerminada = TipoPresupuesto.TAREA_LEVE.equals(tipoPresupuesto) && 
+                                               "TERMINADO".equals(estadoObra);
+                
+                boolean incluir = esAprobadoOEnEjecucion || esTareaLeveTerminada;
+                
+                if (incluir) {
+                    log.debug("✅ Incluir - Obra ID={} '{}' estado={} tipo={}", 
+                        obra.getId(), obra.getNombre(), estadoObra, tipoPresupuesto);
+                } else {
+                    log.debug("❌ Excluir - Obra ID={} '{}' estado={} tipo={}", 
+                        obra.getId(), obra.getNombre(), estadoObra, tipoPresupuesto);
+                }
+                
+                return incluir;
+            })
+            .collect(Collectors.toList());
+        
+        log.info("📊 [CONSOLIDADO] Asignaciones después de filtrar por estado de obra: {}", asignacionesFiltradas.size());
+        log.info("📊 [CONSOLIDADO] Estados aceptados: APROBADO, EN_EJECUCION, TERMINADO (solo TAREA_LEVE)");
+        
+        if (asignacionesFiltradas.isEmpty()) {
+            log.warn("⚠️ [CONSOLIDADO] No hay asignaciones con obras en estados válidos (APROBADO, EN_EJECUCION, TERMINADO para TAREA_LEVE)");
+            return new ArrayList<>();
+        }
+        
         // Log de estados encontrados (solo informativo)
-        Map<String, Long> estadosCount = todasLasAsignaciones.stream()
+        Map<String, Long> estadosCount = asignacionesFiltradas.stream()
             .collect(Collectors.groupingBy(
                 a -> a.getEstado() != null ? a.getEstado() : "NULL",
                 Collectors.counting()
             ));
-        log.info("📊 [CONSOLIDADO] Estados encontrados: {}", estadosCount);
+        log.info("📊 [CONSOLIDADO] Estados de asignaciones (después de filtrar): {}", estadosCount);
         
         // Log de modalidades encontradas
-        Map<String, Long> modalidadesCount = todasLasAsignaciones.stream()
+        Map<String, Long> modalidadesCount = asignacionesFiltradas.stream()
             .collect(Collectors.groupingBy(
                 a -> a.getModalidad() != null ? a.getModalidad() : "NULL",
                 Collectors.counting()
@@ -1112,13 +1157,13 @@ public class ProfesionalObraService implements IProfesionalObraService {
         log.info("📊 [CONSOLIDADO] Modalidades encontradas: {}", modalidadesCount);
         
         // Log de primeras 3 asignaciones para debug
-        todasLasAsignaciones.stream().limit(3).forEach(a -> 
+        asignacionesFiltradas.stream().limit(3).forEach(a -> 
             log.info("   → Asignación ID={}, Obra={}, Profesional={}, Estado={}, Modalidad={}", 
                 a.getId(), a.getObraId(), a.getProfesionalNombre(), a.getEstado(), a.getModalidad())
         );
         
         // Agrupar asignaciones por profesionalId
-        Map<Long, List<AsignacionProfesionalObra>> asignacionesPorProfesional = todasLasAsignaciones.stream()
+        Map<Long, List<AsignacionProfesionalObra>> asignacionesPorProfesional = asignacionesFiltradas.stream()
             .collect(Collectors.groupingBy(AsignacionProfesionalObra::getProfesionalId));
         
         List<ProfesionalConsolidadoDTO> profesionalesDTO = new ArrayList<>();
@@ -1197,6 +1242,29 @@ public class ProfesionalObraService implements IProfesionalObraService {
         BigDecimal totalUtilizado = importeJornal.multiply(jornalesUtilizados);
         BigDecimal saldoPendiente = totalAsignado.subtract(totalUtilizado);
         
+        // 💰 Calcular total pagado en esta asignación específica
+        BigDecimal totalPagado = BigDecimal.ZERO;
+        List<com.rodrigo.construccion.dto.response.HistorialPagoDTO> historialPagos = new ArrayList<>();
+        try {
+            totalPagado = pagoRepository.calcularTotalPagadoByAsignacion(asig.getId());
+            log.debug("💵 Asignación ID={} ({}): totalPagado={}", asig.getId(), asig.getRubroNombre(), totalPagado);
+            
+            // 📋 Cargar historial de pagos
+            var pagos = pagoRepository.findPagosByAsignacionId(asig.getId());
+            historialPagos = pagos.stream()
+                .map(p -> com.rodrigo.construccion.dto.response.HistorialPagoDTO.builder()
+                    .pagoId(p.getId())
+                    .fechaPago(p.getFechaPago())
+                    .monto(p.getMontoFinal())
+                    .tipoPago(p.getTipoPago())
+                    .observaciones(p.getObservaciones())
+                    .build())
+                .collect(java.util.stream.Collectors.toList());
+            log.debug("📋 Asignación ID={}: {} pagos en historial", asig.getId(), historialPagos.size());
+        } catch (Exception e) {
+            log.warn("⚠️ Error al calcular totalPagado para asignación {}: {}", asig.getId(), e.getMessage());
+        }
+        
         // Obtener rubroNombre dinámicamente desde honorarios_por_rubro si no existe o es un valor por defecto
         String rubroNombre = asig.getRubroNombre();
         if (rubroNombre == null || rubroNombre.isEmpty() || rubroNombre.startsWith("Asignación Semanal")) {
@@ -1222,6 +1290,8 @@ public class ProfesionalObraService implements IProfesionalObraService {
             .jornalesRestantes(jornalesRestantes)
             .totalAsignado(totalAsignado)
             .totalUtilizado(totalUtilizado)
+            .totalPagado(totalPagado)  // 💰 Total de pagos realizados
+            .historialPagos(historialPagos)  // 📋 Historial completo de pagos
             .saldoPendiente(saldoPendiente)
             .fechaInicio(asig.getFechaInicio())
             .fechaFin(asig.getFechaFin())

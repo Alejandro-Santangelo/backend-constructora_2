@@ -668,4 +668,116 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
         
         log.info("✅ Descuento total de adelantos aplicado: ${}", descuentoAcumulado);
     }
+
+    /**
+     * Crear múltiples pagos parciales por asignación (batch)
+     */
+    @Override
+    @Transactional
+    public com.rodrigo.construccion.dto.response.PagoProfesionalBatchResponseDTO crearPagosBatch(
+            com.rodrigo.construccion.dto.request.PagoProfesionalBatchRequestDTO request) {
+        
+        log.info("📦 Iniciando creación de pagos batch para empresa: {}", request.getEmpresaId());
+        log.info("📋 Total de asignaciones a pagar: {}", request.getImportesPorAsignacion().size());
+        
+        List<PagoProfesionalObraResponseDTO> pagosCreados = new ArrayList<>();
+        BigDecimal montoTotal = BigDecimal.ZERO;
+        
+        // Validar que no esté vacío
+        if (request.getImportesPorAsignacion().isEmpty()) {
+            throw new RuntimeException("No hay importes para procesar");
+        }
+        
+        // Procesar cada asignación
+        for (var entry : request.getImportesPorAsignacion().entrySet()) {
+            Long asignacionId = entry.getKey();
+            BigDecimal importe = entry.getValue();
+            
+            // Validar importe positivo
+            if (importe == null || importe.compareTo(BigDecimal.ZERO) <= 0) {
+                log.warn("⚠️ Importe inválido para asignación {}: {}", asignacionId, importe);
+                continue;
+            }
+            
+            try {
+                // Buscar asignación
+                AsignacionProfesionalObra asignacion = asignacionRepository.findById(asignacionId)
+                    .orElseThrow(() -> new RuntimeException("Asignación no encontrada: " + asignacionId));
+                
+                log.info("💰 Procesando pago: Asig={}, Prof={}, Obra={}, Rubro={}, Monto=${}",
+                    asignacionId,
+                    asignacion.getProfesionalId(),
+                    asignacion.getObraId(),
+                    asignacion.getRubroId(),
+                    importe
+                );
+                
+                // Buscar o crear ProfesionalObra
+                ProfesionalObra profesionalObra = profesionalObraRepository
+                    .findByProfesionalIdAndObraId(asignacion.getProfesionalId(), asignacion.getObraId())
+                    .orElseGet(() -> {
+                        ProfesionalObra nuevo = new ProfesionalObra();
+                        nuevo.setProfesional(asignacion.getProfesional());
+                        nuevo.setObra(asignacion.getObra());
+                        nuevo.setEmpresaId(request.getEmpresaId());
+                        nuevo.setFechaDesde(LocalDate.now());
+                        nuevo.setEstado("ACTIVO");
+                        return profesionalObraRepository.save(nuevo);
+                    });
+                
+                // Crear el pago
+                PagoProfesionalObra pago = new PagoProfesionalObra();
+                pago.setEmpresaId(request.getEmpresaId());
+                pago.setProfesionalObra(profesionalObra);
+                pago.setAsignacion(asignacion);
+                pago.setTipoPago(request.getTipoPago() != null ? request.getTipoPago() : "PAGO_PARCIAL");
+                
+                // 📅 Usar fecha personalizada si existe, sino usar fecha actual
+                LocalDate fechaPago = LocalDate.now();
+                if (request.getFechasPorAsignacion() != null && request.getFechasPorAsignacion().containsKey(asignacionId)) {
+                    fechaPago = request.getFechasPorAsignacion().get(asignacionId);
+                    log.info("📅 Usando fecha personalizada para asignación {}: {}", asignacionId, fechaPago);
+                }
+                pago.setFechaPago(fechaPago);
+                
+                pago.setMontoBase(importe);
+                pago.setMontoBruto(importe);
+                pago.setMontoNeto(importe);
+                pago.setDescuentoAdelantos(BigDecimal.ZERO);
+                pago.setDescuentoPresentismo(BigDecimal.ZERO);
+                pago.setAjustes(BigDecimal.ZERO);
+                pago.setEstado(PagoProfesionalObra.ESTADO_PAGADO); // ✅ Estado correcto para que se cuente en totalPagado
+                pago.setMetodoPago("EFECTIVO");
+                
+                String obs = String.format("Pago parcial - Rubro: %s | ", 
+                    asignacion.getRubroNombre() != null ? asignacion.getRubroNombre() : "N/A");
+                if (request.getObservaciones() != null) {
+                    obs += request.getObservaciones();
+                }
+                pago.setObservaciones(obs);
+                
+                PagoProfesionalObra pagoGuardado = pagoRepository.save(pago);
+                log.info("✅ Pago creado: ID={}, Monto=${}", pagoGuardado.getId(), importe);
+                
+                pagosCreados.add(mapearEntityAResponse(pagoGuardado));
+                montoTotal = montoTotal.add(importe);
+                
+            } catch (Exception e) {
+                log.error("❌ Error al crear pago para asignación {}: {}", asignacionId, e.getMessage());
+            }
+        }
+        
+        com.rodrigo.construccion.dto.response.PagoProfesionalBatchResponseDTO response = 
+            new com.rodrigo.construccion.dto.response.PagoProfesionalBatchResponseDTO();
+        response.setTotalPagosCreados(pagosCreados.size());
+        response.setMontoTotalPagado(montoTotal);
+        response.setPagosCreados(pagosCreados);
+        response.setMensaje(String.format("Se crearon %d pagos por un total de $%s",
+            pagosCreados.size(), montoTotal));
+        
+        log.info("📦 ✅ Batch completado: {} pagos creados, total: ${}", 
+            pagosCreados.size(), montoTotal);
+        
+        return response;
+    }
 }

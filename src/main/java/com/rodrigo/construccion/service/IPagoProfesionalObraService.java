@@ -103,4 +103,12 @@ public interface IPagoProfesionalObraService {
      * Marcar un pago como pagado con validación de empresa
      */
     PagoProfesionalObraResponseDTO marcarComoPagado(Long pagoId, Long empresaId, LocalDate fechaPago);
+
+    /**
+     * Crear múltiples pagos parciales por asignación (batch)
+     * Usado desde el modal de gestión de pagos profesionales
+     */
+    com.rodrigo.construccion.dto.response.PagoProfesionalBatchResponseDTO crearPagosBatch(
+        com.rodrigo.construccion.dto.request.PagoProfesionalBatchRequestDTO request
+    );
 }

@@ -209,4 +209,28 @@ public interface PagoProfesionalObraRepository extends JpaRepository<PagoProfesi
            "AND p.saldoAdelantoPorDescontar > 0 " +
            "ORDER BY p.fechaPago ASC")
     List<PagoProfesionalObra> findAdelantosActivosByProfesionalObraId(@Param("profesionalObraId") Long profesionalObraId);
+
+    /**
+     * Calcular total pagado en una asignación específica (profesional-obra-rubro)
+     * Suma todos los pagos donde asignacion_profesional_obra_id coincide
+     * 
+     * @param asignacionId ID de la asignación (profesional + obra + rubro)
+     * @return Total pagado en esa asignación, 0 si no hay pagos
+     */
+    @Query("SELECT COALESCE(SUM(p.montoFinal), 0) FROM PagoProfesionalObra p " +
+           "WHERE p.asignacion.id = :asignacionId " +
+           "AND p.estado = 'PAGADO'")
+    BigDecimal calcularTotalPagadoByAsignacion(@Param("asignacionId") Long asignacionId);
+
+    /**
+     * Obtener lista de pagos de una asignación específica (para historial)
+     * 
+     * @param asignacionId ID de la asignación
+     * @return Lista de pagos ordenados por fecha descendente
+     */
+    @Query("SELECT p FROM PagoProfesionalObra p " +
+           "WHERE p.asignacion.id = :asignacionId " +
+           "AND p.estado = 'PAGADO' " +
+           "ORDER BY p.fechaPago DESC")
+    List<PagoProfesionalObra> findPagosByAsignacionId(@Param("asignacionId") Long asignacionId);
 }
