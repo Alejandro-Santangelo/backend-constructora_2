@@ -49,15 +49,15 @@ public interface PagoGastoGeneralObraRepository extends JpaRepository<PagoGastoG
         Long presupuestoNoClienteId, EstadoPago estado, Long empresaId);
 
     /**
+     * Buscar todos los pagos de gastos generales de una empresa.
+     */
+    List<PagoGastoGeneralObra> findByEmpresaIdOrderByFechaPagoDesc(Long empresaId);
+
+    /**
      * Buscar pagos por gasto general específico.
      */
     List<PagoGastoGeneralObra> findByGastoGeneralIdAndEmpresaIdOrderByFechaPagoDesc(
         Long gastoGeneralId, Long empresaId);
-
-    /**
-     * Listar todos los pagos de gastos generales por empresa.
-     */
-    List<PagoGastoGeneralObra> findByEmpresaIdOrderByFechaPagoDesc(Long empresaId);
 
     /**
      * Buscar pagos por rango de fechas.

@@ -16,6 +16,9 @@ public interface ObraMaterialRepository extends JpaRepository<ObraMaterial, Long
     /* Busca una asignación por ID y empresaId (para multi-tenancy) */
     Optional<ObraMaterial> findByIdAndEmpresaId(Long id, Long empresaId);
 
+    /* Busca todas las asignaciones de materiales de una empresa */
+    List<ObraMaterial> findByEmpresaId(Long empresaId);
+
     /* Elimina todas las asignaciones que referencian un material específico de calculadora */
     void deleteByMaterialCalculadoraId(Long materialCalculadoraId);
 }

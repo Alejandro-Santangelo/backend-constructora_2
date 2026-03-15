@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.service;
 
+import com.rodrigo.construccion.dto.response.GastoGeneralConsolidadoDTO;
 import com.rodrigo.construccion.model.entity.GastoGeneral;
 
 import java.util.List;
@@ -48,6 +49,11 @@ public interface IGastoGeneralService {
      * Actualizar precio de un gasto general específico
      */
     void actualizarPrecioPorId(Long empresaId, Long id, double porcentaje);
+
+    /**
+     * Obtener gastos generales consolidados con sus pagos para gestión de pagos
+     */
+    List<GastoGeneralConsolidadoDTO> obtenerGastosGeneralesConsolidados(Long empresaId);
 
     /**
      * Actualizar precio de varios gastos generales

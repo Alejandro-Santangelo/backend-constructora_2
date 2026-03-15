@@ -2,8 +2,10 @@ package com.rodrigo.construccion.controller;
 
 import com.rodrigo.construccion.dto.request.MaterialRequestDTO;
 import com.rodrigo.construccion.dto.response.MaterialEstadisticaResponseDTO;
+import com.rodrigo.construccion.dto.response.MaterialConsolidadoDTO;
 import com.rodrigo.construccion.model.entity.Material;
 import com.rodrigo.construccion.service.IMaterialService;
+import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -88,5 +90,17 @@ public class MaterialController {
     @GetMapping("/ordenados")
     public ResponseEntity<List<Material>> obtenerMaterialesOrdenados() {
         return ResponseEntity.ok(materialService.obtenerTodosOrdenadosPorNombre());
+    }
+
+    @GetMapping("/materiales-consolidados")
+    @Operation(summary = "Listar materiales con sus asignaciones consolidadas",
+            description = "GESTIÓN DE PAGOS POR MATERIAL: Devuelve estructura jerárquica: Material → Obras → Asignaciones. " +
+                    "Cada material contiene todas las obras donde está asignado, con cantidades, precios y saldos. " +
+                    "Incluye totales consolidados por obra y por material. " +
+                    "Ideal para ver cuánto material se ha asignado y utilizado en cada obra.")
+    public ResponseEntity<List<MaterialConsolidadoDTO>> obtenerMaterialesConsolidados(
+            @Parameter(description = "ID de la empresa", required = true) @RequestParam Long empresaId) {
+        List<MaterialConsolidadoDTO> materiales = materialService.obtenerMaterialesConsolidados(empresaId);
+        return ResponseEntity.ok(materiales);
     }
 }

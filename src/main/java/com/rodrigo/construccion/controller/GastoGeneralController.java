@@ -1,6 +1,7 @@
 package com.rodrigo.construccion.controller;
 
 import com.rodrigo.construccion.dto.response.GastoGeneralConStockResponseDTO;
+import com.rodrigo.construccion.dto.response.GastoGeneralConsolidadoDTO;
 import com.rodrigo.construccion.model.entity.GastoGeneral;
 import com.rodrigo.construccion.service.PresupuestoNoClienteService;
 import com.rodrigo.construccion.service.IGastoGeneralService;
@@ -237,6 +238,28 @@ public class GastoGeneralController {
             
         } catch (Exception e) {
             log.error("❌ Error al obtener gastos generales para presupuesto {}: {}", id, e.getMessage(), e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+        }
+    }
+
+    @GetMapping("/gastos-generales/gastos-consolidados")
+    @Operation(summary = "Listar gastos generales con sus pagos consolidados",
+            description = "GESTIÓN DE PAGOS POR GASTOS GENERALES: Devuelve estructura jerárquica: Gasto → Obras → Pagos. " +
+                    "Cada gasto general contiene todas las obras donde se realizaron pagos, con montos y detalles. " +
+                    "Incluye totales consolidados por obra y por tipo de gasto. " +
+                    "Ideal para ver cuánto se ha gastado en cada categoría de gasto general.")
+    public ResponseEntity<List<GastoGeneralConsolidadoDTO>> obtenerGastosGeneralesConsolidados(
+            @Parameter(description = "ID de la empresa", required = true) @RequestParam Long empresaId) {
+        
+        log.info("🔍 GET /gastos-generales/gastos-consolidados - Empresa: {}", empresaId);
+        
+        try {
+            List<GastoGeneralConsolidadoDTO> gastos = gastoGeneralService.obtenerGastosGeneralesConsolidados(empresaId);
+            log.info("✅ Obtenidos {} gastos generales consolidados", gastos.size());
+            return ResponseEntity.ok(gastos);
+            
+        } catch (Exception e) {
+            log.error("❌ Error al obtener gastos generales consolidados: {}", e.getMessage(), e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
         }
     }

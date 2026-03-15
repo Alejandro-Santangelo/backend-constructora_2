@@ -2,9 +2,16 @@ package com.rodrigo.construccion.service;
 
 import com.rodrigo.construccion.dto.request.MaterialRequestDTO;
 import com.rodrigo.construccion.dto.response.MaterialEstadisticaResponseDTO;
+import com.rodrigo.construccion.dto.response.MaterialConsolidadoDTO;
+import com.rodrigo.construccion.dto.response.ObraMaterialDTO;
+import com.rodrigo.construccion.dto.response.AsignacionMaterialDTO;
 import com.rodrigo.construccion.exception.ResourceNotFoundException;
 import com.rodrigo.construccion.model.entity.Material;
+import com.rodrigo.construccion.model.entity.PagoConsolidado;
+import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
 import com.rodrigo.construccion.repository.MaterialRepository;
+import com.rodrigo.construccion.repository.PagoConsolidadoRepository;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -14,18 +21,29 @@ import jakarta.persistence.EntityManager;
 import org.hibernate.Session;
 
 import java.math.BigDecimal;
+import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @Transactional
 public class MaterialService implements IMaterialService {
 
     private final MaterialRepository materialRepository;
+    private final PagoConsolidadoRepository pagoConsolidadoRepository;
     private final EntityManager entityManager;
+    private final EmpresaService empresaService;
 
-    public MaterialService(MaterialRepository materialRepository, EntityManager entityManager) {
+    public MaterialService(MaterialRepository materialRepository, 
+                          PagoConsolidadoRepository pagoConsolidadoRepository,
+                          EntityManager entityManager,
+                          EmpresaService empresaService) {
         this.materialRepository = materialRepository;
+        this.pagoConsolidadoRepository = pagoConsolidadoRepository;
         this.entityManager = entityManager;
+        this.empresaService = empresaService;
     }
 
     /* Obtener todos los materiales activos */
@@ -191,6 +209,143 @@ public class MaterialService implements IMaterialService {
                     nuevoMaterial.setActivo(true);
                     return materialRepository.save(nuevoMaterial);
                 });
+    }
+
+    /**
+     * Obtener materiales consolidados con sus pagos
+     * Similar a obtenerGastosGeneralesConsolidados - usa tabla de PAGOS
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<MaterialConsolidadoDTO> obtenerMaterialesConsolidados(Long empresaId) {
+        log.info("🔍 [CONSOLIDADO-MAT] Obteniendo materiales consolidados para empresa ID: {}", empresaId);
+        
+        // Validar empresa
+        empresaService.findEmpresaById(empresaId);
+        log.info("✅ [CONSOLIDADO-MAT] Empresa {} validada correctamente", empresaId);
+        
+        // Obtener TODOS los pagos de materiales de la empresa (tabla pagos_material_obra)
+        log.info("📋 [CONSOLIDADO-MAT] Buscando TODOS los pagos de materiales para empresa {}...", empresaId);
+        List<PagoConsolidado> todosLosPagos = pagoConsolidadoRepository.findByEmpresaIdOrderByFechaPagoDesc(empresaId);
+        
+        log.info("📊 [CONSOLIDADO-MAT] Total pagos encontrados: {}", todosLosPagos.size());
+        
+        if (todosLosPagos.isEmpty()) {
+            log.warn("⚠️ [CONSOLIDADO-MAT] NO HAY PAGOS de materiales para empresa {}", empresaId);
+            return new ArrayList<>();
+        }
+        
+        // Agrupar pagos por concepto (tipo de material)
+        Map<String, List<PagoConsolidado>> pagosPorMaterial = todosLosPagos.stream()
+            .collect(Collectors.groupingBy(pago -> 
+                pago.getConcepto() != null ? pago.getConcepto() : "Material"
+            ));
+        
+        List<MaterialConsolidadoDTO> materialesDTO = new ArrayList<>();
+        
+        // Para cada tipo de material, crear su DTO consolidado
+        for (Map.Entry<String, List<PagoConsolidado>> entry : pagosPorMaterial.entrySet()) {
+            String conceptoMaterial = entry.getKey();
+            List<PagoConsolidado> pagosMaterial = entry.getValue();
+            
+            // Obtener datos del primer pago
+            PagoConsolidado primerPago = pagosMaterial.get(0);
+            
+            MaterialConsolidadoDTO materialDTO = MaterialConsolidadoDTO.builder()
+                .materialId(primerPago.getMaterialCalculadora() != null && primerPago.getMaterialCalculadora().getId() != null ? 
+                    primerPago.getMaterialCalculadora().getId() : null)
+                .materialNombre(primerPago.getConcepto())
+                .materialDescripcion(primerPago.getConcepto())
+                .unidadMedida(null)
+                .precioReferencia(primerPago.getPrecioUnitario())
+                .obras(new ArrayList<>())
+                .build();
+            
+            // Agrupar pagos por presupuestoNoClienteId (que representa la obra)
+            Map<Long, List<PagoConsolidado>> pagosPorObra = pagosMaterial.stream()
+                .filter(p -> p.getPresupuestoNoCliente() != null && p.getPresupuestoNoCliente().getId() != null)
+                .collect(Collectors.groupingBy(p -> p.getPresupuestoNoCliente().getId()));
+            
+            // Para cada obra, crear su DTO
+            for (Map.Entry<Long, List<PagoConsolidado>> obraEntry : pagosPorObra.entrySet()) {
+                Long presupuestoId = obraEntry.getKey();
+                List<PagoConsolidado> pagosObra = obraEntry.getValue();
+                
+                // Obtener datos de la obra
+                PagoConsolidado pagoObra = pagosObra.get(0);
+                PresupuestoNoCliente presupuesto = pagoObra.getPresupuestoNoCliente();
+                
+                ObraMaterialDTO obraDTO = ObraMaterialDTO.builder()
+                    .obraId(presupuestoId)
+                    .obraNombre(presupuesto != null && presupuesto.getNombreObra() != null ? 
+                        presupuesto.getNombreObra() : "Obra " + presupuestoId)
+                    .obraEstado(presupuesto != null && presupuesto.getEstado() != null ? 
+                        presupuesto.getEstado().name() : "DESCONOCIDO")
+                    .direccionCompleta(presupuesto != null ? construirDireccionPresupuesto(presupuesto) : "")
+                    .asignaciones(new ArrayList<>())
+                    .build();
+                
+                // Mapear cada pago a AsignacionMaterialDTO
+                for (PagoConsolidado pago : pagosObra) {
+                    AsignacionMaterialDTO asignacionDTO = mapearPagoAMaterialDTO(pago);
+                    obraDTO.getAsignaciones().add(asignacionDTO);
+                }
+                
+                // Calcular totales de la obra
+                obraDTO.calcularTotales();
+                materialDTO.getObras().add(obraDTO);
+            }
+            
+            // Calcular totales del material
+            materialDTO.calcularTotales();
+            materialesDTO.add(materialDTO);
+        }
+        
+        log.info("✅ [CONSOLIDADO-MAT] Se procesaron {} materiales con sus pagos", materialesDTO.size());
+        return materialesDTO;
+    }
+    
+    /**
+     * Mapea PagoConsolidado a AsignacionMaterialDTO
+     */
+    private AsignacionMaterialDTO mapearPagoAMaterialDTO(PagoConsolidado pago) {
+        BigDecimal cantidad = pago.getCantidad() != null ? pago.getCantidad() : BigDecimal.ONE;
+        BigDecimal precioUnitario = pago.getPrecioUnitario() != null ? pago.getPrecioUnitario() : BigDecimal.ZERO;
+        BigDecimal montoTotal = pago.getMonto() != null ? pago.getMonto() : 
+            precioUnitario.multiply(cantidad);
+        
+        return AsignacionMaterialDTO.builder()
+            .asignacionId(pago.getId())
+            .descripcion(pago.getConcepto())
+            .unidadMedida(null)
+            .esGlobal(false)
+            .cantidadAsignada(cantidad)
+            .cantidadUtilizada(cantidad) // Ya está pagado
+            .cantidadPendiente(BigDecimal.ZERO)
+            .precioUnitario(precioUnitario)
+            .totalAsignado(montoTotal)
+            .totalUtilizado(montoTotal) // Ya está pagado
+            .saldoPendiente(BigDecimal.ZERO)
+            .fechaAsignacion(pago.getFechaPago() != null ? pago.getFechaPago().atStartOfDay() : null)
+            .semana(null)
+            .observaciones(pago.getObservaciones())
+            .build();
+    }
+    
+    /**
+     * Construye dirección completa de un presupuesto
+     */
+    private String construirDireccionPresupuesto(PresupuestoNoCliente presupuesto) {
+        if (presupuesto == null) return "";
+        
+        StringBuilder direccion = new StringBuilder();
+        if (presupuesto.getDireccionObraCalle() != null && !presupuesto.getDireccionObraCalle().isBlank()) {
+            direccion.append(presupuesto.getDireccionObraCalle());
+        }
+        if (presupuesto.getDireccionObraAltura() != null && !presupuesto.getDireccionObraAltura().isBlank()) {
+            direccion.append(" ").append(presupuesto.getDireccionObraAltura());
+        }
+        return direccion.toString();
     }
 }
 

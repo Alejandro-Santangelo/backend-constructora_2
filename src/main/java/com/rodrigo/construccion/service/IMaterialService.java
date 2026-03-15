@@ -2,6 +2,7 @@ package com.rodrigo.construccion.service;
 
 import com.rodrigo.construccion.dto.request.MaterialRequestDTO;
 import com.rodrigo.construccion.dto.response.MaterialEstadisticaResponseDTO;
+import com.rodrigo.construccion.dto.response.MaterialConsolidadoDTO;
 import com.rodrigo.construccion.model.entity.Material;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -40,4 +41,7 @@ public interface IMaterialService {
 
     /* Busca un material por ID sin lanzar excepción si no existe */
     Material buscarPorIdOpcional(Long id);
+
+    /* Obtener materiales consolidados con sus asignaciones a obras para gestión de pagos */
+    List<MaterialConsolidadoDTO> obtenerMaterialesConsolidados(Long empresaId);
 }
