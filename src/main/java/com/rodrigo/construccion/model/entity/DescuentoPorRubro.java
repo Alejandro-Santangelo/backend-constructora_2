@@ -32,6 +32,11 @@ public class DescuentoPorRubro {
     @Column(name = "nombre_rubro", length = 100, nullable = false)
     private String nombreRubro;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "rubro_id")
+    @com.fasterxml.jackson.annotation.JsonIgnoreProperties({"hibernateLazyInitializer", "handler"})
+    private Rubro rubro;
+
     @Column(name = "activo", nullable = false, columnDefinition = "BOOLEAN DEFAULT true")
     private Boolean activo = true;
 

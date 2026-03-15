@@ -329,7 +329,7 @@ public class AdelantoService implements IAdelantoService {
         BigDecimal montoTotalAsignado = BigDecimal.ZERO;
         if (profesionalObra.getCantidadJornales() != null && profesionalObra.getImporteJornal() != null) {
             montoTotalAsignado = profesionalObra.getImporteJornal()
-                    .multiply(new BigDecimal(profesionalObra.getCantidadJornales()));
+                    .multiply(profesionalObra.getCantidadJornales());
         }
 
         if (montoTotalAsignado.compareTo(BigDecimal.ZERO) == 0) {
@@ -359,7 +359,7 @@ public class AdelantoService implements IAdelantoService {
         BigDecimal montoTotalAsignado = BigDecimal.ZERO;
         if (profesionalObra.getCantidadJornales() != null && profesionalObra.getImporteJornal() != null) {
             montoTotalAsignado = profesionalObra.getImporteJornal()
-                    .multiply(new BigDecimal(profesionalObra.getCantidadJornales()));
+                    .multiply(profesionalObra.getCantidadJornales());
         }
         
         if (montoTotalAsignado.compareTo(BigDecimal.ZERO) == 0) {

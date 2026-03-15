@@ -92,6 +92,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     private final ObraMaterialRepository obraMaterialRepository;
     private final TrabajoAdicionalRepository trabajoAdicionalRepository;
     private final ProfesionalObraService profesionalObraService;
+    private final RubroRepository rubroRepository;
 
     public PresupuestoNoClienteService(
             PresupuestoNoClienteRepository repository,
@@ -109,7 +110,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             PagoGastoGeneralObraRepository pagoGastoGeneralObraRepository,
             ObraMaterialRepository obraMaterialRepository,
             TrabajoAdicionalRepository trabajoAdicionalRepository,
-            ProfesionalObraService profesionalObraService) {
+            ProfesionalObraService profesionalObraService,
+            RubroRepository rubroRepository) {
         this.repository = repository;
         this.costoInicialRepository = costoInicialRepository;
         this.itemCalculadoraRepository = itemCalculadoraRepository;
@@ -126,6 +128,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         this.obraMaterialRepository = obraMaterialRepository;
         this.trabajoAdicionalRepository = trabajoAdicionalRepository;
         this.profesionalObraService = profesionalObraService;
+        this.rubroRepository = rubroRepository;
     }
 
     @PersistenceContext
@@ -1693,7 +1696,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                 
                 // Nuevos campos para tipoUnidad y cantidadJornales
                 prof.setTipoUnidad(profDto.getTipoUnidad() != null && !profDto.getTipoUnidad().isEmpty() ? profDto.getTipoUnidad().toLowerCase() : "jornales");
-                prof.setCantidadJornales(profDto.getCantidadJornales() != null ? BigDecimal.valueOf(profDto.getCantidadJornales()) : null);
+                prof.setCantidadJornales(profDto.getCantidadJornales());
                 
                 pnc.getProfesionales().add(prof);
             }
@@ -3263,10 +3266,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
                 // 🔧 FIX: Guardar cantidad de jornales e importe jornal para cálculos financieros
                 asignacion.setCantidadJornales(profCalc.getCantidadJornales() != null 
-                        ? profCalc.getCantidadJornales().intValue() 
-                        : 0);
+                        ? profCalc.getCantidadJornales() 
+                        : BigDecimal.ZERO);
                 asignacion.setImporteJornal(valorHora);
-                asignacion.setJornalesUtilizados(0); // Inicializar en 0
+                asignacion.setJornalesUtilizados(BigDecimal.ZERO); // Inicializar en 0
 
                 // Guardar asignación
                 ProfesionalObra asignacionGuardada = profesionalObraRepository.save(asignacion);
@@ -5814,6 +5817,42 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
                 totalPresupuesto, totalMayoresCostos, totalMayoresCostosPorRubro, totalHonorarios, totalDescuentosPorRubro, totalConHonorarios, totalConDescuentos);
     }
 
+    // ========== GESTIÓN DE RUBROS ==========
+
+    /**
+     * Busca un rubro existente por nombre (case-insensitive) o crea uno nuevo si no existe.
+     * Los rubros creados dinámicamente se marcan con categoría "personalizado".
+     * 
+     * @param nombreRubro Nombre del rubro a buscar o crear
+     * @return Entidad Rubro existente o recién creada
+     */
+    private com.rodrigo.construccion.model.entity.Rubro buscarOCrearRubro(String nombreRubro) {
+        if (nombreRubro == null || nombreRubro.trim().isEmpty()) {
+            log.warn("⚠️ Intento de buscar/crear rubro con nombre vacío o nulo");
+            throw new IllegalArgumentException("El nombre del rubro no puede estar vacío");
+        }
+
+        String nombreNormalizado = nombreRubro.trim();
+        
+        // Buscar rubro existente (case-insensitive)
+        return rubroRepository.findByNombreIgnoreCase(nombreNormalizado)
+                .orElseGet(() -> {
+                    // No existe, crear uno nuevo
+                    com.rodrigo.construccion.model.entity.Rubro nuevoRubro = 
+                        new com.rodrigo.construccion.model.entity.Rubro();
+                    nuevoRubro.setNombre(nombreNormalizado);
+                    nuevoRubro.setCategoria("personalizado");
+                    nuevoRubro.setDescripcion("Rubro creado automáticamente desde presupuesto");
+                    nuevoRubro.setActivo(true);
+                    
+                    com.rodrigo.construccion.model.entity.Rubro guardado = rubroRepository.save(nuevoRubro);
+                    log.info("✅ Rubro creado automáticamente: {} (ID: {})", 
+                            guardado.getNombre(), guardado.getId());
+                    
+                    return guardado;
+                });
+    }
+
     // ========== MAPEO DE HONORARIOS POR RUBRO ==========
 
     /**
@@ -5835,6 +5874,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             honorario.setId(dto.getId());
             honorario.setPresupuestoNoCliente(presupuesto);
             honorario.setNombreRubro(dto.getNombreRubro());
+            
+            // Buscar o crear rubro en tabla rubros
+            com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+            honorario.setRubro(rubro);
+            
             honorario.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
             honorario.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
             honorario.setValor(dto.getValor());
@@ -5881,6 +5925,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             mayorCosto.setId(dto.getId());
             mayorCosto.setPresupuestoNoCliente(presupuesto);
             mayorCosto.setNombreRubro(dto.getNombreRubro());
+            
+            // Buscar o crear rubro en tabla rubros
+            com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+            mayorCosto.setRubro(rubro);
+            
             mayorCosto.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
             mayorCosto.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
             mayorCosto.setValor(dto.getValor());
@@ -5932,6 +5981,11 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             descuento.setId(dto.getId());
             descuento.setPresupuestoNoCliente(presupuesto);
             descuento.setNombreRubro(dto.getNombreRubro());
+            
+            // Buscar o crear rubro en tabla rubros
+            com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+            descuento.setRubro(rubro);
+            
             descuento.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
             descuento.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
             descuento.setValor(dto.getValor());

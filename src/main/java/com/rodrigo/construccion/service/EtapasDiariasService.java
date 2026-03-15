@@ -234,7 +234,7 @@ public class EtapasDiariasService {
                         .profesionalId(((Number) row[1]).longValue())
                         .profesionalNombre((String) row[2])
                         .tipoProfesional((String) row[3])
-                        .cantidadJornales(row[4] != null ? ((Number) row[4]).intValue() : 0)
+                        .cantidadJornales(row[4] != null ? BigDecimal.valueOf(((Number) row[4]).longValue()) : BigDecimal.ZERO)
                         .semanaIso((String) row[5])
                         .build())
                 .toList();

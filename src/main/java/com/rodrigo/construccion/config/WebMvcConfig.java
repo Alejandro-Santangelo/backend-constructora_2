@@ -14,16 +14,31 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  * 
  * También registra el TenantInterceptor para establecer automáticamente
  * el empresaId en el TenantContext desde el query param.
+ * 
+ * SEGURIDAD: Registra EmpresaValidationInterceptor para validar que el usuario
+ * tenga permiso para acceder a la empresa solicitada (multi-tenant security).
  */
 @Configuration
 @RequiredArgsConstructor
 public class WebMvcConfig implements WebMvcConfigurer {
 
     private final TenantInterceptor tenantInterceptor;
+    private final EmpresaValidationInterceptor empresaValidationInterceptor;
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // Registrar TenantInterceptor para TODOS los endpoints
+        // SEGURIDAD: Registrar EmpresaValidationInterceptor PRIMERO
+        // Valida que el usuario tenga permiso para acceder a la empresa solicitada
+        registry.addInterceptor(empresaValidationInterceptor)
+                .addPathPatterns("/api/**")
+                .excludePathPatterns(
+                        "/api/auth/**",       // Excluir autenticación
+                        "/swagger-ui/**",     // Excluir Swagger UI
+                        "/v3/api-docs/**",    // Excluir OpenAPI docs
+                        "/api-docs/**"        // Excluir API docs
+                );
+        
+        // Registrar TenantInterceptor para establecer empresaId en contexto
         registry.addInterceptor(tenantInterceptor)
                 .addPathPatterns("/**")
                 .excludePathPatterns(

@@ -12,12 +12,14 @@ import com.rodrigo.construccion.repository.AsignacionProfesionalDiaRepository;
 import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.repository.ProfesionalRepository;
+import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
 import com.rodrigo.construccion.util.DiasHabilesUtil;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -36,8 +38,26 @@ public class AsignacionSemanalService {
     private final AsignacionProfesionalDiaRepository asignacionDiaRepository;
     private final ObraRepository obraRepository;
     private final ProfesionalRepository profesionalRepository;
+    private final HonorarioPorRubroRepository honorarioPorRubroRepository;
 
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+
+    /**
+     * Obtener nombre del rubro desde honorarios_por_rubro si existe
+     */
+    private String obtenerRubroNombrePorId(Long rubroId) {
+        if (rubroId == null || rubroId == 0L) {
+            return "Asignación Semanal";
+        }
+        try {
+            return honorarioPorRubroRepository.findById(rubroId)
+                    .map(rubro -> rubro.getNombreRubro())
+                    .orElse("Asignación Semanal");
+        } catch (Exception e) {
+            log.warn("No se pudo obtener el rubroNombre para rubroId: {}", rubroId);
+            return "Asignación Semanal";
+        }
+    }
 
     /**
      * Crear asignación semanal (modalidad "total" o "semanal")
@@ -94,7 +114,7 @@ public class AsignacionSemanalService {
             throw new BusinessException("No hay días hábiles en el período especificado");
         }
 
-        int totalJornales = 0;
+        BigDecimal totalJornales = BigDecimal.ZERO;
         int totalProfesionales = request.getProfesionales().size();
 
         // Para cada profesional
@@ -117,10 +137,16 @@ public class AsignacionSemanalService {
             asignacion.setEstado("ACTIVO");
             asignacion.setFechaInicio(obra.getFechaInicio());
             // Usar rubroId del DTO si existe, sino usar 0L como fallback
-            asignacion.setRubroId(profDTO.getRubroId() != null ? profDTO.getRubroId() : 0L);
-            asignacion.setRubroNombre(profDTO.getRubroNombre() != null ? profDTO.getRubroNombre() : "Asignación Semanal");
-            asignacion.setCantidadJornales(diasHabiles.size() * profDTO.getCantidadPorDia());
-            asignacion.setJornalesUtilizados(0);
+            Long rubroId = profDTO.getRubroId() != null ? profDTO.getRubroId() : 0L;
+            asignacion.setRubroId(rubroId);
+            // Obtener rubroNombre del DTO, o buscarlo en honorarios_por_rubro, o usar fallback
+            String rubroNombre = profDTO.getRubroNombre();
+            if (rubroNombre == null || rubroNombre.trim().isEmpty()) {
+                rubroNombre = obtenerRubroNombrePorId(rubroId);
+            }
+            asignacion.setRubroNombre(rubroNombre);
+            asignacion.setCantidadJornales(BigDecimal.valueOf(diasHabiles.size() * profDTO.getCantidadPorDia()));
+            asignacion.setJornalesUtilizados(BigDecimal.ZERO);
 
             asignacion = asignacionRepository.save(asignacion);
 
@@ -137,7 +163,7 @@ public class AsignacionSemanalService {
             }
 
             asignacionDiaRepository.saveAll(diasAsignacion);
-            totalJornales += asignacion.getCantidadJornales();
+            totalJornales = totalJornales.add(asignacion.getCantidadJornales());
 
             log.info("Asignación creada para profesional {} con {} jornales en {} días", 
                     profesional.getNombre(), asignacion.getCantidadJornales(), diasHabiles.size());
@@ -147,7 +173,7 @@ public class AsignacionSemanalService {
                 .success(true)
                 .message("Asignación creada correctamente")
                 .data(AsignacionSemanalCreacionResponseDTO.DatosAsignacionDTO.builder()
-                        .totalJornalesAsignados(totalJornales)
+                        .totalJornalesAsignados(totalJornales.intValue())
                         .diasHabiles(diasHabiles.size())
                         .profesionalesAsignados(totalProfesionales)
                         .build())
@@ -202,12 +228,16 @@ public class AsignacionSemanalService {
                 asignacion.setEstado("ACTIVO");
                 asignacion.setFechaInicio(obra.getFechaInicio());
                 // Usar rubroId del profesional si existe, sino usar 0L como fallback
-                asignacion.setRubroId(profDTO.getRubroId() != null ? profDTO.getRubroId() : 0L);
-                asignacion.setRubroNombre(profDTO.getRubroNombre() != null 
-                    ? profDTO.getRubroNombre() 
-                    : "Asignación Semanal - " + semanaDTO.getSemanaKey());
-                asignacion.setCantidadJornales(jornalesSemana);
-                asignacion.setJornalesUtilizados(0);
+                Long rubroId = profDTO.getRubroId() != null ? profDTO.getRubroId() : 0L;
+                asignacion.setRubroId(rubroId);
+                // Obtener rubroNombre del DTO, o buscarlo en honorarios_por_rubro, o usar fallback
+                String rubroNombre = profDTO.getRubroNombre();
+                if (rubroNombre == null || rubroNombre.trim().isEmpty()) {
+                    rubroNombre = obtenerRubroNombrePorId(rubroId);
+                }
+                asignacion.setRubroNombre(rubroNombre);
+                asignacion.setCantidadJornales(BigDecimal.valueOf(jornalesSemana));
+                asignacion.setJornalesUtilizados(BigDecimal.ZERO);
 
                 asignacion = asignacionRepository.save(asignacion);
 
@@ -308,8 +338,10 @@ public class AsignacionSemanalService {
                     .collect(Collectors.toList());
 
             int totalJornales = grupo.stream()
-                    .mapToInt(a -> a.getCantidadJornales() != null ? a.getCantidadJornales() : 0)
-                    .sum();
+                    .filter(a -> a.getCantidadJornales() != null)
+                    .map(a -> a.getCantidadJornales())
+                    .reduce(BigDecimal.ZERO, BigDecimal::add)
+                    .intValue();
 
             resultado.add(AsignacionSemanalResponseDTO.builder()
                     .asignacionId(primera.getId())

@@ -41,7 +41,7 @@ public class ProfesionalJornalResumenDTO {
     /**
      * Cantidad de jornales registrados
      */
-    private Integer cantidadJornales;
+    private BigDecimal cantidadJornales;
 
     /**
      * Total de horas trabajadas (suma de horasTrabajadasDecimal)
@@ -58,9 +58,9 @@ public class ProfesionalJornalResumenDTO {
      * Promedio de horas por jornal
      */
     public BigDecimal getPromedioHorasPorJornal() {
-        if (cantidadJornales != null && cantidadJornales > 0 && totalHorasDecimal != null) {
+        if (cantidadJornales != null && cantidadJornales.compareTo(BigDecimal.ZERO) > 0 && totalHorasDecimal != null) {
             return totalHorasDecimal.divide(
-                BigDecimal.valueOf(cantidadJornales), 
+                cantidadJornales, 
                 2, 
                 java.math.RoundingMode.HALF_UP
             );
@@ -72,9 +72,9 @@ public class ProfesionalJornalResumenDTO {
      * Promedio de monto por jornal
      */
     public BigDecimal getPromedioMontoPorJornal() {
-        if (cantidadJornales != null && cantidadJornales > 0 && totalCobrado != null) {
+        if (cantidadJornales != null && cantidadJornales.compareTo(BigDecimal.ZERO) > 0 && totalCobrado != null) {
             return totalCobrado.divide(
-                BigDecimal.valueOf(cantidadJornales), 
+                cantidadJornales, 
                 2, 
                 java.math.RoundingMode.HALF_UP
             );

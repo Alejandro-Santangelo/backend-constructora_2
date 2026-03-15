@@ -304,7 +304,7 @@ public class ProfesionalJornalDiarioService {
                 .profesionalNombre(profesional.getNombre())
                 .obraId(obraId)
                 .obraNombre(obra.getNombre())
-                .cantidadJornales((int) cantidadJornales)
+                .cantidadJornales(BigDecimal.valueOf(cantidadJornales))
                 .totalHorasDecimal(totalHoras)
                 .totalCobrado(totalCobrado)
                 .build();
@@ -327,7 +327,7 @@ public class ProfesionalJornalDiarioService {
                     .profesionalNombre((String) row[1])
                     .obraId(obraId)
                     .obraNombre(obra.getNombre())
-                    .cantidadJornales(((Long) row[2]).intValue())
+                    .cantidadJornales(row[2] != null ? BigDecimal.valueOf(((Number) row[2]).longValue()) : BigDecimal.ZERO)
                     .totalHorasDecimal((BigDecimal) row[3])
                     .totalCobrado((BigDecimal) row[4])
                     .build());
@@ -352,7 +352,7 @@ public class ProfesionalJornalDiarioService {
                     .profesionalNombre(profesional.getNombre())
                     .obraId((Long) row[0])
                     .obraNombre((String) row[1])
-                    .cantidadJornales(((Long) row[2]).intValue())
+                    .cantidadJornales(row[2] != null ? BigDecimal.valueOf(((Number) row[2]).longValue()) : BigDecimal.ZERO)
                     .totalHorasDecimal((BigDecimal) row[3])
                     .totalCobrado((BigDecimal) row[4])
                     .build());

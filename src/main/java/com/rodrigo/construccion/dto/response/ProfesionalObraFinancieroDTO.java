@@ -44,8 +44,8 @@ public class ProfesionalObraFinancieroDTO {
     @Schema(description = "Rol en la obra", example = "Oficial")
     private String rolEnObra;
 
-    @Schema(description = "Cantidad de jornales asignados", example = "20")
-    private Integer cantidadJornales;
+    @Schema(description = "Cantidad de jornales asignados (puede ser decimal)", example = "20.5")
+    private BigDecimal cantidadJornales;
 
     @Schema(description = "Precio por jornal", example = "15000.00")
     private BigDecimal precioJornal;
@@ -65,8 +65,8 @@ public class ProfesionalObraFinancieroDTO {
     @Schema(description = "Monto total asignado (alias)", example = "300000.00")
     private BigDecimal montoTotal;
 
-    @Schema(description = "Jornales utilizados hasta el momento", example = "5")
-    private Integer jornalesUtilizados;
+    @Schema(description = "Jornales utilizados hasta el momento (puede ser decimal)", example = "5.5")
+    private BigDecimal jornalesUtilizados;
 
     @Schema(description = "Fecha de inicio de la asignación", example = "2024-01-15")
     private LocalDate fechaInicio;

@@ -96,12 +96,12 @@ public class AsignacionProfesionalObra {
     private BigDecimal importeJornal;
 
     @PositiveOrZero(message = "La cantidad de jornales debe ser mayor o igual a cero")
-    @Column(name = "cantidad_jornales")
-    private Integer cantidadJornales;
+    @Column(name = "cantidad_jornales", precision = 10, scale = 2)
+    private BigDecimal cantidadJornales;
 
     @PositiveOrZero(message = "Los jornales utilizados deben ser mayor o igual a cero")
-    @Column(name = "jornales_utilizados")
-    private Integer jornalesUtilizados = 0;
+    @Column(name = "jornales_utilizados", precision = 10, scale = 2)
+    private BigDecimal jornalesUtilizados = BigDecimal.ZERO;
 
     @NotNull(message = "La fecha de inicio es obligatoria")
     @Column(name = "fecha_inicio", nullable = false)
@@ -142,11 +142,11 @@ public class AsignacionProfesionalObra {
 
     // ==================== MÉTODOS DE CONVENIENCIA ====================
 
-    public Integer getJornalesRestantes() {
+    public BigDecimal getJornalesRestantes() {
         if (cantidadJornales == null || jornalesUtilizados == null) {
-            return 0;
+            return BigDecimal.ZERO;
         }
-        return cantidadJornales - jornalesUtilizados;
+        return cantidadJornales.subtract(jornalesUtilizados);
     }
 
     /**

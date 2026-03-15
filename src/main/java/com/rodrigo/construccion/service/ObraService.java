@@ -294,8 +294,8 @@ public class ObraService implements IObraService {
 
             // 🔧 DATOS FINANCIEROS: Campos críticos para adelantos y pagos
             asignacion.setImporteJornal(valorHora);
-            asignacion.setCantidadJornales(profForm.getCantidadJornales() != null ? profForm.getCantidadJornales() : 0);
-            asignacion.setJornalesUtilizados(0);
+            asignacion.setCantidadJornales(profForm.getCantidadJornales() != null ? profForm.getCantidadJornales() : BigDecimal.ZERO);
+            asignacion.setJornalesUtilizados(BigDecimal.ZERO);
 
             profesionalObraRepository.save(asignacion);
         }

@@ -1,5 +1,6 @@
 package com.rodrigo.construccion.dto;
 
+import java.math.BigDecimal;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -18,6 +19,6 @@ public class ProfesionalDisponibleDTO {
     private Long profesionalId;
     private String profesionalNombre;
     private String tipoProfesional;
-    private Integer cantidadJornales;
+    private BigDecimal cantidadJornales;
     private String semanaIso;
 }

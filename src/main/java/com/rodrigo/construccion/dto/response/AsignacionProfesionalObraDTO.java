@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -49,14 +50,14 @@ public class AsignacionProfesionalObraDTO {
     @Schema(description = "Tipo de asignación", example = "JORNAL", allowableValues = {"PROFESIONAL", "JORNAL"})
     private String tipoAsignacion;
 
-    @Schema(description = "Cantidad de jornales asignados", example = "10")
-    private Integer cantidadJornales;
+    @Schema(description = "Cantidad de jornales asignados (puede ser decimal para fracciones de jornal)", example = "10.5")
+    private BigDecimal cantidadJornales;
 
-    @Schema(description = "Jornales ya utilizados", example = "3")
-    private Integer jornalesUtilizados;
+    @Schema(description = "Jornales ya utilizados (puede ser decimal)", example = "3.5")
+    private BigDecimal jornalesUtilizados;
 
-    @Schema(description = "Jornales restantes", example = "7")
-    private Integer jornalesRestantes;
+    @Schema(description = "Jornales restantes (puede ser decimal)", example = "7.0")
+    private BigDecimal jornalesRestantes;
 
     @Schema(description = "Fecha de inicio", example = "2025-12-01")
     private LocalDate fechaInicio;

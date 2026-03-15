@@ -28,6 +28,7 @@ import com.rodrigo.construccion.repository.ProfesionalObraRepository;
 import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
+import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -59,6 +60,7 @@ public class ProfesionalObraService implements IProfesionalObraService {
     private final PagoProfesionalObraRepository pagoRepository;
     private final ObraRepository obraRepository;
     private final AsignacionProfesionalObraRepository asignacionProfesionalObraRepository;
+    private final HonorarioPorRubroRepository honorarioPorRubroRepository;
     private final IEmpresaService empresaService;
     private final ProfesionalObraMapper profesionalObraMapper;
     private final IProfesionalService profesionalService;
@@ -145,8 +147,8 @@ public class ProfesionalObraService implements IProfesionalObraService {
 
         // 🔧 DATOS FINANCIEROS: Establecer campos requeridos para cálculos de adelantos y pagos
         asignacion.setImporteJornal(valorHora); // Mismo valor que valorHoraAsignado
-        asignacion.setCantidadJornales(request.getCantidadJornales() != null ? request.getCantidadJornales() : 0);
-        asignacion.setJornalesUtilizados(0); // Inicializar en 0
+        asignacion.setCantidadJornales(request.getCantidadJornales() != null ? request.getCantidadJornales() : BigDecimal.ZERO);
+        asignacion.setJornalesUtilizados(BigDecimal.ZERO); // Inicializar en 0
 
         // 5. Guardar la asignación en la base de datos
         log.info("💾 Guardando asignación en base de datos...");
@@ -546,12 +548,12 @@ public class ProfesionalObraService implements IProfesionalObraService {
         dto.setObservaciones(po.getObservaciones());
         
         // Datos financieros de jornales
-        Integer cantidadJornales = po.getCantidadJornales();
+        BigDecimal cantidadJornales = po.getCantidadJornales();
         BigDecimal importeJornal = po.getImporteJornal();
-        Integer jornalesUtilizados = po.getJornalesUtilizados();
+        BigDecimal jornalesUtilizados = po.getJornalesUtilizados();
         
-        dto.setCantidadJornales(cantidadJornales != null ? cantidadJornales : 0);
-        dto.setJornalesUtilizados(jornalesUtilizados != null ? jornalesUtilizados : 0);
+        dto.setCantidadJornales(cantidadJornales != null ? cantidadJornales : BigDecimal.ZERO);
+        dto.setJornalesUtilizados(jornalesUtilizados != null ? jornalesUtilizados : BigDecimal.ZERO);
         
         // Precio por jornal (3 aliases)
         BigDecimal precioJornal = importeJornal != null ? importeJornal : BigDecimal.ZERO;
@@ -561,8 +563,8 @@ public class ProfesionalObraService implements IProfesionalObraService {
         
         // Precio total = cantidadJornales × precioJornal (3 aliases)
         BigDecimal precioTotal = BigDecimal.ZERO;
-        if (cantidadJornales != null && cantidadJornales > 0 && importeJornal != null) {
-            precioTotal = importeJornal.multiply(new BigDecimal(cantidadJornales));
+        if (cantidadJornales != null && cantidadJornales.compareTo(BigDecimal.ZERO) > 0 && importeJornal != null) {
+            precioTotal = importeJornal.multiply(cantidadJornales);
         }
         dto.setPrecioTotal(precioTotal);
         dto.setPrecio(precioTotal);
@@ -884,8 +886,8 @@ public class ProfesionalObraService implements IProfesionalObraService {
 
                     // 🔧 DATOS FINANCIEROS: Campos requeridos para sistema de adelantos
                     asignacion.setImporteJornal(tipoProfesional.valorHoraSugerido);
-                    asignacion.setCantidadJornales(0); // Se actualizará después
-                    asignacion.setJornalesUtilizados(0);
+                    asignacion.setCantidadJornales(BigDecimal.ZERO); // Se actualizará después
+                    asignacion.setJornalesUtilizados(BigDecimal.ZERO);
 
                     ProfesionalObra asignacionGuardada = profesionalObraRepository.save(asignacion);
                     asignacionesCreadas.add(asignacionGuardada);
@@ -1013,12 +1015,12 @@ public class ProfesionalObraService implements IProfesionalObraService {
      */
     private ProfesionalPagoDTO mapearAsignacionAProfesionalPagoDTO(AsignacionProfesionalObra asig) {
         BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
-        Integer cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : 0;
-        Integer jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : 0;
-        Integer jornalesRestantes = cantidadJornales - jornalesUtilizados;
+        BigDecimal cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : BigDecimal.ZERO;
+        BigDecimal jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : BigDecimal.ZERO;
+        BigDecimal jornalesRestantes = cantidadJornales.subtract(jornalesUtilizados);
         
-        BigDecimal totalAsignado = importeJornal.multiply(BigDecimal.valueOf(cantidadJornales));
-        BigDecimal totalUtilizado = importeJornal.multiply(BigDecimal.valueOf(jornalesUtilizados));
+        BigDecimal totalAsignado = importeJornal.multiply(cantidadJornales);
+        BigDecimal totalUtilizado = importeJornal.multiply(jornalesUtilizados);
         BigDecimal saldoPendiente = totalAsignado.subtract(totalUtilizado);
         
         return ProfesionalPagoDTO.builder()
@@ -1187,18 +1189,32 @@ public class ProfesionalObraService implements IProfesionalObraService {
      */
     private AsignacionRubroDTO mapearAsignacionARubroDTO(AsignacionProfesionalObra asig) {
         BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
-        Integer cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : 0;
-        Integer jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : 0;
-        Integer jornalesRestantes = cantidadJornales - jornalesUtilizados;
+        BigDecimal cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : BigDecimal.ZERO;
+        BigDecimal jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : BigDecimal.ZERO;
+        BigDecimal jornalesRestantes = cantidadJornales.subtract(jornalesUtilizados);
         
-        BigDecimal totalAsignado = importeJornal.multiply(BigDecimal.valueOf(cantidadJornales));
-        BigDecimal totalUtilizado = importeJornal.multiply(BigDecimal.valueOf(jornalesUtilizados));
+        BigDecimal totalAsignado = importeJornal.multiply(cantidadJornales);
+        BigDecimal totalUtilizado = importeJornal.multiply(jornalesUtilizados);
         BigDecimal saldoPendiente = totalAsignado.subtract(totalUtilizado);
+        
+        // Obtener rubroNombre dinámicamente desde honorarios_por_rubro si no existe o es un valor por defecto
+        String rubroNombre = asig.getRubroNombre();
+        if (rubroNombre == null || rubroNombre.isEmpty() || rubroNombre.startsWith("Asignación Semanal")) {
+            if (asig.getRubroId() != null && asig.getRubroId() > 0L) {
+                try {
+                    rubroNombre = honorarioPorRubroRepository.findById(asig.getRubroId())
+                            .map(rubro -> rubro.getNombreRubro())
+                            .orElse(asig.getRubroNombre());
+                } catch (Exception e) {
+                    log.warn("No se pudo obtener el rubroNombre para rubroId: {}", asig.getRubroId());
+                }
+            }
+        }
         
         return AsignacionRubroDTO.builder()
             .asignacionId(asig.getId())
             .rubroId(asig.getRubroId())
-            .rubroNombre(asig.getRubroNombre())
+            .rubroNombre(rubroNombre)
             .tipoAsignacion(asig.getTipoAsignacion())
             .importeJornal(importeJornal)
             .cantidadJornales(cantidadJornales)

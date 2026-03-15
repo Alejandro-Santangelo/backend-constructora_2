@@ -6,6 +6,7 @@ import jakarta.validation.constraints.Positive;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 /**
@@ -49,8 +50,8 @@ public class AsignarProfesionalRequest {
     @Schema(description = "Valor por hora asignado para esta obra específica", example = "25000")
     public Double valorHoraAsignado;
 
-    @Schema(description = "Cantidad de jornales asignados (opcional, por defecto 0)", example = "20")
-    public Integer cantidadJornales;
+    @Schema(description = "Cantidad de jornales asignados (puede ser decimal para fracciones de jornal)", example = "20.5")
+    public BigDecimal cantidadJornales;
 
     @Schema(description = "Estado de la asignación", example = "true", defaultValue = "true")
     public Boolean activo = true;

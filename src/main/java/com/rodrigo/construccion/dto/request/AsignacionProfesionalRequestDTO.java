@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.PositiveOrZero;
 import lombok.*;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -41,7 +42,7 @@ public class AsignacionProfesionalRequestDTO {
 
     @PositiveOrZero(message = "La cantidad de jornales debe ser mayor o igual a cero")
     @Schema(description = "Cantidad de jornales a asignar (solo si tipoAsignacion=JORNAL)", example = "10")
-    private Integer cantidadJornales;
+    private BigDecimal cantidadJornales;
 
     @Schema(description = "Fecha de inicio de la asignación", example = "2025-12-01")
     private LocalDate fechaInicio;

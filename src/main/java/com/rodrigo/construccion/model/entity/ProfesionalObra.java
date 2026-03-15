@@ -54,14 +54,14 @@ public class ProfesionalObra {
     @Column(name = "importe_jornal", precision = 10, scale = 2)
     private BigDecimal valorHoraAsignado;
     
-    @Column(name = "cantidad_jornales")
-    private Integer cantidadJornales;
+    @Column(name = "cantidad_jornales", precision = 10, scale = 2)
+    private BigDecimal cantidadJornales;
     
     @Column(name = "importe_jornal", precision = 15, scale = 2, insertable = false, updatable = false)
     private BigDecimal importeJornal;
     
-    @Column(name = "jornales_utilizados")
-    private Integer jornalesUtilizados;
+    @Column(name = "jornales_utilizados", precision = 10, scale = 2)
+    private BigDecimal jornalesUtilizados;
     
     @Column(name = "observaciones", columnDefinition = "TEXT")
     private String observaciones;

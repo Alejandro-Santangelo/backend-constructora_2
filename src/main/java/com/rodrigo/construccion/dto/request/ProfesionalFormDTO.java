@@ -33,7 +33,7 @@ public class ProfesionalFormDTO {
     private BigDecimal valorHora;
 
     @Schema(description = "Cantidad de jornales asignados (opcional)", example = "21")
-    private Integer cantidadJornales;
+    private BigDecimal cantidadJornales;
 
     @Schema(description = "Indica si es un profesional ingresado manualmente (true) o existente del sistema (false)", 
             example = "false", requiredMode = Schema.RequiredMode.REQUIRED)

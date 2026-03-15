@@ -28,9 +28,9 @@ public class AsignacionRubroDTO {
     // Datos de la asignación
     private String tipoAsignacion; // PROFESIONAL o JORNAL
     private BigDecimal importeJornal;
-    private Integer cantidadJornales;
-    private Integer jornalesUtilizados;
-    private Integer jornalesRestantes;
+    private BigDecimal cantidadJornales;
+    private BigDecimal jornalesUtilizados;
+    private BigDecimal jornalesRestantes;
     
     // Financiero
     private BigDecimal totalAsignado;

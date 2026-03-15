@@ -11,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -63,7 +64,7 @@ public class AsignacionProfesionalObraService {
 
         // Validaciones específicas para asignación por JORNAL
         if ("JORNAL".equals(request.getTipoAsignacion())) {
-            if (request.getCantidadJornales() == null || request.getCantidadJornales() <= 0) {
+            if (request.getCantidadJornales() == null || request.getCantidadJornales().compareTo(BigDecimal.ZERO) <= 0) {
                 throw new BusinessException("Debe especificar cantidad de jornales para asignación tipo JORNAL");
             }
 
@@ -93,8 +94,8 @@ public class AsignacionProfesionalObraService {
             int jornalesDisponibles = cantidadTotal - jornalesAsignados;
 
             // Paso 5: Validar que hay suficientes jornales disponibles
-            if (request.getCantidadJornales() > jornalesDisponibles) {
-                throw new BusinessException(String.format("Jornales insuficientes. Disponibles: %d, Solicitados: %d", jornalesDisponibles,
+            if (request.getCantidadJornales().compareTo(BigDecimal.valueOf(jornalesDisponibles)) > 0) {
+                throw new BusinessException(String.format("Jornales insuficientes. Disponibles: %d, Solicitados: %s", jornalesDisponibles,
                         request.getCantidadJornales()
                 ));
             }
@@ -125,7 +126,7 @@ public class AsignacionProfesionalObraService {
         // Tipo de asignación y jornales
         asignacion.setTipoAsignacion(request.getTipoAsignacion());
         asignacion.setCantidadJornales(request.getCantidadJornales());
-        asignacion.setJornalesUtilizados(0);
+        asignacion.setJornalesUtilizados(BigDecimal.ZERO);
         // Fechas
         asignacion.setFechaInicio(request.getFechaInicio() != null ? request.getFechaInicio() : LocalDate.now());
         asignacion.setFechaFin(request.getFechaFin());

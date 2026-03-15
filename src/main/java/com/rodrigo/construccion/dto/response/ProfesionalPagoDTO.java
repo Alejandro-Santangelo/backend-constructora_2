@@ -24,9 +24,9 @@ public class ProfesionalPagoDTO {
     
     private String tipoAsignacion; // PROFESIONAL o JORNAL
     private BigDecimal importeJornal;
-    private Integer cantidadJornales;
-    private Integer jornalesUtilizados;
-    private Integer jornalesRestantes;
+    private BigDecimal cantidadJornales;
+    private BigDecimal jornalesUtilizados;
+    private BigDecimal jornalesRestantes;
     
     private BigDecimal totalAsignado; // importeJornal * cantidadJornales
     private BigDecimal totalUtilizado; // importeJornal * jornalesUtilizados
