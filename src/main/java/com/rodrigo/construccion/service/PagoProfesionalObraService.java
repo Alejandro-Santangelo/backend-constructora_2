@@ -10,6 +10,10 @@ import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
 import com.rodrigo.construccion.repository.ProfesionalObraRepository;
 import com.rodrigo.construccion.repository.PagoAdelantoAplicadoRepository;
+import com.rodrigo.construccion.repository.ProfesionalJornalDiarioRepository;
+import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
+import com.rodrigo.construccion.repository.ProfesionalRepository;
+import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.config.TenantContext;
 
 import lombok.RequiredArgsConstructor;
@@ -35,6 +39,10 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
     private final ProfesionalObraRepository profesionalObraRepository;
     private final AsignacionProfesionalObraRepository asignacionRepository;
     private final PagoAdelantoAplicadoRepository pagoAdelantoAplicadoRepository;
+    private final ProfesionalJornalDiarioRepository jornalDiarioRepository;
+    private final HonorarioPorRubroRepository honorarioRubroRepository;
+    private final ProfesionalRepository profesionalRepository;
+    private final ObraRepository obraRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -700,9 +708,74 @@ public class PagoProfesionalObraService implements IPagoProfesionalObraService {
             }
             
             try {
-                // Buscar asignación
-                AsignacionProfesionalObra asignacion = asignacionRepository.findById(asignacionId)
-                    .orElseThrow(() -> new RuntimeException("Asignación no encontrada: " + asignacionId));
+                AsignacionProfesionalObra asignacion;
+                
+                // 🔍 Detectar asignaciones virtuales (IDs negativos de jornales diarios)
+                if (asignacionId < 0) {
+                    log.info("🔄 Asignación virtual detectada (ID negativo): {}", asignacionId);
+                    
+                    // Decodificar el ID virtual: -1 * (profesionalId * 100000 + obraId)
+                    long idPositivo = Math.abs(asignacionId);
+                    long profesionalId = idPositivo / 100000;
+                    long obraId = idPositivo % 100000;
+                    
+                    log.info("📍 Decodificado - ProfesionalId: {}, ObraId: {}", profesionalId, obraId);
+                    
+                    // Buscar o crear asignación real para este profesional/obra
+                    asignacion = asignacionRepository
+                        .findByProfesionalIdAndObraIdAndEmpresaId(profesionalId, obraId, request.getEmpresaId())
+                        .stream()
+                        .findFirst()
+                        .orElseGet(() -> {
+                            log.info("➕ Creando nueva asignación real para profesional {} en obra {}", profesionalId, obraId);
+                            
+                            AsignacionProfesionalObra nueva = new AsignacionProfesionalObra();
+                            nueva.setEmpresaId(request.getEmpresaId());
+                            nueva.setProfesionalId(profesionalId);
+                            nueva.setObraId(obraId);
+                            nueva.setEstado("ACTIVO");
+                            nueva.setFechaInicio(LocalDate.now());
+                            nueva.setModalidad("JORNAL_DIARIO");
+                            nueva.setTipoAsignacion("JORNAL"); // Campo obligatorio
+                            
+                            // Cargar entidades relacionadas
+                            var profesional = profesionalRepository.findById(profesionalId)
+                                .orElseThrow(() -> new RuntimeException("Profesional no encontrado: " + profesionalId));
+                            var obra = obraRepository.findById(obraId)
+                                .orElseThrow(() -> new RuntimeException("Obra no encontrada: " + obraId));
+                            
+                            nueva.setProfesional(profesional);
+                            nueva.setObra(obra);
+                            
+                            // Buscar el rubro desde los jornales diarios
+                            var jornales = jornalDiarioRepository.findByProfesionalIdAndObraIdOrderByFechaDesc(
+                                profesionalId, obraId);
+                            
+                            if (!jornales.isEmpty() && jornales.get(0).getRubroId() != null) {
+                                Long rubroId = jornales.get(0).getRubroId();
+                                nueva.setRubroId(rubroId);
+                                
+                                // Obtener el nombre del rubro
+                                honorarioRubroRepository.findById(rubroId).ifPresent(rubro -> {
+                                    nueva.setRubroNombre(rubro.getNombreRubro());
+                                    log.info("✅ Rubro asignado: {} (ID: {})", rubro.getNombreRubro(), rubroId);
+                                });
+                            } else {
+                                // Si no hay jornales, usar valores por defecto
+                                nueva.setRubroId(0L);
+                                nueva.setRubroNombre("Sin rubro");
+                                log.warn("⚠️ No se encontraron jornales para profesional {} en obra {}", profesionalId, obraId);
+                            }
+                            
+                            return asignacionRepository.save(nueva);
+                        });
+                    
+                    log.info("✅ Asignación real obtenida/creada con ID: {}", asignacion.getId());
+                } else {
+                    // Buscar asignación tradicional
+                    asignacion = asignacionRepository.findById(asignacionId)
+                        .orElseThrow(() -> new RuntimeException("Asignación no encontrada: " + asignacionId));
+                }
                 
                 log.info("💰 Procesando pago: Asig={}, Prof={}, Obra={}, Rubro={}, Monto=${}",
                     asignacionId,

@@ -30,6 +30,11 @@ import com.rodrigo.construccion.repository.PagoProfesionalObraRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
+import com.rodrigo.construccion.repository.PresupuestoNoClienteRepository;
+import com.rodrigo.construccion.repository.ProfesionalJornalDiarioRepository;
+import com.rodrigo.construccion.model.entity.ProfesionalJornalDiario;
+import com.rodrigo.construccion.model.entity.HonorarioPorRubro;
+import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -62,6 +67,8 @@ public class ProfesionalObraService implements IProfesionalObraService {
     private final ObraRepository obraRepository;
     private final AsignacionProfesionalObraRepository asignacionProfesionalObraRepository;
     private final HonorarioPorRubroRepository honorarioPorRubroRepository;
+    private final PresupuestoNoClienteRepository presupuestoNoClienteRepository;
+    private final ProfesionalJornalDiarioRepository jornalDiarioRepository;
     private final IEmpresaService empresaService;
     private final ProfesionalObraMapper profesionalObraMapper;
     private final IProfesionalService profesionalService;
@@ -1083,84 +1090,52 @@ public class ProfesionalObraService implements IProfesionalObraService {
         empresaService.findEmpresaById(empresaId);
         log.info("✅ [CONSOLIDADO] Empresa {} validada correctamente", empresaId);
         
-        // Obtener TODAS las asignaciones de la empresa
+        // Obtener TODAS las asignaciones de la empresa CON FETCH de Obra y Profesional
         log.info("📋 [CONSOLIDADO] Buscando TODAS las asignaciones para empresa {}...", empresaId);
         List<AsignacionProfesionalObra> todasLasAsignaciones = asignacionProfesionalObraRepository
-            .findByEmpresaId(empresaId);
+            .findByEmpresaIdWithObraAndProfesional(empresaId);
         
-        log.info("📊 [CONSOLIDADO] Total asignaciones encontradas (sin filtrar): {}", todasLasAsignaciones.size());
+        log.info("📊 [CONSOLIDADO] Total asignaciones encontradas: {}", todasLasAsignaciones.size());
         
         if (todasLasAsignaciones.isEmpty()) {
-            log.error("❌ [CONSOLIDADO] NO HAY NINGUNA ASIGNACIÓN en la tabla asignaciones_profesional_obra para empresa {}", empresaId);
-            log.error("❌ [CONSOLIDADO] Verifica que hayas asignado profesionales a obras desde 'Asignar por Día' o 'Asignar por Semana'");
+            log.warn("⚠️ [CONSOLIDADO] No hay asignaciones para empresa {}", empresaId);
             return new ArrayList<>();
         }
         
-        // 🔍 Filtrar asignaciones por estado de obra
-        // Incluir obras con estado: APROBADO, EN_EJECUCION
-        // Si la obra es TAREA_LEVE, también incluir estado TERMINADO
+        // 🔍 Filtrar asignaciones por estado de obra: APROBADO, EN_EJECUCION, TERMINADO
         List<AsignacionProfesionalObra> asignacionesFiltradas = todasLasAsignaciones.stream()
             .filter(asig -> {
                 Obra obra = asig.getObra();
                 if (obra == null) {
-                    log.warn("⚠️ Asignación ID={} sin obra asociada", asig.getId());
+                    log.warn("⚠️ Asignación sin obra asociada");
                     return false;
                 }
                 
                 String estadoObra = obra.getEstado();
                 TipoPresupuesto tipoPresupuesto = obra.getTipoPresupuesto();
                 
-                // Estados base aceptados
-                boolean esAprobadoOEnEjecucion = "APROBADO".equals(estadoObra) || 
-                                                  "EN_EJECUCION".equals(estadoObra);
-                
-                // Si es TAREA_LEVE, también aceptar TERMINADO
-                boolean esTareaLeveTerminada = TipoPresupuesto.TAREA_LEVE.equals(tipoPresupuesto) && 
-                                               "TERMINADO".equals(estadoObra);
-                
-                boolean incluir = esAprobadoOEnEjecucion || esTareaLeveTerminada;
-                
-                if (incluir) {
-                    log.debug("✅ Incluir - Obra ID={} '{}' estado={} tipo={}", 
-                        obra.getId(), obra.getNombre(), estadoObra, tipoPresupuesto);
-                } else {
-                    log.debug("❌ Excluir - Obra ID={} '{}' estado={} tipo={}", 
-                        obra.getId(), obra.getNombre(), estadoObra, tipoPresupuesto);
+                // Incluir APROBADO y EN_EJECUCION siempre
+                if ("APROBADO".equals(estadoObra) || "EN_EJECUCION".equals(estadoObra)) {
+                    return true;
                 }
                 
-                return incluir;
+                // Incluir TERMINADO solo si es TAREA_LEVE
+                if ("TERMINADO".equals(estadoObra) && TipoPresupuesto.TAREA_LEVE.equals(tipoPresupuesto)) {
+                    log.debug("✅ Incluir TAREA_LEVE terminada: {}", obra.getNombre());
+                    return true;
+                }
+                
+                log.debug("❌ Excluir - Obra '{}' estado={} tipo={}", obra.getNombre(), estadoObra, tipoPresupuesto);
+                return false;
             })
             .collect(Collectors.toList());
         
-        log.info("📊 [CONSOLIDADO] Asignaciones después de filtrar por estado de obra: {}", asignacionesFiltradas.size());
-        log.info("📊 [CONSOLIDADO] Estados aceptados: APROBADO, EN_EJECUCION, TERMINADO (solo TAREA_LEVE)");
+        log.info("📊 [CONSOLIDADO] Asignaciones después de filtrar: {}", asignacionesFiltradas.size());
         
         if (asignacionesFiltradas.isEmpty()) {
-            log.warn("⚠️ [CONSOLIDADO] No hay asignaciones con obras en estados válidos (APROBADO, EN_EJECUCION, TERMINADO para TAREA_LEVE)");
+            log.warn("⚠️ [CONSOLIDADO] No hay asignaciones con obras activas");
             return new ArrayList<>();
         }
-        
-        // Log de estados encontrados (solo informativo)
-        Map<String, Long> estadosCount = asignacionesFiltradas.stream()
-            .collect(Collectors.groupingBy(
-                a -> a.getEstado() != null ? a.getEstado() : "NULL",
-                Collectors.counting()
-            ));
-        log.info("📊 [CONSOLIDADO] Estados de asignaciones (después de filtrar): {}", estadosCount);
-        
-        // Log de modalidades encontradas
-        Map<String, Long> modalidadesCount = asignacionesFiltradas.stream()
-            .collect(Collectors.groupingBy(
-                a -> a.getModalidad() != null ? a.getModalidad() : "NULL",
-                Collectors.counting()
-            ));
-        log.info("📊 [CONSOLIDADO] Modalidades encontradas: {}", modalidadesCount);
-        
-        // Log de primeras 3 asignaciones para debug
-        asignacionesFiltradas.stream().limit(3).forEach(a -> 
-            log.info("   → Asignación ID={}, Obra={}, Profesional={}, Estado={}, Modalidad={}", 
-                a.getId(), a.getObraId(), a.getProfesionalNombre(), a.getEstado(), a.getModalidad())
-        );
         
         // Agrupar asignaciones por profesionalId
         Map<Long, List<AsignacionProfesionalObra>> asignacionesPorProfesional = asignacionesFiltradas.stream()
@@ -1182,7 +1157,7 @@ public class ProfesionalObraService implements IProfesionalObraService {
                 .profesionalId(profesionalId)
                 .profesionalNombre(primeraAsignacion.getProfesionalNombre())
                 .profesionalTipo(primeraAsignacion.getProfesionalTipo())
-                .profesionalDni(null) // El modelo Profesional no tiene campo DNI
+                .profesionalDni(null)
                 .profesionalTelefono(profesional != null ? profesional.getTelefono() : null)
                 .profesionalEmail(profesional != null ? profesional.getEmail() : null)
                 .obras(new ArrayList<>())
@@ -1191,6 +1166,9 @@ public class ProfesionalObraService implements IProfesionalObraService {
             // Agrupar asignaciones del profesional por obraId
             Map<Long, List<AsignacionProfesionalObra>> asignacionesPorObra = asignacionesProfesional.stream()
                 .collect(Collectors.groupingBy(AsignacionProfesionalObra::getObraId));
+            
+            // Calcular totales compartidos por rubro-obra ANTES de mapear
+            Map<String, TotalesRubroObra> totalesMap = calcularTotalesPorRubroObra(asignacionesFiltradas);
             
             // Para cada obra, crear su DTO
             for (Map.Entry<Long, List<AsignacionProfesionalObra>> obraEntry : asignacionesPorObra.entrySet()) {
@@ -1209,9 +1187,9 @@ public class ProfesionalObraService implements IProfesionalObraService {
                     .asignaciones(new ArrayList<>())
                     .build();
                 
-                // Mapear cada asignación a AsignacionRubroDTO
+                // Mapear cada asignación a AsignacionRubroDTO con totales compartidos
                 for (AsignacionProfesionalObra asig : asignacionesObra) {
-                    AsignacionRubroDTO asignacionDTO = mapearAsignacionARubroDTO(asig);
+                    AsignacionRubroDTO asignacionDTO = mapearAsignacionSimple(asig, totalesMap);
                     obraDTO.getAsignaciones().add(asignacionDTO);
                 }
                 
@@ -1225,14 +1203,125 @@ public class ProfesionalObraService implements IProfesionalObraService {
             profesionalesDTO.add(profesionalDTO);
         }
         
-        log.info("✅ Se procesaron {} profesionales con sus asignaciones", profesionalesDTO.size());
+        log.info("✅ Procesados {} profesionales con asignaciones", profesionalesDTO.size());
         return profesionalesDTO;
     }
     
     /**
-     * Mapea AsignacionProfesionalObra a AsignacionRubroDTO
+     * Clase auxiliar para almacenar totales compartidos por rubro-obra
      */
-    private AsignacionRubroDTO mapearAsignacionARubroDTO(AsignacionProfesionalObra asig) {
+    private static class TotalesRubroObra {
+        BigDecimal presupuestoTotal = BigDecimal.ZERO;
+        BigDecimal totalPagado = BigDecimal.ZERO;
+        BigDecimal saldoPendiente = BigDecimal.ZERO;
+    }
+    
+    /**
+     * Calcular totales compartidos agrupados por (obra_id, rubro_id)
+     * CORREGIDO: Obtiene presupuesto desde honorarios_por_rubro.profesionales_valor (presupuesto compartido REAL)
+     * NO suma asignaciones individuales
+     */
+    private Map<String, TotalesRubroObra> calcularTotalesPorRubroObra(List<AsignacionProfesionalObra> asignaciones) {
+        Map<String, TotalesRubroObra> totalesMap = new java.util.HashMap<>();
+        Map<String, Long> obrasPorGrupo = new java.util.HashMap<>(); // Para guardar obra_id por grupo
+        Map<String, Long> rubrosPorGrupo = new java.util.HashMap<>(); // Para guardar rubro_id por grupo
+        
+        // Primera pasada: Agrupar asignaciones y sumar SOLO pagos
+        for (AsignacionProfesionalObra asig : asignaciones) {
+            if (asig.getObraId() == null || asig.getRubroId() == null) {
+                continue;
+            }
+            
+            String key = asig.getObraId() + "_" + asig.getRubroId();
+            TotalesRubroObra totales = totalesMap.computeIfAbsent(key, k -> new TotalesRubroObra());
+            
+            // Guardar IDs para buscar presupuesto después
+            obrasPorGrupo.putIfAbsent(key, asig.getObraId());
+            rubrosPorGrupo.putIfAbsent(key, asig.getRubroId());
+            
+            // SOLO sumar pagos (no presupuestos individuales)
+            if (asig.getId() != null && asig.getId() > 0) {
+                try {
+                    BigDecimal pagado = pagoRepository.calcularTotalPagadoByAsignacion(asig.getId());
+                    totales.totalPagado = totales.totalPagado.add(pagado);
+                } catch (Exception e) {
+                    log.warn("⚠️ Error calculando pagos para asignación {}: {}", asig.getId(), e.getMessage());
+                }
+            }
+        }
+        
+        // Segunda pasada: Obtener presupuesto REAL desde honorarios_por_rubro
+        for (Map.Entry<String, Long> entry : obrasPorGrupo.entrySet()) {
+            String key = entry.getKey();
+            Long obraId = entry.getValue();
+            Long rubroId = rubrosPorGrupo.get(key);
+            
+            TotalesRubroObra totales = totalesMap.get(key);
+            
+            try {
+                // Buscar presupuesto aprobado de la obra
+                PresupuestoNoCliente presupuesto = presupuestoNoClienteRepository
+                    .findByObraIdAndEstado(obraId, "APROBADO")
+                    .stream()
+                    .findFirst()
+                    .orElse(null);
+                
+                if (presupuesto != null) {
+                    // Buscar honorario del rubro específico
+                    List<HonorarioPorRubro> honorarios = honorarioPorRubroRepository
+                        .findByPresupuestoNoClienteIdAndActivoTrue(presupuesto.getId());
+                    
+                    for (HonorarioPorRubro honorario : honorarios) {
+                        // Comparar usando la relación rubro (puede ser null, comparar con cuidado)
+                        Long honorarioRubroId = (honorario.getRubro() != null) ? honorario.getRubro().getId() : null;
+                        if (honorarioRubroId != null && honorarioRubroId.equals(rubroId)) {
+                            // ✅ USAR PRESUPUESTO COMPARTIDO desde profesionales_valor
+                            BigDecimal presupuestoCompartido = honorario.getProfesionalesValor();
+                            if (presupuestoCompartido != null && presupuestoCompartido.compareTo(BigDecimal.ZERO) > 0) {
+                                totales.presupuestoTotal = presupuestoCompartido;
+                                log.info("✅ Presupuesto REAL hallado para {}_{}: ${}", 
+                                    obraId, rubroId, presupuestoCompartido);
+                                break;
+                            }
+                        }
+                    }
+                }
+                
+                // Fallback: Si no se encuentra presupuesto en honorarios_por_rubro, sumar asignaciones
+                if (totales.presupuestoTotal.compareTo(BigDecimal.ZERO) == 0) {
+                    log.warn("⚠️ No se encontró presupuesto en honorarios_por_rubro para {}_{}, usando suma de asignaciones",
+                        obraId, rubroId);
+                    for (AsignacionProfesionalObra asig : asignaciones) {
+                        if (asig.getObraId().equals(obraId) && asig.getRubroId().equals(rubroId)) {
+                            BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
+                            BigDecimal cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : BigDecimal.ZERO;
+                            totales.presupuestoTotal = totales.presupuestoTotal.add(importeJornal.multiply(cantidadJornales));
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                log.error("❌ Error obteniendo presupuesto para {}_{}: {}", obraId, rubroId, e.getMessage());
+            }
+        }
+        
+        // Calcular saldo pendiente para cada grupo
+        totalesMap.forEach((key, totales) -> {
+            totales.saldoPendiente = totales.presupuestoTotal.subtract(totales.totalPagado);
+        });
+        
+        log.info("📊 Totales por rubro-obra calculados: {} grupos", totalesMap.size());
+        totalesMap.forEach((key, totales) -> {
+            log.info("   🔹 Rubro-Obra {}: Presupuesto(compartido)={}, Pagado={}, Saldo={}",
+                key, totales.presupuestoTotal, totales.totalPagado, totales.saldoPendiente);
+        });
+        
+        return totalesMap;
+    }
+    
+    /**
+     * Mapea una AsignacionProfesionalObra a AsignacionRubroDTO (con totales compartidos por rubro-obra)
+     */
+    private AsignacionRubroDTO mapearAsignacionSimple(AsignacionProfesionalObra asig, Map<String, TotalesRubroObra> totalesMap) {
         BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
         BigDecimal cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : BigDecimal.ZERO;
         BigDecimal jornalesUtilizados = asig.getJornalesUtilizados() != null ? asig.getJornalesUtilizados() : BigDecimal.ZERO;
@@ -1241,62 +1330,49 @@ public class ProfesionalObraService implements IProfesionalObraService {
         BigDecimal totalAsignado = importeJornal.multiply(cantidadJornales);
         BigDecimal totalUtilizado = importeJornal.multiply(jornalesUtilizados);
         
-        // 💰 Calcular total pagado en esta asignación específica
-        BigDecimal totalPagado = BigDecimal.ZERO;
+        // Obtener totales COMPARTIDOS del rubro-obra
+        String key = asig.getObraId() + "_" + asig.getRubroId();
+        TotalesRubroObra totalesCompartidos = totalesMap.get(key);
+        
+        // Usar totales compartidos o valores individuales como fallback
+        BigDecimal totalPagado = totalesCompartidos != null ? totalesCompartidos.totalPagado : BigDecimal.ZERO;
+        BigDecimal saldoPendiente = totalesCompartidos != null ? totalesCompartidos.saldoPendiente : BigDecimal.ZERO;
+        BigDecimal presupuestoTotalRubro = totalesCompartidos != null ? totalesCompartidos.presupuestoTotal : totalAsignado;
+        
+        // Calcular historial de pagos SOLO de esta asignación (para detalle)
         List<com.rodrigo.construccion.dto.response.HistorialPagoDTO> historialPagos = new ArrayList<>();
-        try {
-            totalPagado = pagoRepository.calcularTotalPagadoByAsignacion(asig.getId());
-            log.debug("💵 Asignación ID={} ({}): totalPagado={}", asig.getId(), asig.getRubroNombre(), totalPagado);
-            
-            // 📋 Cargar historial de pagos
-            var pagos = pagoRepository.findPagosByAsignacionId(asig.getId());
-            historialPagos = pagos.stream()
-                .map(p -> com.rodrigo.construccion.dto.response.HistorialPagoDTO.builder()
-                    .pagoId(p.getId())
-                    .fechaPago(p.getFechaPago())
-                    .monto(p.getMontoFinal())
-                    .tipoPago(p.getTipoPago())
-                    .observaciones(p.getObservaciones())
-                    .build())
-                .collect(java.util.stream.Collectors.toList());
-            log.debug("📋 Asignación ID={}: {} pagos en historial", asig.getId(), historialPagos.size());
-        } catch (Exception e) {
-            log.warn("⚠️ Error al calcular totalPagado para asignación {}: {}", asig.getId(), e.getMessage());
-        }
         
-        // ✅ Calcular saldo pendiente correctamente: presupuesto - pagos reales
-        BigDecimal saldoPendiente = totalAsignado.subtract(totalPagado);
-        log.debug("💰 Asignación ID={}: Presupuesto={}, Pagado={}, Pendiente={}", 
-            asig.getId(), totalAsignado, totalPagado, saldoPendiente);
-        
-        // Obtener rubroNombre dinámicamente desde honorarios_por_rubro si no existe o es un valor por defecto
-        String rubroNombre = asig.getRubroNombre();
-        if (rubroNombre == null || rubroNombre.isEmpty() || rubroNombre.startsWith("Asignación Semanal")) {
-            if (asig.getRubroId() != null && asig.getRubroId() > 0L) {
-                try {
-                    rubroNombre = honorarioPorRubroRepository.findById(asig.getRubroId())
-                            .map(rubro -> rubro.getNombreRubro())
-                            .orElse(asig.getRubroNombre());
-                } catch (Exception e) {
-                    log.warn("No se pudo obtener el rubroNombre para rubroId: {}", asig.getRubroId());
-                }
+        if (asig.getId() != null && asig.getId() > 0) {
+            try {
+                var pagos = pagoRepository.findPagosByAsignacionId(asig.getId());
+                historialPagos = pagos.stream()
+                    .map(p -> com.rodrigo.construccion.dto.response.HistorialPagoDTO.builder()
+                        .pagoId(p.getId())
+                        .fechaPago(p.getFechaPago())
+                        .monto(p.getMontoFinal())
+                        .tipoPago(p.getTipoPago())
+                        .observaciones(p.getObservaciones())
+                        .build())
+                    .collect(Collectors.toList());
+            } catch (Exception e) {
+                log.warn("⚠️ Error obteniendo historial de pagos para asignación {}: {}", asig.getId(), e.getMessage());
             }
         }
         
         return AsignacionRubroDTO.builder()
             .asignacionId(asig.getId())
             .rubroId(asig.getRubroId())
-            .rubroNombre(rubroNombre)
+            .rubroNombre(asig.getRubroNombre())
             .tipoAsignacion(asig.getTipoAsignacion())
             .importeJornal(importeJornal)
             .cantidadJornales(cantidadJornales)
             .jornalesUtilizados(jornalesUtilizados)
             .jornalesRestantes(jornalesRestantes)
-            .totalAsignado(totalAsignado)
+            .totalAsignado(presupuestoTotalRubro)  // ✅ PRESUPUESTO COMPARTIDO DEL RUBRO-OBRA
             .totalUtilizado(totalUtilizado)
-            .totalPagado(totalPagado)  // 💰 Total de pagos realizados
-            .historialPagos(historialPagos)  // 📋 Historial completo de pagos
-            .saldoPendiente(saldoPendiente)
+            .totalPagado(totalPagado)  // ✅ TOTAL PAGADO COMPARTIDO
+            .historialPagos(historialPagos)
+            .saldoPendiente(saldoPendiente)  // ✅ SALDO COMPARTIDO
             .fechaInicio(asig.getFechaInicio())
             .fechaFin(asig.getFechaFin())
             .estado(asig.getEstado())

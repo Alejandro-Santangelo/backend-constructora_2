@@ -56,6 +56,13 @@ public interface PresupuestoNoClienteRepository extends JpaRepository<Presupuest
     List<PresupuestoNoCliente> findByEstado(PresupuestoEstado estado);
 
     /**
+     * Busca presupuestos por obra_id y estado (String)
+     * Usado para obtener el presupuesto compartido de un rubro en una obra
+     */
+    @Query("SELECT p FROM PresupuestoNoCliente p WHERE p.obra.id = :obraId AND p.estado = :estado ORDER BY p.numeroVersion DESC")
+    List<PresupuestoNoCliente> findByObraIdAndEstado(@Param("obraId") Long obraId, @Param("estado") String estado);
+
+    /**
      * Busca presupuestos por estado y fecha probable de inicio menor o igual a la fecha especificada
      * Usado para cambiar APROBADOS a EN_EJECUCION cuando llega la fecha de inicio
      */

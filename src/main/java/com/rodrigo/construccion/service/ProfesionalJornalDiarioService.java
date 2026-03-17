@@ -13,6 +13,8 @@ import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
 import com.rodrigo.construccion.repository.ObraRepository;
 import com.rodrigo.construccion.repository.ProfesionalJornalDiarioRepository;
 import com.rodrigo.construccion.repository.ProfesionalRepository;
+import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
+import com.rodrigo.construccion.model.entity.AsignacionProfesionalObra;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -37,6 +39,7 @@ public class ProfesionalJornalDiarioService {
     private final ProfesionalRepository profesionalRepository;
     private final ObraRepository obraRepository;
     private final HonorarioPorRubroRepository honorarioPorRubroRepository;
+    private final AsignacionProfesionalObraRepository asignacionRepository;
 
     /**
      * Crear un nuevo jornal diario
@@ -109,16 +112,12 @@ public class ProfesionalJornalDiarioService {
             jornal.setHorasTrabajadasDecimal(requestDTO.getHorasTrabajadasDecimal());
             
             // Si se especificó una tarifa personalizada, usarla; sino copiar del profesional
+            // Se permite tarifa en 0 o null (para casos donde no se cobra)
             if (requestDTO.getTarifaDiaria() != null) {
                 jornal.setTarifaDiaria(requestDTO.getTarifaDiaria());
             } else {
-                if (profesional.getHonorarioDia() == null) {
-                    throw new IllegalArgumentException(
-                        "El profesional no tiene configurado un honorario diario. " +
-                        "Configure el honorario o especifique una tarifa personalizada."
-                    );
-                }
-                jornal.setTarifaDiaria(profesional.getHonorarioDia());
+                // Si el profesional tiene honorario configurado, usarlo; sino usar 0
+                jornal.setTarifaDiaria(profesional.getHonorarioDia() != null ? profesional.getHonorarioDia() : BigDecimal.ZERO);
             }
 
             jornal.setObservaciones(requestDTO.getObservaciones());
@@ -138,6 +137,9 @@ public class ProfesionalJornalDiarioService {
 
             log.info("Jornal creado exitosamente: id={}, montoCobrado={}", 
                      jornalGuardado.getId(), jornalGuardado.getMontoCobrado());
+
+            // 🔗 CREAR/ACTUALIZAR ASIGNACIÓN AUTOMÁTICAMENTE
+            crearOActualizarAsignacion(profesional, obra, requestDTO.getRubroId(), empresaId);
 
             return toResponseDTO(jornalGuardado);
         } finally {
@@ -358,6 +360,66 @@ public class ProfesionalJornalDiarioService {
                     .build());
         }
         return resumenes;
+    }
+
+    /**
+     * 🔗 Crear o actualizar asignación automáticamente al registrar jornal diario
+     * Esto asegura que SIEMPRE exista una asignación real en la base de datos
+     */
+    private void crearOActualizarAsignacion(Profesional profesional, Obra obra, Long rubroId, Long empresaId) {
+        log.info("🔗 Verificando asignación: profesional={}, obra={}, rubro={}", 
+                 profesional.getId(), obra.getId(), rubroId);
+
+        // Buscar asignación existente para este profesional/obra/rubro
+        List<AsignacionProfesionalObra> asignaciones = asignacionRepository
+            .findByProfesionalIdAndObraIdAndEmpresaId(profesional.getId(), obra.getId(), empresaId);
+
+        AsignacionProfesionalObra asignacion = asignaciones.stream()
+            .filter(a -> a.getRubroId() != null && a.getRubroId().equals(rubroId))
+            .findFirst()
+            .orElse(null);
+
+        if (asignacion == null) {
+            // No existe asignación → CREAR NUEVA
+            log.info("➕ Creando nueva asignación automática desde jornal diario");
+            
+            asignacion = new AsignacionProfesionalObra();
+            asignacion.setEmpresaId(empresaId);
+            asignacion.setProfesionalId(profesional.getId());
+            asignacion.setProfesional(profesional);
+            asignacion.setObraId(obra.getId());
+            asignacion.setObra(obra);
+            asignacion.setRubroId(rubroId);
+            asignacion.setTipoAsignacion("JORNAL");
+            asignacion.setEstado("ACTIVO");
+            asignacion.setFechaInicio(LocalDate.now());
+            asignacion.setModalidad("JORNAL_DIARIO");
+            
+            // Obtener nombre del rubro
+            var rubroOpt = honorarioPorRubroRepository.findById(rubroId);
+            if (rubroOpt.isPresent()) {
+                asignacion.setRubroNombre(rubroOpt.get().getNombreRubro());
+            }
+            
+            // Copiar datos del profesional
+            asignacion.setProfesionalTipo(profesional.getTipoProfesional());
+            asignacion.setProfesionalNombre(profesional.getNombre());
+            
+            asignacionRepository.save(asignacion);
+            log.info("✅ Asignación creada automáticamente con ID: {}", asignacion.getId());
+            
+        } else if ("FINALIZADO".equals(asignacion.getEstado()) || "CANCELADO".equals(asignacion.getEstado())) {
+            // Existe pero está inactiva → REACTIVAR
+            log.info("🔄 Reactivando asignación ID: {} (estaba: {})", asignacion.getId(), asignacion.getEstado());
+            asignacion.setEstado("ACTIVO");
+            asignacion.setFechaInicio(LocalDate.now());
+            asignacionRepository.save(asignacion);
+            log.info("✅ Asignación reactivada");
+            
+        } else {
+            // Ya existe y está activa → NO HACER NADA
+            log.info("✓ Asignación ya existe y está activa (ID: {})", asignacion.getId());
+        }
     }
 
     /**

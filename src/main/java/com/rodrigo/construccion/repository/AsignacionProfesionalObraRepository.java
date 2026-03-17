@@ -23,6 +23,13 @@ public interface AsignacionProfesionalObraRepository extends JpaRepository<Asign
     /* Obtiene TODAS las asignaciones de una empresa (sin filtrar por estado) */
     List<AsignacionProfesionalObra> findByEmpresaId(Long empresaId);
 
+    /* Obtiene TODAS las asignaciones de una empresa con Obra y Profesional cargados (para consolidado) */
+    @Query("SELECT a FROM AsignacionProfesionalObra a " +
+           "LEFT JOIN FETCH a.obra " +
+           "LEFT JOIN FETCH a.profesional " +
+           "WHERE a.empresaId = :empresaId")
+    List<AsignacionProfesionalObra> findByEmpresaIdWithObraAndProfesional(@Param("empresaId") Long empresaId);
+
     /* Elimina todas las asignaciones de una obra y empresa */
     void deleteByObra_IdAndEmpresaId(Long obraId, Long empresaId);
     
@@ -38,4 +45,7 @@ public interface AsignacionProfesionalObraRepository extends JpaRepository<Asign
            "AND a.tipoAsignacion = 'JORNAL' " +
            "AND a.estado = 'ACTIVO'")
     Integer sumJornalesAsignadosByObraAndItem(@Param("obraId") Long obraId, @Param("itemId") Long itemId);
+    
+    /* Buscar asignaciones por profesional, obra y empresa (para pagos de jornales diarios) */
+    List<AsignacionProfesionalObra> findByProfesionalIdAndObraIdAndEmpresaId(Long profesionalId, Long obraId, Long empresaId);
 }
