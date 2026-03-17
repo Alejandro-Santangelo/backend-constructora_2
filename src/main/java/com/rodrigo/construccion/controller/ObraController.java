@@ -85,11 +85,21 @@ public class ObraController {
         return ResponseEntity.ok(obrasSimpleDto);
     }
 
-    @Operation(summary = "Obtener obras activas de una empresa")
+    @Operation(summary = "Obtener obras activas de una empresa (o todas si es SUPER_ADMIN)", 
+               description = "Si empresaId es null y el usuario es SUPER_ADMIN, devuelve todas las obras activas del sistema")
     @GetMapping("/activas")
     public ResponseEntity<List<ObraSimpleDTO>> obtenerObrasActivas(
-            @Parameter(description = "ID de la empresa", required = true)
-            @RequestParam Long empresaId) {
+            @Parameter(description = "ID de la empresa (opcional para SUPER_ADMIN)")
+            @RequestParam(required = false) Long empresaId,
+            @Parameter(description = "Rol del usuario") 
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // Si es SUPER_ADMIN y no se proporciona empresaId, mostrar TODAS las obras activas
+        boolean esSuperAdmin = "SUPER_ADMIN".equals(rol);
+        if (esSuperAdmin && empresaId == null) {
+            log.info("✅ SUPER_ADMIN solicitando TODAS las obras activas del sistema");
+        }
+        
         List<ObraSimpleDTO> obrasActivasDto = obraService.obtenerActivasPorEmpresa(empresaId);
         return ResponseEntity.ok(obrasActivasDto);
     }
@@ -112,15 +122,24 @@ public class ObraController {
         return ResponseEntity.ok(obras);
     }
 
-    @Deprecated
-    @Operation(
-        summary = "[DEPRECADO] Obtener todas las obras",
-        description = "DEPRECADO: Este endpoint viola multi-tenancy. Usar GET /empresa/{empresaId} en su lugar."
+@Operation(
+        summary = "Obtener todas las obras del sistema (SOLO SUPER_ADMIN)",
+        description = "ACCESO GLOBAL: Solo usuarios con rol SUPER_ADMIN pueden acceder a este endpoint. Devuelve TODAS las obras de TODAS las empresas."
     )
     @GetMapping("/todas")
-    public ResponseEntity<List<ObraResponseDTO>> obtenerTodasObras() {
-        log.warn("⚠️ Endpoint DEPRECADO /obras/todas llamado - retornando lista vacía");
-        return ResponseEntity.ok(new ArrayList<>());
+    public ResponseEntity<List<ObraResponseDTO>> obtenerTodasObras(
+            @Parameter(description = "Rol del usuario") 
+            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+        
+        // ✅ VERIFICAR que sea SUPER_ADMIN
+        if (!"SUPER_ADMIN".equals(rol)) {
+            log.warn("⚠️ Acceso denegado a /obras/todas - Usuario no es SUPER_ADMIN: {}", rol);
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+        
+        log.info("✅ SUPER_ADMIN accediendo a TODAS las obras del sistema");
+        List<ObraResponseDTO> todasLasObras = obraService.obtenerPorEmpresa(null);
+        return ResponseEntity.ok(todasLasObras);
     }
 
     @Operation(summary = "Crear nueva obra")
@@ -148,20 +167,23 @@ public class ObraController {
     }
 
     @DeleteMapping("/{id}/cascade")
-    @Operation(summary = "Eliminar obra en cascada", description = "⚠️ REQUIERE ROL SUPER_ADMIN - CONTRATISTAS NO PUEDEN ELIMINAR OBRAS")
+    @Operation(summary = "Eliminar obra en cascada", description = "⚠️ REQUIERE ROL SUPER_ADMIN - Solo Super Administradores pueden eliminar obras")
     public ResponseEntity<Map<String, String>> eliminarObraEnCascada(
             @Parameter(description = "ID de la obra a eliminar") @PathVariable Long id,
             @Parameter(description = "ID de la empresa (multi-tenancy)", required = true)
             @RequestParam Long empresaId,
-            @RequestHeader(value = "X-User-Rol", required = false) String rol) {
+            @RequestHeader(value = "X-User-Rol", required = true) String rol) {
         
-        // ✅ VALIDAR PERMISOS
+        log.info("🗑️ Solicitud de eliminación obra {} - Rol: {} - Empresa: {}", id, rol, empresaId);
+        
+        // ✅ VALIDAR PERMISOS - Solo SUPER_ADMIN puede eliminar obras
         if (!permisoService.puedeEliminarObras(rol)) {
             log.warn("❌ ACCESO DENEGADO: Usuario con rol {} intentó eliminar obra {}", rol, id);
-            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para eliminar obras"));
+            return ResponseEntity.status(403).body(Map.of("error", "No tiene permisos para eliminar obras. Solo Super Administradores pueden realizar esta acción."));
         }
         
-        obraService.eliminarEnCascada(id, empresaId);
+        log.info("🗑️ Usuario con rol {} eliminando obra {} en cascada para empresa {}", rol, id, empresaId);
+        obraService.eliminarEnCascada(id, empresaId, rol);
         return ResponseEntity.ok(Map.of("mensaje", "Obra y todas sus relaciones eliminadas exitosamente."));
     }
 

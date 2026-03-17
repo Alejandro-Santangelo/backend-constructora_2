@@ -39,7 +39,7 @@ public interface IObraService {
 
     ObraResponseDTO actualizar(Long id, ObraRequestDTO obraActualizada);
 
-    void eliminarEnCascada(Long id, Long empresaId);
+    void eliminarEnCascada(Long id, Long empresaId, String rol);
 
     ObraResponseDTO cambiarEstado(Long id, EstadoObra nuevoEstado);
 

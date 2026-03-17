@@ -63,7 +63,7 @@ public class AuthService {
         // Obtener lista de empresas permitidas según rol
         List<LoginResponse.EmpresaPermitida> empresasPermitidas = new ArrayList<>();
 
-        if ("SUPER_ADMINISTRADOR".equals(usuario.getRol())) {
+        if ("SUPER_ADMIN".equals(usuario.getRol())) {
             // Super administrador puede ver TODAS las empresas
             log.info("🔓 Super Administrador detectado - acceso a todas las empresas");
             empresasPermitidas = empresaRepository.findAll().stream()
@@ -156,7 +156,7 @@ public class AuthService {
                 .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
 
         // Super administrador tiene acceso a todas las empresas
-        if ("SUPER_ADMINISTRADOR".equals(usuario.getRol())) {
+        if ("SUPER_ADMIN".equals(usuario.getRol())) {
             return true;
         }
 

@@ -89,6 +89,12 @@ public class ObraService implements IObraService {
 
     /* Obtener obras activas por empresa (método seguro) */
     public List<ObraSimpleDTO> obtenerActivasPorEmpresa(Long empresaId) {
+        // Si empresaId es null, devolver TODAS las obras activas (SUPER_ADMIN)
+        if (empresaId == null) {
+            log.info("✅ SUPER_ADMIN: Obteniendo TODAS las obras activas del sistema");
+            List<Obra> obrasActivas = obraRepository.findObrasActivas();
+            return mapToSimpleDTOList(obrasActivas);
+        }
         empresaService.findEmpresaById(empresaId);
         List<Obra> obrasActivas = obraRepository.findObrasActivasByEmpresaId(empresaId);
         return mapToSimpleDTOList(obrasActivas);
@@ -103,6 +109,12 @@ public class ObraService implements IObraService {
     /* Obtener obras por empresa */
     @Override
     public List<ObraResponseDTO> obtenerPorEmpresa(Long empresaId) {
+        // Si empresaId es null, devolver TODAS las obras (SUPER_ADMIN)
+        if (empresaId == null) {
+            log.info("✅ SUPER_ADMIN: Obteniendo TODAS las obras del sistema");
+            List<Obra> todasLasObras = obraRepository.findAll();
+            return mapToResponseDTOList(todasLasObras);
+        }
         empresaService.findEmpresaById(empresaId);
         List<Obra> obrasPorEmpresa = obraRepository.findByEmpresaId(empresaId);
         return mapToResponseDTOList(obrasPorEmpresa);
@@ -111,6 +123,12 @@ public class ObraService implements IObraService {
     /* Obtener SOLO obras manuales por empresa (sin presupuesto previo) */
     @Override
     public List<ObraResponseDTO> obtenerObrasManualesPorEmpresa(Long empresaId) {
+        // Si empresaId es null, devolver TODAS las obras manuales (SUPER_ADMIN)
+        if (empresaId == null) {
+            log.info("✅ SUPER_ADMIN: Obteniendo TODAS las obras manuales del sistema");
+            List<Obra> obrasManuales = obraRepository.findByEsObraManualTrueAndEstado("En obra");
+            return mapToResponseDTOList(obrasManuales);
+        }
         empresaService.findEmpresaById(empresaId);
         List<Obra> obrasManuales = obraRepository.findObrasManualesByEmpresaId(empresaId);
         return mapToResponseDTOList(obrasManuales);
@@ -342,14 +360,20 @@ public class ObraService implements IObraService {
     /* Eliminar obra y todas sus relaciones en cascada */
     @Override
     @Transactional
-    public void eliminarEnCascada(Long id, Long empresaId) {
+    public void eliminarEnCascada(Long id, Long empresaId, String rol) {
         // 1. Verificar que la obra existe
         Obra obra = obraRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Obra no encontrada con ID: " + id));
 
         // 2. Validar que la obra pertenece a la empresa (multi-tenancy)
-        if (obra.getEmpresaId() == null || !obra.getEmpresaId().equals(empresaId)) {
-            throw new RuntimeException("La obra no pertenece a la empresa especificada");
+        // EXCEPCIÓN: SUPER_ADMIN puede eliminar obras de cualquier empresa
+        boolean esSuperAdmin = "SUPER_ADMIN".equals(rol);
+        if (!esSuperAdmin) {
+            if (obra.getEmpresaId() == null || !obra.getEmpresaId().equals(empresaId)) {
+                throw new RuntimeException("La obra no pertenece a la empresa especificada");
+            }
+        } else {
+            log.info("✅ SUPER_ADMIN: Saltando validación de empresa para obra {}", id);
         }
 
         // 3. Eliminar la obra

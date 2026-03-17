@@ -90,8 +90,8 @@ public class Usuario {
     public boolean tieneAccesoAEmpresa(Long empresaId) {
         if (empresaId == null) return false;
         
-        // SUPER_ADMINISTRADOR tiene acceso a todas las empresas
-        if ("SUPER_ADMINISTRADOR".equalsIgnoreCase(this.rol)) {
+        // SUPER_ADMIN tiene acceso a todas las empresas
+        if ("SUPER_ADMIN".equals(this.rol)) {
             return true;
         }
         
@@ -157,8 +157,8 @@ public class Usuario {
 
     // Roles del sistema
     public static final String ROL_ADMIN = "administrador";
-    public static final String ROL_CONTRATISTA = "contratista"; // Equivalente a admin de empresa
-    public static final String ROL_SUPER_ADMIN = "SUPER_ADMINISTRADOR"; // Acceso global
+    public static final String ROL_CONTRATISTA = "CONTRATISTA"; // Equivalente a admin de empresa
+    public static final String ROL_SUPER_ADMIN = "SUPER_ADMIN"; // Acceso global
     public static final String ROL_GERENTE = "gerente";
     public static final String ROL_ARQUITECTO = "arquitecto";
     public static final String ROL_INGENIERO = "ingeniero";

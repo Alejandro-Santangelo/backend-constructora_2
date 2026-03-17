@@ -61,7 +61,7 @@ public class PermisosController {
         Map<String, Object> response = new HashMap<>();
         response.put("rol", rol);
         response.put("secciones", secciones);
-        response.put("esSuperAdmin", "SUPER_ADMINISTRADOR".equals(rol));
+        response.put("esSuperAdmin", "SUPER_ADMIN".equals(rol));
         
         return response;
     }

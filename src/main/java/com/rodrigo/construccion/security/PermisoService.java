@@ -8,8 +8,8 @@ import java.util.List;
  * Servicio para validar permisos según el rol del usuario.
  * 
  * Roles:
- * - SUPER_ADMINISTRADOR: Acceso completo a todas las secciones
- * - contratista: Solo acceso a Presupuestos y Obras
+ * - SUPER_ADMIN: Acceso completo a todas las secciones
+ * - CONTRATISTA: Solo acceso a Presupuestos y Obras
  */
 @Service
 public class PermisoService {
@@ -17,11 +17,11 @@ public class PermisoService {
     /**
      * Retorna la lista de SECCIONES a las que el usuario tiene acceso.
      * 
-     * SUPER_ADMINISTRADOR: Todas las secciones
-     * contratista: Solo Presupuestos y Obras
+     * SUPER_ADMIN: Todas las secciones
+     * CONTRATISTA: Solo Presupuestos y Obras
      */
     public List<String> getSeccionesPermitidas(String rol) {
-        if ("SUPER_ADMINISTRADOR".equals(rol)) {
+        if ("SUPER_ADMIN".equals(rol)) {
             return Arrays.asList(
                 "empresas",
                 "presupuestos", 
@@ -35,15 +35,17 @@ public class PermisoService {
                 "profesionales-por-obra",
                 "trabajos-diarios",
                 "nuevos-clientes",
-                "reportes"
+                "reportes",
+                "usuarios" // ✅ AGREGADO: SUPER_ADMIN debe poder gestionar usuarios
             );
         }
         
-        if ("contratista".equalsIgnoreCase(rol)) {
+        if ("CONTRATISTA".equals(rol)) {
             return Arrays.asList(
                 "presupuestos",
                 "obras",
-                "usuarios"
+                "clientes", // ✅ AGREGADO: Contratista ve sus clientes
+                "usuarios"  // Solo su propio perfil
             );
         }
         
@@ -61,22 +63,22 @@ public class PermisoService {
     // Usados por los controllers para validar operaciones específicas
 
     public boolean puedeModificarPresupuestos(String rol) {
-        return "SUPER_ADMINISTRADOR".equals(rol);
+        return "SUPER_ADMIN".equals(rol);
     }
 
     public boolean puedeEliminarPresupuestos(String rol) {
-        return "SUPER_ADMINISTRADOR".equals(rol);
+        return "SUPER_ADMIN".equals(rol);
     }
 
     public boolean puedeModificarObras(String rol) {
-        return "SUPER_ADMINISTRADOR".equals(rol);
+        return "SUPER_ADMIN".equals(rol);
     }
 
     public boolean puedeEliminarObras(String rol) {
-        return "SUPER_ADMINISTRADOR".equals(rol);
+        return "SUPER_ADMIN".equals(rol);
     }
 
     public boolean puedeModificarEmpresa(String rol, Long empresaIdUsuario, Long empresaIdAModificar) {
-        return "SUPER_ADMINISTRADOR".equals(rol); // Solo super administrador puede modificar empresas
+        return "SUPER_ADMIN".equals(rol); // Solo super administrador puede modificar empresas
     }
 }
