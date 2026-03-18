@@ -497,9 +497,18 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setHonorariosConfiguracionPresupuestoValor(dto.getHonorariosConfiguracionPresupuestoValor());
 
         // Honorarios por Rubro (relación @OneToMany)
+        // IMPORTANTE: No usar clear() porque rompe el tracking de Hibernate
+        // El método mapearHonorariosPorRubroDTO ya actualiza los existentes in-place
         if (dto.getHonorariosPorRubro() != null) {
-            pnc.getHonorariosPorRubro().clear();
-            pnc.getHonorariosPorRubro().addAll(mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc));
+            Set<com.rodrigo.construccion.model.entity.HonorarioPorRubro> mapeados = 
+                mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc);
+            
+            // Solo agregar los nuevos (sin ID) - los existentes ya fueron actualizados
+            for (com.rodrigo.construccion.model.entity.HonorarioPorRubro mapeado : mapeados) {
+                if (mapeado.getId() == null) {
+                    pnc.getHonorariosPorRubro().add(mapeado);
+                }
+            }
         }
 
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
@@ -542,9 +551,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
 
         // Mayores Costos por Rubro (relación @OneToMany)
+        // 🔥 FIX: NO usar clear() - Trabajar directamente con la colección
+        // Lo que viene en el DTO ES LA VERDAD: eliminar lo que no está, actualizar lo que existe, agregar lo nuevo
         if (dto.getMayoresCostosPorRubro() != null) {
-            pnc.getMayoresCostosPorRubro().clear();
-            pnc.getMayoresCostosPorRubro().addAll(mapearMayoresCostosPorRubroDTO(dto.getMayoresCostosPorRubro(), pnc));
+            sincronizarMayoresCostosPorRubro(pnc, dto.getMayoresCostosPorRubro());
         }
 
         // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
@@ -630,9 +640,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         }
 
         // Descuentos por Rubro (relación @OneToMany)
+        // 🔥 FIX: NO usar clear() - Trabajar directamente con la colección
+        // Lo que viene en el DTO ES LA VERDAD: eliminar lo que no está, actualizar lo que existe, agregar lo nuevo
         if (dto.getDescuentosPorRubro() != null) {
-            pnc.getDescuentosPorRubro().clear();
-            pnc.getDescuentosPorRubro().addAll(mapearDescuentosPorRubroDTO(dto.getDescuentosPorRubro(), pnc));
+            sincronizarDescuentosPorRubro(pnc, dto.getDescuentosPorRubro());
         }
 
         // total general: profesionales + materiales + otros costos + honorarios dirección
@@ -1516,8 +1527,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Honorarios por Rubro (relación @OneToMany)
         if (dto.getHonorariosPorRubro() != null) {
-            pnc.getHonorariosPorRubro().clear();
-            pnc.getHonorariosPorRubro().addAll(mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc));
+            Set<com.rodrigo.construccion.model.entity.HonorarioPorRubro> mapeados = mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc); for (com.rodrigo.construccion.model.entity.HonorarioPorRubro mapeado : mapeados) { if (mapeado.getId() == null) { pnc.getHonorariosPorRubro().add(mapeado); } }
         }
 
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
@@ -1555,9 +1565,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
 
         // Mayores Costos por Rubro (relación @OneToMany)
+        // 🔥 FIX: NO usar clear() - Trabajar directamente con la colección
+        //  Lo que viene en el DTO ES LA VERDAD: eliminar lo que no está, actualizar lo que existe, agregar lo nuevo
         if (dto.getMayoresCostosPorRubro() != null) {
-            pnc.getMayoresCostosPorRubro().clear();
-            pnc.getMayoresCostosPorRubro().addAll(mapearMayoresCostosPorRubroDTO(dto.getMayoresCostosPorRubro(), pnc));
+            sincronizarMayoresCostosPorRubro(pnc, dto.getMayoresCostosPorRubro());
         }
 
         // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
@@ -1638,9 +1649,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         }
 
         // Descuentos por Rubro (relación @OneToMany)
+        // 🔥 FIX: NO usar clear() - Trabajar directamente con la colección
+        // Lo que viene en el DTO ES LA VERDAD: eliminar lo que no está, actualizar lo que existe, agregar lo nuevo
         if (dto.getDescuentosPorRubro() != null) {
-            pnc.getDescuentosPorRubro().clear();
-            pnc.getDescuentosPorRubro().addAll(mapearDescuentosPorRubroDTO(dto.getDescuentosPorRubro(), pnc));
+            sincronizarDescuentosPorRubro(pnc, dto.getDescuentosPorRubro());
         }
 
         // total general actualizado
@@ -1966,8 +1978,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
         // Honorarios por Rubro (relación @OneToMany)
         if (dto.getHonorariosPorRubro() != null) {
-            pnc.getHonorariosPorRubro().clear();
-            pnc.getHonorariosPorRubro().addAll(mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc));
+            Set<com.rodrigo.construccion.model.entity.HonorarioPorRubro> mapeados = mapearHonorariosPorRubroDTO(dto.getHonorariosPorRubro(), pnc); for (com.rodrigo.construccion.model.entity.HonorarioPorRubro mapeado : mapeados) { if (mapeado.getId() == null) { pnc.getHonorariosPorRubro().add(mapeado); } }
         }
 
         // ========== MAPEAR CONFIGURACIÓN DE CÁLCULO DE DÍAS HÁBILES ==========
@@ -2005,9 +2016,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setMayoresCostosExplicacion(dto.getMayoresCostosExplicacion());
 
         // Mayores Costos por Rubro (relación @OneToMany)
+        // 🔥 FIX: NO usar clear() - Trabajar directamente con la colección
+        // Lo que viene en el DTO ES LA VERDAD: eliminar lo que no está, actualizar lo que existe, agregar lo nuevo
         if (dto.getMayoresCostosPorRubro() != null) {
-            pnc.getMayoresCostosPorRubro().clear();
-            pnc.getMayoresCostosPorRubro().addAll(mapearMayoresCostosPorRubroDTO(dto.getMayoresCostosPorRubro(), pnc));
+            sincronizarMayoresCostosPorRubro(pnc, dto.getMayoresCostosPorRubro());
         }
 
         // ========== MAPEAR CONFIGURACIÓN DE DESCUENTOS (Modelo Relacional) ==========
@@ -2088,9 +2100,10 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         }
 
         // Descuentos por Rubro (relación @OneToMany)
+        // 🔥 FIX: NO usar clear() - Trabajar directamente con la colección
+        // Lo que viene en el DTO ES LA VERDAD: eliminar lo que no está, actualizar lo que existe, agregar lo nuevo
         if (dto.getDescuentosPorRubro() != null) {
-            pnc.getDescuentosPorRubro().clear();
-            pnc.getDescuentosPorRubro().addAll(mapearDescuentosPorRubroDTO(dto.getDescuentosPorRubro(), pnc));
+            sincronizarDescuentosPorRubro(pnc, dto.getDescuentosPorRubro());
         }
 
         // total general actualizado
@@ -5857,6 +5870,7 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
     /**
      * Mapea una lista de DTOs de honorarios por rubro a entidades
+     * CORREGIDO: Ahora actualiza entidades existentes en lugar de crear duplicados
      */
     private Set<com.rodrigo.construccion.model.entity.HonorarioPorRubro> mapearHonorariosPorRubroDTO(
             List<com.rodrigo.construccion.dto.request.HonorarioPorRubroDTO> dtos,
@@ -5868,11 +5882,29 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             return honorarios;
         }
 
+        // Obtener honorarios existentes del presupuesto para actualizar en lugar de duplicar
+        java.util.Map<String, com.rodrigo.construccion.model.entity.HonorarioPorRubro> existentesPorNombre = new java.util.HashMap<>();
+        if (presupuesto.getHonorariosPorRubro() != null) {
+            for (com.rodrigo.construccion.model.entity.HonorarioPorRubro existente : presupuesto.getHonorariosPorRubro()) {
+                existentesPorNombre.put(existente.getNombreRubro(), existente);
+            }
+        }
+
         for (com.rodrigo.construccion.dto.request.HonorarioPorRubroDTO dto : dtos) {
-            com.rodrigo.construccion.model.entity.HonorarioPorRubro honorario = new com.rodrigo.construccion.model.entity.HonorarioPorRubro();
+            com.rodrigo.construccion.model.entity.HonorarioPorRubro honorario;
             
-            honorario.setId(dto.getId());
-            honorario.setPresupuestoNoCliente(presupuesto);
+            // Si el honorario ya existe (por nombre de rubro), actualizarlo; si no, crear uno nuevo
+            if (existentesPorNombre.containsKey(dto.getNombreRubro())) {
+                // Actualizar existente - buscar por nombre de rubro (la constraint única)
+                honorario = existentesPorNombre.get(dto.getNombreRubro());
+                log.debug("♻️ Actualizando HonorarioPorRubro existente ID: {} para rubro: {}", honorario.getId(), dto.getNombreRubro());
+            } else {
+                // Crear nuevo solo si NO existe por nombre
+                honorario = new com.rodrigo.construccion.model.entity.HonorarioPorRubro();
+                honorario.setPresupuestoNoCliente(presupuesto);
+                log.debug("✨ Creando nuevo HonorarioPorRubro para rubro: {}", dto.getNombreRubro());
+            }
+            
             honorario.setNombreRubro(dto.getNombreRubro());
             
             // Buscar o crear rubro en tabla rubros
@@ -5908,10 +5940,15 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
 
     /**
      * Mapea una lista de DTOs de mayores costos por rubro a entidades
+     * CORREGIDO: Ahora actualiza entidades existentes en lugar de crear duplicados
+     * @param dtos Lista de DTOs con la configuración de mayores costos
+     * @param presupuesto Presupuesto al que pertenecen los mayores costos
+     * @param existentes Colección de mayores costos existentes capturada ANTES del clear()
      */
     private Set<com.rodrigo.construccion.model.entity.MayorCostoPorRubro> mapearMayoresCostosPorRubroDTO(
             List<com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO> dtos,
-            PresupuestoNoCliente presupuesto) {
+            PresupuestoNoCliente presupuesto,
+            Set<com.rodrigo.construccion.model.entity.MayorCostoPorRubro> existentes) {
         
         Set<com.rodrigo.construccion.model.entity.MayorCostoPorRubro> mayoresCostos = new java.util.HashSet<>();
         
@@ -5919,11 +5956,30 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
             return mayoresCostos;
         }
 
+        // 🔥 FIX: Crear Map de existentes usando el Set pasado por parámetro (capturado ANTES del clear)
+        java.util.Map<String, com.rodrigo.construccion.model.entity.MayorCostoPorRubro> existentesPorNombre = new java.util.HashMap<>();
+        if (existentes != null && !existentes.isEmpty()) {
+            for (com.rodrigo.construccion.model.entity.MayorCostoPorRubro existente : existentes) {
+                existentesPorNombre.put(existente.getNombreRubro(), existente);
+                log.debug("📋 Encontrado MayorCostoPorRubro existente ID: {} para rubro: {}", existente.getId(), existente.getNombreRubro());
+            }
+        }
+
         for (com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO dto : dtos) {
-            com.rodrigo.construccion.model.entity.MayorCostoPorRubro mayorCosto = new com.rodrigo.construccion.model.entity.MayorCostoPorRubro();
+            com.rodrigo.construccion.model.entity.MayorCostoPorRubro mayorCosto;
             
-            mayorCosto.setId(dto.getId());
-            mayorCosto.setPresupuestoNoCliente(presupuesto);
+            // 🔥 FIX: Si el mayor costo ya existe (por nombre_rubro), actualizarlo; si no, crear uno nuevo
+            if (existentesPorNombre.containsKey(dto.getNombreRubro())) {
+                // Actualizar existente
+                mayorCosto = existentesPorNombre.get(dto.getNombreRubro());
+                log.debug("♻️ Actualizando MayorCostoPorRubro existente ID: {} para rubro: {}", mayorCosto.getId(), dto.getNombreRubro());
+            } else {
+                // Crear nuevo
+                mayorCosto = new com.rodrigo.construccion.model.entity.MayorCostoPorRubro();
+                mayorCosto.setPresupuestoNoCliente(presupuesto);
+                log.debug("✨ Creando nuevo MayorCostoPorRubro para rubro: {}", dto.getNombreRubro());
+            }
+            
             mayorCosto.setNombreRubro(dto.getNombreRubro());
             
             // Buscar o crear rubro en tabla rubros
@@ -5958,6 +6014,295 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         }
 
         return mayoresCostos;
+    }
+
+    /**
+     * SINCRONIZA la colección de mayores costos por rubro con los DTOs recibidos
+     * SIN usar clear() para evitar violación de constraint UNIQUE
+     * 
+     * ESTRATEGIA:
+     * 1. Crear Map de DTOs por nombreRubro
+     * 2. Eliminar entidades que ya no están en los DTOs (removeIf)
+     * 3. Actualizar entidades existentes o crear nuevas según corresponda
+     * 
+     * @param presupuesto Presupuesto cuya colección se va a sincronizar
+     * @param dtos Lista de DTOs con la configuración actual (la verdad)
+     */
+    private void sincronizarMayoresCostosPorRubro(
+            PresupuestoNoCliente presupuesto,
+            List<com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO> dtos) {
+        
+        // 1️⃣ Crear Map de DTOs por nombreRubro para búsqueda rápida
+        java.util.Map<String, com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO> dtosPorNombre = new java.util.HashMap<>();
+        if (dtos != null && !dtos.isEmpty()) {
+            for (com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO dto : dtos) {
+                dtosPorNombre.put(dto.getNombreRubro(), dto);
+            }
+        }
+        
+        // 2️⃣ Eliminar los que ya NO están en los DTOs
+        presupuesto.getMayoresCostosPorRubro().removeIf(existente -> {
+            boolean debeEliminar = !dtosPorNombre.containsKey(existente.getNombreRubro());
+            if (debeEliminar) {
+                log.debug("🗑️ Eliminando MayorCostoPorRubro ID: {} - Rubro: {}", 
+                         existente.getId(), existente.getNombreRubro());
+            }
+            return debeEliminar;
+        });
+        
+        // 3️⃣ Actualizar existentes o agregar nuevos
+        for (com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO dto : dtosPorNombre.values()) {
+            // Buscar si ya existe en la colección actual
+            com.rodrigo.construccion.model.entity.MayorCostoPorRubro existente = presupuesto.getMayoresCostosPorRubro()
+                .stream()
+                .filter(mc -> mc.getNombreRubro().equals(dto.getNombreRubro()))
+                .findFirst()
+                .orElse(null);
+            
+            if (existente != null) {
+                // ♻️ Actualizar existente
+                log.debug("♻️ Actualizando MayorCostoPorRubro ID: {} - Rubro: {}", 
+                         existente.getId(), dto.getNombreRubro());
+                actualizarMayorCostoPorRubro(existente, dto);
+            } else {
+                // ✨ Crear y agregar nuevo
+                log.debug("✨ Creando nuevo MayorCostoPorRubro - Rubro: {}", dto.getNombreRubro());
+                com.rodrigo.construccion.model.entity.MayorCostoPorRubro nuevo = crearMayorCostoPorRubro(dto, presupuesto);
+                presupuesto.getMayoresCostosPorRubro().add(nuevo);
+            }
+        }
+    }
+    
+    /**
+     * Actualiza una entidad MayorCostoPorRubro con los valores del DTO
+     */
+    private void actualizarMayorCostoPorRubro(
+            com.rodrigo.construccion.model.entity.MayorCostoPorRubro entity,
+            com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO dto) {
+        
+        // Actualizar rubro si cambió el nombre
+        if (!entity.getNombreRubro().equals(dto.getNombreRubro())) {
+            entity.setNombreRubro(dto.getNombreRubro());
+            com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+            entity.setRubro(rubro);
+        }
+        
+        // Configuración general
+        entity.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        entity.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+        entity.setValor(dto.getValor());
+        
+        // Profesionales
+        entity.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+        entity.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+        entity.setProfesionalesValor(dto.getProfesionalesValor());
+        
+        // Materiales
+        entity.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+        entity.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+        entity.setMaterialesValor(dto.getMaterialesValor());
+        
+        // Otros Costos
+        entity.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+        entity.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+        entity.setOtrosCostosValor(dto.getOtrosCostosValor());
+        
+        // Honorarios
+        entity.setHonorariosActivo(dto.getHonorariosActivo() != null ? dto.getHonorariosActivo() : true);
+        entity.setHonorariosTipo(dto.getHonorariosTipo() != null ? dto.getHonorariosTipo() : "porcentaje");
+        entity.setHonorariosValor(dto.getHonorariosValor());
+    }
+    
+    /**
+     * Crea una nueva entidad MayorCostoPorRubro desde el DTO
+     */
+    private com.rodrigo.construccion.model.entity.MayorCostoPorRubro crearMayorCostoPorRubro(
+            com.rodrigo.construccion.dto.request.MayorCostoPorRubroDTO dto,
+            PresupuestoNoCliente presupuesto) {
+        
+        com.rodrigo.construccion.model.entity.MayorCostoPorRubro entity = new com.rodrigo.construccion.model.entity.MayorCostoPorRubro();
+        entity.setPresupuestoNoCliente(presupuesto);
+        entity.setNombreRubro(dto.getNombreRubro());
+        
+        // Buscar o crear rubro
+        com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+        entity.setRubro(rubro);
+        
+        // Configuración general
+        entity.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        entity.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+        entity.setValor(dto.getValor());
+        
+        // Profesionales
+        entity.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+        entity.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+        entity.setProfesionalesValor(dto.getProfesionalesValor());
+        
+        // Materiales
+        entity.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+        entity.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+        entity.setMaterialesValor(dto.getMaterialesValor());
+        
+        // Otros Costos
+        entity.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+        entity.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+        entity.setOtrosCostosValor(dto.getOtrosCostosValor());
+        
+        // Honorarios
+        entity.setHonorariosActivo(dto.getHonorariosActivo() != null ? dto.getHonorariosActivo() : true);
+        entity.setHonorariosTipo(dto.getHonorariosTipo() != null ? dto.getHonorariosTipo() : "porcentaje");
+        entity.setHonorariosValor(dto.getHonorariosValor());
+        
+        return entity;
+    }
+
+    // ========== SINCRONIZACIÓN DE DESCUENTOS POR RUBRO (FIX LLAVE DUPLICADA) ==========
+
+    /**
+     * Sincroniza los descuentos por rubro del presupuesto con la lista de DTOs recibida.
+     * Evita duplicados usando UPDATE/INSERT en lugar de clear()+addAll().
+     * 
+     * Lógica:
+     * 1. Elimina los descuentos que ya NO están en el DTO
+     * 2. ACTUALIZA los que existen
+     * 3. CREA los nuevos
+     */
+    private void sincronizarDescuentosPorRubro(
+            PresupuestoNoCliente presupuesto,
+            List<com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO> dtos) {
+        
+        // 1️⃣ Crear Map de DTOs por nombreRubro para búsqueda rápida
+        java.util.Map<String, com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO> dtosPorNombre = new java.util.HashMap<>();
+        if (dtos != null && !dtos.isEmpty()) {
+            for (com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO dto : dtos) {
+                dtosPorNombre.put(dto.getNombreRubro(), dto);
+            }
+        }
+        
+        // 2️⃣ Eliminar los que ya NO están en los DTOs
+        presupuesto.getDescuentosPorRubro().removeIf(existente -> {
+            boolean debeEliminar = !dtosPorNombre.containsKey(existente.getNombreRubro());
+            if (debeEliminar) {
+                log.debug("🗑️ Eliminando DescuentoPorRubro ID: {} - Rubro: {}", 
+                         existente.getId(), existente.getNombreRubro());
+            }
+            return debeEliminar;
+        });
+        
+        // 3️⃣ Actualizar existentes o agregar nuevos
+        for (com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO dto : dtosPorNombre.values()) {
+            // Buscar si ya existe en la colección actual
+            com.rodrigo.construccion.model.entity.DescuentoPorRubro existente = presupuesto.getDescuentosPorRubro()
+                .stream()
+                .filter(d -> d.getNombreRubro().equals(dto.getNombreRubro()))
+                .findFirst()
+                .orElse(null);
+            
+            if (existente != null) {
+                // ♻️ Actualizar existente
+                log.debug("♻️ Actualizando DescuentoPorRubro ID: {} - Rubro: {}", 
+                         existente.getId(), dto.getNombreRubro());
+                actualizarDescuentoPorRubro(existente, dto);
+            } else {
+                // ✨ Crear y agregar nuevo
+                log.debug("✨ Creando nuevo DescuentoPorRubro - Rubro: {}", dto.getNombreRubro());
+                com.rodrigo.construccion.model.entity.DescuentoPorRubro nuevo = crearDescuentoPorRubro(dto, presupuesto);
+                presupuesto.getDescuentosPorRubro().add(nuevo);
+            }
+        }
+    }
+    
+    /**
+     * Actualiza una entidad DescuentoPorRubro con los valores del DTO
+     */
+    private void actualizarDescuentoPorRubro(
+            com.rodrigo.construccion.model.entity.DescuentoPorRubro entity,
+            com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO dto) {
+        
+        // Actualizar rubro si cambió el nombre
+        if (!entity.getNombreRubro().equals(dto.getNombreRubro())) {
+            entity.setNombreRubro(dto.getNombreRubro());
+            com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+            entity.setRubro(rubro);
+        }
+        
+        // Configuración general
+        entity.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        entity.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+        entity.setValor(dto.getValor());
+        
+        // Profesionales
+        entity.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+        entity.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+        entity.setProfesionalesValor(dto.getProfesionalesValor());
+        
+        // Materiales
+        entity.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+        entity.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+        entity.setMaterialesValor(dto.getMaterialesValor());
+        
+        // Otros Costos
+        entity.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+        entity.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+        entity.setOtrosCostosValor(dto.getOtrosCostosValor());
+        
+        // Honorarios
+        entity.setHonorariosActivo(dto.getHonorariosActivo() != null ? dto.getHonorariosActivo() : false);
+        entity.setHonorariosTipo(dto.getHonorariosTipo() != null ? dto.getHonorariosTipo() : "PORCENTAJE");
+        entity.setHonorariosValor(dto.getHonorariosValor());
+        
+        // Mayores Costos
+        entity.setMayoresCostosActivo(dto.getMayoresCostosActivo() != null ? dto.getMayoresCostosActivo() : false);
+        entity.setMayoresCostosTipo(dto.getMayoresCostosTipo() != null ? dto.getMayoresCostosTipo() : "PORCENTAJE");
+        entity.setMayoresCostosValor(dto.getMayoresCostosValor());
+    }
+    
+    /**
+     * Crea una nueva entidad DescuentoPorRubro desde el DTO
+     */
+    private com.rodrigo.construccion.model.entity.DescuentoPorRubro crearDescuentoPorRubro(
+            com.rodrigo.construccion.dto.request.DescuentoPorRubroDTO dto,
+            PresupuestoNoCliente presupuesto) {
+        
+        com.rodrigo.construccion.model.entity.DescuentoPorRubro entity = new com.rodrigo.construccion.model.entity.DescuentoPorRubro();
+        entity.setPresupuestoNoCliente(presupuesto);
+        entity.setNombreRubro(dto.getNombreRubro());
+        
+        // Buscar o crear rubro
+        com.rodrigo.construccion.model.entity.Rubro rubro = buscarOCrearRubro(dto.getNombreRubro());
+        entity.setRubro(rubro);
+        
+        // Configuración general
+        entity.setActivo(dto.getActivo() != null ? dto.getActivo() : true);
+        entity.setTipo(dto.getTipo() != null ? dto.getTipo() : "porcentaje");
+        entity.setValor(dto.getValor());
+        
+        // Profesionales
+        entity.setProfesionalesActivo(dto.getProfesionalesActivo() != null ? dto.getProfesionalesActivo() : true);
+        entity.setProfesionalesTipo(dto.getProfesionalesTipo() != null ? dto.getProfesionalesTipo() : "porcentaje");
+        entity.setProfesionalesValor(dto.getProfesionalesValor());
+        
+        // Materiales
+        entity.setMaterialesActivo(dto.getMaterialesActivo() != null ? dto.getMaterialesActivo() : true);
+        entity.setMaterialesTipo(dto.getMaterialesTipo() != null ? dto.getMaterialesTipo() : "porcentaje");
+        entity.setMaterialesValor(dto.getMaterialesValor());
+        
+        // Otros Costos
+        entity.setOtrosCostosActivo(dto.getOtrosCostosActivo() != null ? dto.getOtrosCostosActivo() : true);
+        entity.setOtrosCostosTipo(dto.getOtrosCostosTipo() != null ? dto.getOtrosCostosTipo() : "porcentaje");
+        entity.setOtrosCostosValor(dto.getOtrosCostosValor());
+        
+        // Honorarios
+        entity.setHonorariosActivo(dto.getHonorariosActivo() != null ? dto.getHonorariosActivo() : false);
+        entity.setHonorariosTipo(dto.getHonorariosTipo() != null ? dto.getHonorariosTipo() : "PORCENTAJE");
+        entity.setHonorariosValor(dto.getHonorariosValor());
+        
+        // Mayores Costos
+        entity.setMayoresCostosActivo(dto.getMayoresCostosActivo() != null ? dto.getMayoresCostosActivo() : false);
+        entity.setMayoresCostosTipo(dto.getMayoresCostosTipo() != null ? dto.getMayoresCostosTipo() : "PORCENTAJE");
+        entity.setMayoresCostosValor(dto.getMayoresCostosValor());
+        
+        return entity;
     }
 
     // ========== MAPEO DE DESCUENTOS POR RUBRO ==========
@@ -6146,4 +6491,5 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     }
 
 }
+
 
