@@ -1,0 +1,33 @@
+# ============================================
+# Railway Configuration - Auto-Sleep Activado
+# Ahorra ~75% de costos para apps con poco tráfico
+# ============================================
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+# Comando de inicio (Railway lo detecta automático, pero lo especificamos)
+startCommand = "./mvnw spring-boot:run"
+
+# Health check para verificar que la app está lista
+healthcheckPath = "/actuator/health"
+healthcheckTimeout = 60  # Spring Boot necesita tiempo para arrancar
+
+# Timeout para requests (aumentado para Spring Boot)
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
+
+[scaling]
+# 🔑 AUTO-SLEEP ACTIVADO
+# minReplicas = 0 → la app se pausará cuando no tenga tráfico
+# maxReplicas = 1 → solo una instancia (suficiente para 2 usuarios/día)
+minReplicas = 0
+maxReplicas = 1
+
+# ============================================
+# NOTAS:
+# - Primera request después de sleep: 30-40 segundos
+# - Ahorro estimado: ~$12/mes (de $15-20 → $3-8)
+# - Para desactivar auto-sleep: cambiar minReplicas = 1
+# ============================================
