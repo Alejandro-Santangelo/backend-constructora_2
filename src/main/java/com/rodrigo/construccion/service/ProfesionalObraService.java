@@ -32,9 +32,11 @@ import com.rodrigo.construccion.repository.AsignacionProfesionalObraRepository;
 import com.rodrigo.construccion.repository.HonorarioPorRubroRepository;
 import com.rodrigo.construccion.repository.PresupuestoNoClienteRepository;
 import com.rodrigo.construccion.repository.ProfesionalJornalDiarioRepository;
+import com.rodrigo.construccion.repository.ItemCalculadoraPresupuestoRepository;
 import com.rodrigo.construccion.model.entity.ProfesionalJornalDiario;
 import com.rodrigo.construccion.model.entity.HonorarioPorRubro;
 import com.rodrigo.construccion.model.entity.PresupuestoNoCliente;
+import com.rodrigo.construccion.model.entity.ItemCalculadoraPresupuesto;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -48,6 +50,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -68,6 +71,7 @@ public class ProfesionalObraService implements IProfesionalObraService {
     private final AsignacionProfesionalObraRepository asignacionProfesionalObraRepository;
     private final HonorarioPorRubroRepository honorarioPorRubroRepository;
     private final PresupuestoNoClienteRepository presupuestoNoClienteRepository;
+    private final ItemCalculadoraPresupuestoRepository itemCalculadoraPresupuestoRepository;
     private final ProfesionalJornalDiarioRepository jornalDiarioRepository;
     private final IEmpresaService empresaService;
     private final ProfesionalObraMapper profesionalObraMapper;
@@ -1250,11 +1254,18 @@ public class ProfesionalObraService implements IProfesionalObraService {
             }
         }
         
-        // Segunda pasada: Obtener presupuesto REAL desde honorarios_por_rubro
+        // Segunda pasada: Obtener presupuesto REAL desde items_calculadora_presupuesto.subtotal_mano_obra
+        // Matching por nombre de rubro (tipo_profesional == rubroNombre)
+        Map<String, String> nombresRubroPorGrupo = new HashMap<>();
+        for (AsignacionProfesionalObra asig : asignaciones) {
+            String key = asig.getObraId() + "_" + asig.getRubroId();
+            nombresRubroPorGrupo.putIfAbsent(key, asig.getRubroNombre());
+        }
+        
         for (Map.Entry<String, Long> entry : obrasPorGrupo.entrySet()) {
             String key = entry.getKey();
             Long obraId = entry.getValue();
-            Long rubroId = rubrosPorGrupo.get(key);
+            String rubroNombre = nombresRubroPorGrupo.get(key);
             
             TotalesRubroObra totales = totalesMap.get(key);
             
@@ -1266,41 +1277,36 @@ public class ProfesionalObraService implements IProfesionalObraService {
                     .findFirst()
                     .orElse(null);
                 
-                if (presupuesto != null) {
-                    // Buscar honorario del rubro específico
-                    List<HonorarioPorRubro> honorarios = honorarioPorRubroRepository
-                        .findByPresupuestoNoClienteIdAndActivoTrue(presupuesto.getId());
+                if (presupuesto != null && rubroNombre != null) {
+                    // ✅ BUSCAR EN items_calculadora_presupuesto (jornales por rubro)
+                    List<ItemCalculadoraPresupuesto> items = itemCalculadoraPresupuestoRepository
+                        .findByPresupuestoNoClienteId(presupuesto.getId());
                     
-                    for (HonorarioPorRubro honorario : honorarios) {
-                        // Comparar usando la relación rubro (puede ser null, comparar con cuidado)
-                        Long honorarioRubroId = (honorario.getRubro() != null) ? honorario.getRubro().getId() : null;
-                        if (honorarioRubroId != null && honorarioRubroId.equals(rubroId)) {
-                            // ✅ USAR PRESUPUESTO COMPARTIDO desde profesionales_valor
-                            BigDecimal presupuestoCompartido = honorario.getProfesionalesValor();
+                    // Match por nombre (tipo_profesional == rubroNombre)
+                    for (ItemCalculadoraPresupuesto item : items) {
+                        if (item.getTipoProfesional() != null && 
+                            item.getTipoProfesional().equalsIgnoreCase(rubroNombre)) {
+                            // ✅ USAR IMPORTE BASE DE JORNALES (subtotal_mano_obra)
+                            BigDecimal presupuestoCompartido = item.getSubtotalManoObra();
                             if (presupuestoCompartido != null && presupuestoCompartido.compareTo(BigDecimal.ZERO) > 0) {
                                 totales.presupuestoTotal = presupuestoCompartido;
-                                log.info("✅ Presupuesto REAL hallado para {}_{}: ${}", 
-                                    obraId, rubroId, presupuestoCompartido);
+                                log.info("✅ Presupuesto jornales hallado para {} ({}): ${}", 
+                                    key, rubroNombre, presupuestoCompartido);
                                 break;
                             }
                         }
                     }
-                }
-                
-                // Fallback: Si no se encuentra presupuesto en honorarios_por_rubro, sumar asignaciones
-                if (totales.presupuestoTotal.compareTo(BigDecimal.ZERO) == 0) {
-                    log.warn("⚠️ No se encontró presupuesto en honorarios_por_rubro para {}_{}, usando suma de asignaciones",
-                        obraId, rubroId);
-                    for (AsignacionProfesionalObra asig : asignaciones) {
-                        if (asig.getObraId().equals(obraId) && asig.getRubroId().equals(rubroId)) {
-                            BigDecimal importeJornal = asig.getImporteJornal() != null ? asig.getImporteJornal() : BigDecimal.ZERO;
-                            BigDecimal cantidadJornales = asig.getCantidadJornales() != null ? asig.getCantidadJornales() : BigDecimal.ZERO;
-                            totales.presupuestoTotal = totales.presupuestoTotal.add(importeJornal.multiply(cantidadJornales));
-                        }
+                    
+                    // Advertencia si no se encontró el rubro en items
+                    if (totales.presupuestoTotal.compareTo(BigDecimal.ZERO) == 0) {
+                        log.warn("⚠️ Rubro '{}' no encontrado en items_calculadora_presupuesto para {}",
+                            rubroNombre, key);
                     }
+                } else {
+                    log.warn("⚠️ No se encontró presupuesto APROBADO para obra {} o rubroNombre es null", obraId);
                 }
             } catch (Exception e) {
-                log.error("❌ Error obteniendo presupuesto para {}_{}: {}", obraId, rubroId, e.getMessage());
+                log.error("❌ Error obteniendo presupuesto para {}: {}", key, e.getMessage());
             }
         }
         

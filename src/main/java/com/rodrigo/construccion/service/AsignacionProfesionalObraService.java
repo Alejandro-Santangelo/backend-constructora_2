@@ -62,6 +62,28 @@ public class AsignacionProfesionalObraService {
                 .findFirst()
                 .orElseThrow(() -> new ResourceNotFoundException("No se encontró el presupuesto para la obra ID: " + obraId));
 
+        // VALIDACIÓN DE ESTADO DEL PRESUPUESTO: Solo se permiten asignaciones si el presupuesto está en estados válidos
+        if (!List.of("APROBADO", "EN_EJECUCION", "TERMINADO").contains(presupuesto.getEstado())) {
+            throw new BusinessException(String.format(
+                    "No se pueden crear asignaciones para esta obra. El presupuesto debe estar APROBADO, EN_EJECUCION o TERMINADO. Estado actual: %s",
+                    presupuesto.getEstado()
+            ));
+        }
+
+        // VALIDACIÓN DE RUBRO: Verificar que el rubro existe en el presupuesto (no se permiten rubros nuevos)
+        // Esta validación aplica a TODOS los tipos de asignación
+        boolean rubroExisteEnPresupuesto = presupuesto.getItemsCalculadora().stream()
+                .anyMatch(item -> item.getId().equals(request.getRubroId()));
+
+        if (!rubroExisteEnPresupuesto) {
+            throw new BusinessException(String.format(
+                    "El rubro ID %d no existe en el presupuesto de la obra. " +
+                    "Solo se pueden asignar profesionales a rubros existentes en el presupuesto APROBADO/EN_EJECUCION/TERMINADO. " +
+                    "Para agregar nuevos rubros, edite el presupuesto.",
+                    request.getRubroId()
+            ));
+        }
+
         // Validaciones específicas para asignación por JORNAL
         if ("JORNAL".equals(request.getTipoAsignacion())) {
             if (request.getCantidadJornales() == null || request.getCantidadJornales().compareTo(BigDecimal.ZERO) <= 0) {

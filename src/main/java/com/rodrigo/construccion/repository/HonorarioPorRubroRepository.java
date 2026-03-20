@@ -16,13 +16,15 @@ public interface HonorarioPorRubroRepository extends JpaRepository<HonorarioPorR
     List<HonorarioPorRubro> findByPresupuestoNoClienteIdAndActivoTrue(Long presupuestoNoClienteId);
 
     /**
-     * Obtiene los rubros activos del presupuesto aprobado más reciente de una obra.
-     * Si no hay presupuesto aprobado, devuelve lista vacía.
+     * Obtiene los rubros activos del presupuesto aprobado/en ejecución/terminado más reciente de una obra.
+     * Solo devuelve rubros de presupuestos con estados: APROBADO, EN_EJECUCION, TERMINADO.
+     * Esto previene agregar rubros a obras con presupuestos en estos estados.
+     * Si no hay presupuesto en estos estados, devuelve lista vacía.
      */
     @Query("SELECT h FROM HonorarioPorRubro h " +
            "WHERE h.presupuestoNoCliente.id = (" +
            "  SELECT p.id FROM PresupuestoNoCliente p " +
-           "  WHERE p.obra.id = :obraId AND p.estado = 'APROBADO' " +
+           "  WHERE p.obra.id = :obraId AND p.estado IN ('APROBADO', 'EN_EJECUCION', 'TERMINADO') " +
            "  ORDER BY p.numeroVersion DESC LIMIT 1" +
            ") AND h.activo = true")
     List<HonorarioPorRubro> findRubrosActivosByObraId(@Param("obraId") Long obraId);
