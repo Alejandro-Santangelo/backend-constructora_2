@@ -24,7 +24,10 @@ COPY --from=build /app/target/*.jar app.jar
 EXPOSE 8080
 
 # Ejecutar la aplicación con límites de memoria y perfil prod
-# Railway plan: 1GB RAM → JVM max 512MB (deja espacio para overhead)
+# Railway plan: Ajustar según plan contratado
+# 1GB RAM → usar -Xmx512m
+# 2GB RAM → usar -Xmx1024m  
+# 4GB RAM → usar -Xmx2048m
 ENTRYPOINT ["java", \
     "-Xmx512m", \
     "-Xms256m", \

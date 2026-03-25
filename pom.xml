@@ -52,6 +52,12 @@
             <artifactId>spring-boot-starter-aop</artifactId>
         </dependency>
         
+        <!-- Spring Boot Actuator para health checks (Railway) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-actuator</artifactId>
+        </dependency>
+        
         <!-- Jackson JSR310 para soporte de LocalDate/LocalDateTime -->
         <dependency>
             <groupId>com.fasterxml.jackson.datatype</groupId>
