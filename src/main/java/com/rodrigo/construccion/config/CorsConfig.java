@@ -33,7 +33,8 @@ public class CorsConfig {
             "http://localhost:3004",
             "http://localhost:3005",
             "http://localhost:5173",
-            "https://frontend-constructora2-production.up.railway.app"
+            "https://frontend-constructora2-production.up.railway.app",
+            "https://zonal-curiosity-production-3041.up.railway.app"
         ));
         
         // Métodos HTTP permitidos
