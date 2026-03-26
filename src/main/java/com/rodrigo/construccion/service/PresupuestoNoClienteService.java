@@ -141,6 +141,15 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     }
 
     /**
+     * Busca presupuestos por obra y estado
+     */
+    @Override
+    @Transactional(readOnly = true)
+    public List<PresupuestoNoCliente> buscarPorObraIdYEstado(Long obraId, String estado) {
+        return repository.findByObraIdAndEstado(obraId, estado);
+    }
+
+    /**
      * Obtiene todos los presupuestos de una obra específica
      * Ordenados por versión descendente (versión más reciente primero)
      */

@@ -73,4 +73,16 @@ public class ObraMaterialResponseDTO {
 
     @Schema(description = "Observaciones sobre la asignación", example = "Material para primera etapa")
     private String observaciones;
+
+    @Schema(description = "Rubro al que pertenece el material", example = "Albañilería")
+    private String rubro;
+
+    @Schema(description = "Estado de la asignación", example = "ACTIVO")
+    private String estado;
+
+    @Schema(description = "Cantidad utilizada del material", example = "45.50")
+    private BigDecimal cantidadUtilizada;
+
+    @Schema(description = "Precio del material (alias de precioUnitario)", example = "850.00")
+    private BigDecimal precio;
 }

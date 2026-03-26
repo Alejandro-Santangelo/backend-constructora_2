@@ -206,4 +206,16 @@ public interface MovimientoMaterialRepository extends JpaRepository<MovimientoMa
     Page<MovimientoMaterial> findByEmpresaIdAndTextoContaining(@Param("empresaId") Long empresaId, 
                                                                @Param("texto") String texto, 
                                                                Pageable pageable);
+
+    /**
+     * Calcular cantidad total utilizada (salidas) por material catálogo y obra
+     */
+    @Query("SELECT COALESCE(SUM(mm.cantidad), 0) " +
+           "FROM MovimientoMaterial mm " +
+           "WHERE mm.material.id = :materialCatalogoId " +
+           "AND mm.obraId = :obraId " +
+           "AND mm.tipoMovimiento = 'SALIDA' " +
+           "AND mm.estado != 'CANCELADO'")
+    Double getCantidadUtilizadaPorMaterialCatalogoYObra(@Param("materialCatalogoId") Long materialCatalogoId, 
+                                                         @Param("obraId") Long obraId);
 }
