@@ -9,6 +9,8 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
 import java.util.Arrays;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * Configuración CORS usando filtro explícito con máxima prioridad
@@ -24,17 +26,34 @@ public class CorsConfig {
     public FilterRegistrationBean<CorsFilter> corsFilter() {
         CorsConfiguration config = new CorsConfiguration();
         
-        // Orígenes permitidos
-        config.setAllowedOrigins(Arrays.asList(
-            "http://localhost:3000",
-            "http://localhost:3001",
-            "http://localhost:3002",
-            "http://localhost:3003",
-            "http://localhost:3004",
-            "http://localhost:3005",
-            "http://localhost:5173",
-            "https://frontend-constructora2-production.up.railway.app"
-        ));
+        // Orígenes permitidos - LEER DE VARIABLE DE ENTORNO O USAR DEFAULTS
+        List<String> allowedOrigins = new ArrayList<>();
+        
+        // Intentar leer de variable de entorno primero
+        String corsEnv = System.getenv("CORS_ALLOWED_ORIGINS");
+        if (corsEnv != null && !corsEnv.trim().isEmpty()) {
+            // Separar por comas y agregar cada origen
+            String[] origins = corsEnv.split(",");
+            for (String origin : origins) {
+                allowedOrigins.add(origin.trim());
+            }
+            System.out.println("✅ CORS: Usando orígenes desde variable de entorno: " + allowedOrigins);
+        } else {
+            // Usar orígenes por defecto
+            allowedOrigins = Arrays.asList(
+                "http://localhost:3000",
+                "http://localhost:3001",
+                "http://localhost:3002",
+                "http://localhost:3003",
+                "http://localhost:3004",
+                "http://localhost:3005",
+                "http://localhost:5173",
+                "https://frontend-constructora2-production.up.railway.app"
+            );
+            System.out.println("⚠️ CORS: Variable CORS_ALLOWED_ORIGINS no configurada, usando defaults");
+        }
+        
+        config.setAllowedOrigins(allowedOrigins);
         
         // Métodos HTTP permitidos
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"));
