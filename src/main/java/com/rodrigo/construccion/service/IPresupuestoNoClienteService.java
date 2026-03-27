@@ -14,6 +14,11 @@ public interface IPresupuestoNoClienteService {
     List<PresupuestoNoCliente> buscarPorDireccionObra(String calle, String altura, String piso, String departamento);
     
     /**
+     * Busca presupuestos por obra y estado
+     */
+    List<PresupuestoNoCliente> buscarPorObraIdYEstado(Long obraId, String estado);
+    
+    /**
      * Obtiene profesionales con datos financieros de un presupuesto.
      * Si el presupuesto está vinculado a obra (global), busca los profesionales en asignaciones_profesional_obra.
      */
