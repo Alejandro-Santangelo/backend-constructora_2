@@ -75,15 +75,15 @@ public class AsignacionProfesionalObra {
 
     // ==================== CAMPOS DEL RUBRO ====================
 
-    @NotNull(message = "El ID del rubro es obligatorio")
-    @Column(name = "rubro_id", nullable = false)
+    // rubroId puede ser NULL para asignaciones globales (sin presupuesto específico)
+    @Column(name = "rubro_id")
     private Long rubroId;
 
     @Column(name = "item_id")
     private Long itemId;
 
-    @NotBlank(message = "El nombre del rubro es obligatorio")
-    @Column(name = "rubro_nombre", nullable = false)
+    // rubroNombre puede ser NULL para asignaciones globales
+    @Column(name = "rubro_nombre")
     private String rubroNombre;
 
     // ==================== CAMPOS DE ASIGNACIÓN ====================

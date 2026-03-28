@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -55,17 +56,6 @@ public class ProfesionalJornalDiarioService {
         log.info("🔓 Flag SUPER_ADMIN activado para buscar profesionales y obras compartidas");
         
         try {
-            // Validar que no exista un jornal duplicado
-            if (jornalRepository.existsByProfesionalIdAndObraIdAndRubroIdAndFecha(
-                    requestDTO.getProfesionalId(), 
-                    requestDTO.getObraId(),
-                    requestDTO.getRubroId(),
-                    requestDTO.getFecha())) {
-                throw new IllegalArgumentException(
-                    "Ya existe un jornal registrado para este profesional en esta obra/rubro en la fecha " + requestDTO.getFecha()
-                );
-            }
-
             // Buscar profesional (sin filtro, compartido entre empresas)
             Profesional profesional = profesionalRepository.findById(requestDTO.getProfesionalId())
                     .orElseThrow(() -> new ResourceNotFoundException(
@@ -76,43 +66,79 @@ public class ProfesionalJornalDiarioService {
                     .orElseThrow(() -> new ResourceNotFoundException(
                             "Obra no encontrada con id: " + requestDTO.getObraId()));
 
-            // Validar que el rubro exista en el presupuesto aprobado de la obra
+            // NOTA: Validación de rubro desactivada para permitir asignaciones globales
+            // En modo global, los jornales no requieren un rubro específico del presupuesto
+            // Se permite rubroId arbitrario que luego se ignora en asignaciones globales
+            
+            // Opcional: Si la obra tiene presupuesto aprobado, validar que el rubro existe
             List<HonorarioPorRubro> rubrosActivos = honorarioPorRubroRepository.findRubrosActivosByObraId(obra.getId());
             
-            if (rubrosActivos.isEmpty()) {
-                throw new IllegalArgumentException(
-                    "La obra no tiene un presupuesto aprobado con rubros activos. " +
-                    "Por favor, cree y apruebe un presupuesto antes de registrar jornales."
-                );
-            }
-            
-            boolean rubroExiste = rubrosActivos.stream()
-                .anyMatch(r -> r.getId().equals(requestDTO.getRubroId()));
-            
-            if (!rubroExiste) {
-                String rubrosDisponibles = rubrosActivos.stream()
-                    .map(r -> r.getNombreRubro())
-                    .collect(Collectors.joining(", "));
-                    
-                throw new IllegalArgumentException(
-                    "El rubro especificado (ID: " + requestDTO.getRubroId() + ") no existe en el presupuesto aprobado de esta obra. " +
-                    "Rubros disponibles: " + rubrosDisponibles
-                );
+            if (!rubrosActivos.isEmpty()) {
+                // Solo validar si hay presupuesto aprobado
+                boolean rubroExiste = rubrosActivos.stream()
+                    .anyMatch(r -> r.getId().equals(requestDTO.getRubroId()));
+                
+                if (rubroExiste) {
+                    log.info("✓ Rubro validado: rubro_id={} existe en presupuesto de obra_id={}", 
+                             requestDTO.getRubroId(), obra.getId());
+                } else {
+                    log.info("ℹ️ Rubro ID {} no encontrado en presupuesto de obra {}. Permitiendo jornal en modo global.",
+                             requestDTO.getRubroId(), obra.getId());
+                }
+            } else {
+                log.info("ℹ️ Obra {} sin presupuesto aprobado. Registrando jornal en modo global.", obra.getId());
             }
 
-            log.info("Rubro validado: rubro_id={} existe en presupuesto de obra_id={}", 
-                     requestDTO.getRubroId(), obra.getId());
+            // 🔄 LÓGICA UPSERT: Buscar si ya existe un jornal con la misma combinación
+            Optional<ProfesionalJornalDiario> jornalExistente = jornalRepository.findByProfesionalIdAndObraIdAndRubroIdAndFecha(
+                    requestDTO.getProfesionalId(), 
+                    requestDTO.getObraId(),
+                    requestDTO.getRubroId(),
+                    requestDTO.getFecha()
+            );
 
-            // Crear jornal
-            ProfesionalJornalDiario jornal = new ProfesionalJornalDiario();
-            jornal.setProfesional(profesional);
-            jornal.setObra(obra);
-            jornal.setRubroId(requestDTO.getRubroId());
-            jornal.setFecha(requestDTO.getFecha());
+            ProfesionalJornalDiario jornal;
+            String mensajeAccion;
+            
+            if (jornalExistente.isPresent()) {
+                // ACTUALIZAR jornal existente
+                jornal = jornalExistente.get();
+                log.warn("⚠️ Ya existe jornal ID {} para profesional {}, obra {}, rubro {}, fecha {}. Se actualizará.",
+                        jornal.getId(), requestDTO.getProfesionalId(), requestDTO.getObraId(), 
+                        requestDTO.getRubroId(), requestDTO.getFecha());
+                
+                mensajeAccion = String.format(
+                    "Ya existía un jornal registrado para %s en esta obra/rubro/fecha. Se actualizaron las horas trabajadas.",
+                    profesional.getNombre()
+                );
+            } else {
+                // CREAR nuevo jornal
+                jornal = new ProfesionalJornalDiario();
+                jornal.setProfesional(profesional);
+                jornal.setObra(obra);
+                jornal.setRubroId(requestDTO.getRubroId());
+                jornal.setFecha(requestDTO.getFecha());
+                
+                // Obtener empresa del contexto de multi-tenancy
+                Long empresaId = TenantContext.getTenantId();
+                if (empresaId == null && requestDTO.getEmpresaId() != null) {
+                    empresaId = requestDTO.getEmpresaId();
+                }
+                if (empresaId == null) {
+                    throw new IllegalArgumentException("No se pudo determinar la empresa del contexto");
+                }
+                jornal.setEmpresaId(empresaId);
+                
+                mensajeAccion = "Jornal registrado correctamente";
+                log.info("✅ Creando nuevo jornal para profesional {}, obra {}, rubro {}, fecha {}",
+                        requestDTO.getProfesionalId(), requestDTO.getObraId(), 
+                        requestDTO.getRubroId(), requestDTO.getFecha());
+            }
+
+            // Actualizar campos (tanto para CREATE como para UPDATE)
             jornal.setHorasTrabajadasDecimal(requestDTO.getHorasTrabajadasDecimal());
             
             // Si se especificó una tarifa personalizada, usarla; sino copiar del profesional
-            // Se permite tarifa en 0 o null (para casos donde no se cobra)
             if (requestDTO.getTarifaDiaria() != null) {
                 jornal.setTarifaDiaria(requestDTO.getTarifaDiaria());
             } else {
@@ -121,27 +147,18 @@ public class ProfesionalJornalDiarioService {
             }
 
             jornal.setObservaciones(requestDTO.getObservaciones());
-            
-            // Obtener empresa del contexto de multi-tenancy
-            Long empresaId = TenantContext.getTenantId();
-            if (empresaId == null && requestDTO.getEmpresaId() != null) {
-                empresaId = requestDTO.getEmpresaId();
-            }
-            if (empresaId == null) {
-                throw new IllegalArgumentException("No se pudo determinar la empresa del contexto");
-            }
-            jornal.setEmpresaId(empresaId);
 
-            // El método @PrePersist calculará automáticamente el montoCobrado
+            // El método @PrePersist/@PreUpdate calculará automáticamente el montoCobrado
             ProfesionalJornalDiario jornalGuardado = jornalRepository.save(jornal);
 
-            log.info("Jornal creado exitosamente: id={}, montoCobrado={}", 
-                     jornalGuardado.getId(), jornalGuardado.getMontoCobrado());
+            log.info("💾 Jornal guardado: id={}, montoCobrado={}, acción={}", 
+                     jornalGuardado.getId(), jornalGuardado.getMontoCobrado(), mensajeAccion);
 
             // 🔗 CREAR/ACTUALIZAR ASIGNACIÓN AUTOMÁTICAMENTE
+            Long empresaId = jornalGuardado.getEmpresaId();
             crearOActualizarAsignacion(profesional, obra, requestDTO.getRubroId(), empresaId);
 
-            return toResponseDTO(jornalGuardado);
+            return toResponseDTO(jornalGuardado, mensajeAccion);
         } finally {
             // Siempre restaurar el flag de super admin
             TenantContext.setSuperAdmin(false);
@@ -370,12 +387,41 @@ public class ProfesionalJornalDiarioService {
         log.info("🔗 Verificando asignación: profesional={}, obra={}, rubro={}", 
                  profesional.getId(), obra.getId(), rubroId);
 
-        // Buscar asignación existente para este profesional/obra/rubro
+        // Obtener el rubro real desde honorarios_por_rubro PRIMERO
+        // rubroId recibido = honorarios_por_rubro.id (ej: 25)
+        // rubroIdReal necesario = rubros.id (ej: 15) para FK constraint
+        Long rubroIdReal = null;
+        String rubroNombre = null;
+        
+        var honorarioOpt = honorarioPorRubroRepository.findById(rubroId);
+        if (honorarioOpt.isPresent()) {
+            var honorario = honorarioOpt.get();
+            if (honorario.getRubro() != null) {
+                rubroIdReal = honorario.getRubro().getId();
+                rubroNombre = honorario.getNombreRubro();
+                log.info("✓ Rubro encontrado: {} (honorario.id={}, rubro.id={})", 
+                         rubroNombre, rubroId, rubroIdReal);
+            } else {
+                log.warn("⚠️ Honorario ID {} existe pero no tiene rubro_id", rubroId);
+                rubroNombre = honorario.getNombreRubro();
+            }
+        } else {
+            log.info("ℹ️ Honorario ID {} no encontrado. Asignación global.", rubroId);
+            rubroNombre = "Asignación Global";
+        }
+        
+        // Buscar asignación existente para este profesional/obra/rubro REAL
         List<AsignacionProfesionalObra> asignaciones = asignacionRepository
             .findByProfesionalIdAndObraIdAndEmpresaId(profesional.getId(), obra.getId(), empresaId);
 
+        final Long rubroIdFinal = rubroIdReal;
         AsignacionProfesionalObra asignacion = asignaciones.stream()
-            .filter(a -> a.getRubroId() != null && a.getRubroId().equals(rubroId))
+            .filter(a -> {
+                if (rubroIdFinal == null) {
+                    return a.getRubroId() == null;
+                }
+                return a.getRubroId() != null && a.getRubroId().equals(rubroIdFinal);
+            })
             .findFirst()
             .orElse(null);
 
@@ -389,17 +435,12 @@ public class ProfesionalJornalDiarioService {
             asignacion.setProfesional(profesional);
             asignacion.setObraId(obra.getId());
             asignacion.setObra(obra);
-            asignacion.setRubroId(rubroId);
             asignacion.setTipoAsignacion("JORNAL");
             asignacion.setEstado("ACTIVO");
             asignacion.setFechaInicio(LocalDate.now());
             asignacion.setModalidad("JORNAL_DIARIO");
-            
-            // Obtener nombre del rubro
-            var rubroOpt = honorarioPorRubroRepository.findById(rubroId);
-            if (rubroOpt.isPresent()) {
-                asignacion.setRubroNombre(rubroOpt.get().getNombreRubro());
-            }
+            asignacion.setRubroId(rubroIdReal);
+            asignacion.setRubroNombre(rubroNombre);
             
             // Copiar datos del profesional
             asignacion.setProfesionalTipo(profesional.getTipoProfesional());
@@ -426,6 +467,10 @@ public class ProfesionalJornalDiarioService {
      * Convertir entidad a DTO de respuesta
      */
     private ProfesionalJornalDiarioResponseDTO toResponseDTO(ProfesionalJornalDiario jornal) {
+        return toResponseDTO(jornal, null);
+    }
+
+    private ProfesionalJornalDiarioResponseDTO toResponseDTO(ProfesionalJornalDiario jornal, String mensajeAccion) {
         // Obtener nombre del rubro desde honorarios_por_rubro si existe
         String rubroNombre = null;
         if (jornal.getRubroId() != null) {
@@ -455,6 +500,7 @@ public class ProfesionalJornalDiarioService {
                 .empresaId(jornal.getEmpresaId())
                 .fechaCreacion(jornal.getFechaCreacion())
                 .fechaActualizacion(jornal.getFechaActualizacion())
+                .mensajeAccion(mensajeAccion)
                 .build();
     }
 }
