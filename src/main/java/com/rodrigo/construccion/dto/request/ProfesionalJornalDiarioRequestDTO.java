@@ -36,9 +36,14 @@ public class ProfesionalJornalDiarioRequestDTO {
     /**
      * ID del rubro del presupuesto al que se asigna el jornal
      * 
-     * Este ID corresponde a honorarios_por_rubro.id
-     * El presupuesto vinculado a la obra define los rubros disponibles.
-     * Ejemplos: "Albañilería", "Plomería", "Electricidad", etc.
+     * IMPORTANTE: Este ID corresponde a honorarios_por_rubro.id (ID del presupuesto específico)
+     * 
+     * El backend internamente obtendrá el rubro_id (rubros.id) para cumplir con
+     * las FK constraints de asignaciones_profesional_obra.
+     * 
+     * Ejemplos: si el presupuesto tiene un "Limpieza" con honorarios_por_rubro.id=25
+     *           y ese honorario apunta a rubros.id=15, el frontend envía 25 y el backend
+     *           usa 15 para las asignaciones.
      */
     @NotNull(message = "El ID del rubro es obligatorio")
     @Positive(message = "El ID del rubro debe ser positivo")

@@ -674,8 +674,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         log.info("📊 Totales mapeados del frontend: totalPresupuesto={}, totalHonorarios={}, totalFinal={}",
                 dto.getTotalPresupuesto(), dto.getTotalHonorarios(), dto.getTotalPresupuestoConHonorarios());
 
-        // ========== VALIDAR COHERENCIA DE TOTALES ==========
-        validarCoherenciaTotales(pnc);
+        // ℹ️ Los totales vienen correctamente calculados desde el frontend (incluyen honorarios por rubro)
+        // NO validar ni recalcular, guardar directamente lo que envía el usuario
 
         log.info("🔍 DEBUG DESPUÉS DE MAPEO - Valor en entity antes de guardar: {}",
                 pnc.getHonorariosConfiguracionPresupuestoValor());
@@ -1680,8 +1680,8 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
         pnc.setTotalMayoresCostosPorRubro(dto.getTotalMayoresCostosPorRubro() != null ? dto.getTotalMayoresCostosPorRubro() : java.math.BigDecimal.ZERO);
         pnc.setTotalDescuentosPorRubro(dto.getTotalDescuentosPorRubro() != null ? dto.getTotalDescuentosPorRubro() : java.math.BigDecimal.ZERO);
 
-        // ========== VALIDAR COHERENCIA DE TOTALES ==========
-        validarCoherenciaTotales(pnc);
+        // ℹ️ Los totales vienen correctamente calculados desde el frontend (incluyen honorarios por rubro)
+        // NO validar ni recalcular, guardar directamente lo que envía el usuario
 
         // ========== NO recalcular si los totales vienen del frontend ==========
         // Si el DTO trae los totales, no recalcular aquí para evitar perder el valor correcto
@@ -5770,74 +5770,16 @@ public class PresupuestoNoClienteService implements IPresupuestoNoClienteService
     }
 
     // =========================================================================
-    // VALIDACIÓN DE COHERENCIA DE TOTALES
+    // NOTA: Validación de coherencia de totales ELIMINADA
     // =========================================================================
-
-    /**
-     * Valida que los totales del presupuesto sean coherentes matemáticamente.
-     * Evita que el frontend envíe cálculos incorrectos que se guarden sin validar.
-     * 
-     * @param presupuesto Presupuesto a validar
-     * @throws IllegalArgumentException si hay inconsistencias en los totales
-     */
-    private void validarCoherenciaTotales(PresupuestoNoCliente presupuesto) {
-        java.math.BigDecimal totalPresupuesto = presupuesto.getTotalPresupuesto();
-        java.math.BigDecimal totalHonorarios = presupuesto.getTotalHonorariosCalculado();
-        java.math.BigDecimal totalMayoresCostos = presupuesto.getTotalMayoresCostos();
-        java.math.BigDecimal totalMayoresCostosPorRubro = presupuesto.getTotalMayoresCostosPorRubro();
-        java.math.BigDecimal totalDescuentosPorRubro = presupuesto.getTotalDescuentosPorRubro();
-        java.math.BigDecimal totalConHonorarios = presupuesto.getTotalPresupuestoConHonorarios();
-        java.math.BigDecimal totalConDescuentos = presupuesto.getTotalConDescuentos();
-
-        // Permitir valores null
-        if (totalPresupuesto == null || totalHonorarios == null || totalConHonorarios == null) {
-            log.warn("⚠️ Algunos totales son null, omitiendo validación: base={}, honorarios={}, total={}",
-                    totalPresupuesto, totalHonorarios, totalConHonorarios);
-            return;
-        }
-
-        // Validar que totalPresupuestoConHonorarios = totalPresupuesto + totalHonorarios - totalDescuentosPorRubro
-        // ⚠️ CRÍTICO: totalPresupuesto YA incluye mayores costos aplicados en el frontend
-        // NO sumar totalMayoresCostos ni totalMayoresCostosPorRubro porque están DENTRO de totalPresupuesto
-        java.math.BigDecimal sumaEsperada = totalPresupuesto.add(totalHonorarios);
-        
-        // Restar descuentos por rubro (si existe)
-        if (totalDescuentosPorRubro != null) {
-            sumaEsperada = sumaEsperada.subtract(totalDescuentosPorRubro);
-        }
-        
-        java.math.BigDecimal diferencia = sumaEsperada.subtract(totalConHonorarios).abs();
-        java.math.BigDecimal tolerancia = new java.math.BigDecimal("10.00"); // Tolerancia de $10 para redondeos
-
-        if (diferencia.compareTo(tolerancia) > 0) {
-            String error = String.format(
-                "❌ ERROR DE CÁLCULO: Total con honorarios no coincide. " +
-                "Esperado: %s (Base: %s + Honorarios: %s - DescuentosPorRubro: %s), pero se recibió: %s (diferencia: %s). " +
-                "Nota: Base ya incluye mayores costos (general: %s, por rubro: %s)",
-                sumaEsperada, totalPresupuesto, totalHonorarios, totalDescuentosPorRubro, totalConHonorarios, diferencia,
-                totalMayoresCostos, totalMayoresCostosPorRubro
-            );
-            log.error(error);
-            throw new IllegalArgumentException(
-                "Total con honorarios incorrecto. Esperado: $" + sumaEsperada + ", recibido: $" + totalConHonorarios
-            );
-        }
-
-        // Validar que totalConDescuentos <= totalConHonorarios (si existe)
-        if (totalConDescuentos != null && totalConDescuentos.compareTo(totalConHonorarios) > 0) {
-            String error = String.format(
-                "❌ ERROR DE CÁLCULO: Total con descuentos (%s) es mayor que total sin descuentos (%s)",
-                totalConDescuentos, totalConHonorarios
-            );
-            log.error(error);
-            throw new IllegalArgumentException(
-                "Total con descuentos no puede ser mayor que total sin descuentos"
-            );
-        }
-
-        log.info("✅ Validación de totales OK: Base={} (incluye MayoresCostos: {}, MayoresCostosPorRubro: {}) + Honorarios={} - DescuentosPorRubro={} = Total={} (TotalConDescuentos={})",
-                totalPresupuesto, totalMayoresCostos, totalMayoresCostosPorRubro, totalHonorarios, totalDescuentosPorRubro, totalConHonorarios, totalConDescuentos);
-    }
+    // El frontend calcula correctamente los totales incluyendo:
+    // - Honorarios por rubro (ya incluidos en item.total de cada rubro)
+    // - Mayores costos generales y por rubro
+    // - Descuentos generales y por rubro  
+    // 
+    // Si el usuario ve $X en el modal y hace clic en guardar, ese es el valor
+    // correcto que debe guardarse. NO recalcular ni validar en el backend.
+    // =========================================================================
 
     // ========== GESTIÓN DE RUBROS ==========
 

@@ -102,4 +102,10 @@ public class ProfesionalJornalDiarioResponseDTO {
      */
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss")
     private LocalDateTime fechaActualizacion;
+
+    /**
+     * Mensaje informativo sobre la acción realizada
+     * Ejemplo: "Jornal creado correctamente" o "Jornal actualizado - ya existía uno para esta fecha/obra/rubro"
+     */
+    private String mensajeAccion;
 }
